@@ -1,0 +1,51 @@
+h1. Ruby API for PL/SQL
+
+h1. &#x2192; 'ruby-plsql'
+
+
+h2. What
+
+ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. This gem requires ruby-oci8 for connection to Oracle database.
+
+h2. Installing
+
+<pre syntax="ruby">sudo gem install ruby-plsql</pre>
+
+h2. The basics
+
+Read "this blog post first.":http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/
+
+Usage examples:
+
+<pre syntax="ruby">
+require "ruby_plsql"
+
+plsql.connection = OCI8.new("hr","hr","xe")
+
+plsql.test_uppercase('xxx')              # => "XXX"
+plsql.test_uppercase(:p_string => 'xxx') # => "XXX"
+plsql.test_copy("abc", nil, nil)         # => { :p_to => "abc", :p_to_double => "abcabc" }
+plsql.test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil)
+                                         # => { :p_to => "abc", :p_to_double => "abcabc" }
+plsql.hr.test_uppercase('xxx')           # => "XXX"
+plsql.test_package.test_uppercase('xxx') # => 'XXX'
+
+plsql.logoff
+</pre>
+
+See more examples in RSpec tests in spec directory of gem.
+
+h2. Feedback
+
+Submit your feedback as comments "here.":http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/
+
+h2. How to submit patches
+
+Submit bugs and patches to "RubyForge":http://rubyforge.org/tracker/?group_id=5816
+
+The trunk repository is <code>http://ruby-plsql.rubyforge.org/svn/</code> for anonymous access.
+
+h2. License
+
+This code is free to use under the terms of the MIT license. 
+

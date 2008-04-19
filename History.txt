@@ -1,0 +1,31 @@
+== 0.1.4 2008-04-18
+
+* Bug fixes
+  * Fixed bug when nil numeric parameters where passed as 0, now nil numeric parameter is passed as NULL
+
+== 0.1.3 2008-04-15
+
+* Improvements
+  * Support for overloaded procedure definitions (named parameter calls compared by number of arguments and by argument names,
+    sequential parameters compared by number of arguments)
+* Bug fixes
+  * Fixed BigDecimal support for procedure parameters (all number types except from Fixnum are converted to Float)
+  * Fixed Date parameters support (always will convert to DateTime)
+
+== 0.1.2 2008-04-02
+
+* Improvements
+	* When PL/SQL procedure is called with less arguments then missing arguments are filled with nil
+
+== 0.1.1 2008-04-01
+
+* Bug fixes
+  * Improved performance of PL/SQL procedure arguments selection in large databases
+  * Added schema and package names in generated PL/SQL block when calling procedures from packages
+
+== 0.1.0 2008-03-15
+
+* Initial release
+* Known limitations
+  * Currently just NUMBER, VARCHAR2, DATE, TIMESTAMP argument types are supported for PL/SQL procedures
+
