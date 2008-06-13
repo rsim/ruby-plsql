@@ -1,3 +1,9 @@
+== 0.1.5 2008-06-13
+
+* Bug fixes
+  * Fixed bug when ruby-plsql was not finding packages on Oracle 10.2 Enterprise Edition where all_procedures view
+    behaves differently than on Oracle XE and other previous versions
+
 == 0.1.4 2008-04-18
 
 * Bug fixes

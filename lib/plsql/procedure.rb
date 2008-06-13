@@ -3,10 +3,10 @@ module PLSQL
   module ProcedureClassMethods
     def find(schema, procedure, package = nil)
       if package.nil? && schema.select_first("
-            SELECT object_name FROM all_procedures
+            SELECT object_name FROM all_objects
             WHERE owner = :owner
               AND object_name = :object_name
-              AND procedure_name IS NULL
+              AND object_type IN ('PROCEDURE','FUNCTION')
           ", schema.schema_name, procedure.to_s.upcase)
         new(schema, procedure)
       elsif package && schema.select_first("
