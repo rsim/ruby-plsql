@@ -14,8 +14,8 @@ module PLSQL
 
     end
     
-    def initialize(conn = nil, schema = nil, first = true)
-      self.connection = conn
+    def initialize(raw_conn = nil, schema = nil, first = true)
+      self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @first = first
     end
@@ -24,8 +24,8 @@ module PLSQL
       @connection
     end
     
-    def connection=(conn)
-      @connection = conn
+    def connection=(raw_conn)
+      @connection = raw_conn ? Connection.new(raw_conn) : nil
       if @connection
         @procedures = {}
         @packages = {}
@@ -48,10 +48,11 @@ module PLSQL
     end
 
     def select_first(sql, *bindvars)
-      cursor = connection.exec(sql, *bindvars)
-      result = cursor.fetch
-      cursor.close
-      result
+      # cursor = connection.exec(sql, *bindvars)
+      # result = cursor.fetch
+      # cursor.close
+      # result
+      connection.select_first(sql, *bindvars)
     end
     
     def commit
@@ -87,7 +88,7 @@ module PLSQL
     def find_other_schema(name)
       return nil unless @first && connection
       if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
-        Schema.new(connection, name, false)
+        Schema.new(connection.raw_connection, name, false)
       else
         nil
       end

@@ -20,12 +20,12 @@ describe "Connection" do
 
   it "should connect to test database" do
     plsql.connection = @conn
-    plsql.connection.should == @conn
+    plsql.connection.raw_connection.should == @conn
   end
 
   it "should connect to test database using connection alias" do
     plsql(:hr).connection = @conn
-    plsql(:hr).connection.should == @conn
+    plsql(:hr).connection.raw_connection.should == @conn
   end
   
   it "should return schema name" do
@@ -54,7 +54,7 @@ describe "Named Schema" do
   end
 
   it "should have the same connection as default schema" do
-    plsql.hr.connection.should == @conn
+    plsql.hr.connection.raw_connection.should == @conn
   end
 
   it "should return schema name" do
