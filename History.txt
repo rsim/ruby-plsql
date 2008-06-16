@@ -1,3 +1,9 @@
+== 0.1.6 2008-06-16
+
+* Improvements
+  * If PL/SQL functions with output parameters are called then the result will be array with the function return value as a first element
+    and a hash with output parameters values as a second element.
+
 == 0.1.5 2008-06-13
 
 * Bug fixes

@@ -155,8 +155,14 @@ module PLSQL
       
       cursor.exec
 
-      # if function
-      if @return[overload]
+      # if function with output parameters
+      if @return[overload] && @out_list[overload].size > 0
+        result = [ora_value_to_ruby_value(cursor[':return']), {}]
+        @out_list[overload].each do |k|
+          result[1][k] = ora_value_to_ruby_value(cursor[":#{k}"])
+        end
+      # if function without output parameters
+      elsif @return[overload]
         result = ora_value_to_ruby_value(cursor[':return'])
       # if procedure with output parameters
       elsif @out_list[overload].size > 0

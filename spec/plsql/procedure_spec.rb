@@ -3,7 +3,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 require "rubygems"
 require "activerecord"
 
-describe "Procedure with string parameters" do
+describe "Function with string parameters" do
   
   before(:all) do
     plsql.connection = conn = OCI8.new("hr","hr","xe")
@@ -56,7 +56,7 @@ describe "Procedure with string parameters" do
 
 end
 
-describe "Procedure with numeric parameters" do
+describe "Function with numeric parameters" do
   
   before(:all) do
     plsql.connection = conn = OCI8.new("hr","hr","xe")
@@ -97,7 +97,7 @@ describe "Procedure with numeric parameters" do
 
 end
 
-describe "Procedure with date parameters" do
+describe "Function with date parameters" do
   
   before(:all) do
     plsql.connection = conn = OCI8.new("hr","hr","xe")
@@ -142,7 +142,7 @@ describe "Procedure with date parameters" do
 
 end
 
-describe "Procedure with timestamp parameters" do
+describe "Function with timestamp parameters" do
   
   before(:all) do
     plsql.connection = conn = OCI8.new("hr","hr","xe")
@@ -186,11 +186,11 @@ describe "Procedure with output parameters" do
     plsql.logoff
   end
   
-  it "should return array with output parameters" do
+  it "should return hash with output parameters" do
     plsql.test_copy("abc", nil, nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
   end
 
-  it "should return array with output parameters when called with named parameters" do
+  it "should return hash with output parameters when called with named parameters" do
     plsql.test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
   end
 
@@ -291,4 +291,65 @@ describe "Package with procedures with same name but different argument lists" d
     plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
   end
 
+end
+
+describe "Function with output parameters" do
+  before(:all) do
+    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE FUNCTION test_copy_function
+        ( p_from VARCHAR2, p_to OUT VARCHAR2, p_to_double OUT VARCHAR2 )
+        RETURN NUMBER
+      IS
+      BEGIN
+        p_to := p_from;
+        p_to_double := p_from || p_from;
+        RETURN LENGTH(p_from);
+      END test_copy_function;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+  
+  it "should return array with return value and hash of output parameters" do
+    plsql.test_copy_function("abc", nil, nil).should == [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+  end
+
+  it "should return array with return value and hash of output parameters when called with named parameters" do
+    plsql.test_copy_function(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == 
+      [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+  end
+
+  it "should substitute output parameters with nil if they are not specified" do
+    plsql.test_copy_function("abc").should == [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+  end
+
+  it "should substitute all parementers with nil if none are specified" do
+    plsql.test_copy_function.should == [nil, { :p_to => nil, :p_to_double => nil }]
+  end
+
+end
+
+describe "Function without parameters" do
+  before(:all) do
+    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE FUNCTION test_no_params
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN 'dummy';
+      END test_no_params;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+
+  it "should return value" do
+    plsql.test_no_params.should == "dummy"
+  end
 end
