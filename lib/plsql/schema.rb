@@ -25,7 +25,7 @@ module PLSQL
     end
     
     def connection=(raw_conn)
-      @connection = raw_conn ? Connection.new(raw_conn) : nil
+      @connection = raw_conn ? Connection.create(raw_conn) : nil
       if @connection
         @procedures = {}
         @packages = {}
