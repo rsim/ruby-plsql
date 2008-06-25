@@ -26,37 +26,119 @@ module PLSQL
       @raw_driver == :jdbc
     end
     
+    def logoff
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
     def select_first(sql, *bindvars)
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
-    # def exec(sql, *bindvars)
-    #   @raw_connection.exec(sql, *bindvars)
-    # end
+    def select_all(sql, *bindvars, &block)
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
+    def exec(sql, *bindvars)
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
+    def parse(sql)
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
 
   end
   
   class OCIConnection < Connection
+    
+    def logoff
+      raw_connection.logoff
+    end
+    
     def select_first(sql, *bindvars)
       begin
         cursor = raw_connection.exec(sql, *bindvars)
         result = cursor.fetch
         if result
-          result.map do |val|
-            case val
-            when Float
-              val == val.to_i ? val.to_i : val
-            when OraDate
-              val.to_time
-            else
-              val
-            end
-          end
+          result.map { |val| ora_value_to_ruby_value(val) }
         else
           nil
         end
       ensure
         cursor.close rescue nil
+      end
+    end
+
+    def select_all(sql, *bindvars, &block)
+      begin
+        cursor = raw_connection.exec(sql, *bindvars)
+        results = []
+        row_count = 0
+        while row = cursor.fetch
+          row_with_typecast = row.map {|val| ora_value_to_ruby_value(val) }
+          if block_given?
+            yield(row_with_typecast)
+            row_count += 1
+          else
+            results << row_with_typecast
+          end
+        end
+        block_given? ? row_count : results
+      ensure
+        cursor.close rescue nil
+      end
+    end
+
+    def exec(sql, *bindvars)
+      raw_connection.exec(sql, *bindvars)
+    end
+
+    class Cursor
+      attr_accessor :raw_cursor
+      
+      def initialize(raw_cur)
+        @raw_cursor = raw_cur
+      end
+
+      def bind_param(key, value, type=nil, length=nil)
+        raw_cursor.bind_param(key, value, type, length)
+      end
+      
+      def exec(*bindvars)
+        raw_cursor.exec(*bindvars)
+      end
+
+      def [](key)
+        raw_cursor[key]
+      end
+
+      def close
+        raw_cursor.close
+      end
+    end
+
+    def parse(sql)
+      Cursor.new(raw_connection.parse(sql))
+    end
+    
+
+    private
+    
+    def ora_number_to_ruby_number(num)
+      num.to_i == num.to_f ? num.to_i : num.to_f
+    end
+    
+    def ora_date_to_ruby_date(val)
+      val.to_time
+    end
+
+    def ora_value_to_ruby_value(val)
+      case val
+      when Float, OraNumber
+        ora_number_to_ruby_number(val)
+      when OraDate
+        ora_date_to_ruby_date(val)
+      else
+        val
       end
     end
 

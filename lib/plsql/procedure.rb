@@ -34,7 +34,7 @@ module PLSQL
       @out_list = {}
       @return = {}
       @overloaded = false
-      num_rows = @schema.connection.exec("
+      num_rows = @schema.connection.select_all("
         SELECT a.argument_name, a.position, a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.overload
         FROM all_arguments a, all_objects o
         WHERE o.owner = :owner
