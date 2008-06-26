@@ -6,7 +6,7 @@ end
 unless defined?(JRUBY_VERSION)
   begin
     require "oci8"
-
+    require "oradate_patch"
   rescue LoadError
       puts <<-EOS
     To use ruby_plsql you must install ruby-oci8 library.
@@ -15,7 +15,12 @@ unless defined?(JRUBY_VERSION)
 else
   begin
     require "java"
-    require "#{ENV['SQLPATH']}/ojdbc14.jar"
+    ojdbc_jar = "ojdbc14.jar"
+    if ojdbc_jar_path = ENV["PATH"].split(":").find{|d| File.exists?(File.join(d,ojdbc_jar))}
+      require File.join(ojdbc_jar_path,ojdbc_jar)
+    else
+      require ojdbc_jar
+    end
     import java.sql.Statement
     import java.sql.Connection
     import java.sql.SQLException
@@ -28,6 +33,10 @@ else
       EOS
   end
 end
+
+require "time"
+require "date"
+require "bigdecimal"
 
 %w(connection schema procedure package).each do |file|
   require File.dirname(__FILE__) + "/plsql/#{file}"

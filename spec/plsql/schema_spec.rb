@@ -8,14 +8,18 @@ describe "Schema" do
   
 end
 
-describe "Connection" do
+describe "Schema connection" do
   
   before(:each) do
-    @conn = OCI8.new("hr","hr","xe")
+    @conn = get_connection
   end
 
   after(:each) do
-    @conn.logoff
+    unless defined? JRUBY_VERSION
+      @conn.logoff
+    else
+      @conn.close
+    end
   end
 
   it "should connect to test database" do
@@ -41,12 +45,11 @@ end
 
 describe "Named Schema" do
   before(:all) do
-    @conn = OCI8.new("hr","hr","xe")
-    plsql.connection = @conn
+    plsql.connection = @conn = get_connection
   end
 
   after(:all) do
-    @conn.logoff
+    plsql.connection.logoff
   end
 
   it "should find existing schema" do

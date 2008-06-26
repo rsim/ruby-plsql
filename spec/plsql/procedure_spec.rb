@@ -6,7 +6,7 @@ require "activerecord"
 describe "Function with string parameters" do
   
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_uppercase
         ( p_string VARCHAR2 )
@@ -59,7 +59,7 @@ end
 describe "Function with numeric parameters" do
   
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_sum
         ( p_num1 NUMBER, p_num2 NUMBER )
@@ -100,7 +100,7 @@ end
 describe "Function with date parameters" do
   
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_date
         ( p_date DATE )
@@ -116,26 +116,49 @@ describe "Function with date parameters" do
     plsql.logoff
   end
   
-  it "should process DateTime parameters" do
-    now = DateTime.new(2008,8,12,14,28,0)
-    plsql.test_date(now).should == now + 1
+  it "should process Time parameters" do
+    now = Time.local(2008,8,12,14,28,0)
+    plsql.test_date(now).should == now + 60*60*24
   end
 
+  it "should process DateTime parameters" do
+    now = DateTime.parse(Time.local(2008,8,12,14,28,0).iso8601)
+    result = plsql.test_date(now)
+    result.class.should == Time
+    result.should == Time.parse((now + 1).strftime("%c"))
+  end
+  
   it "should process old DateTime parameters" do
-    now = DateTime.new(1900,1,1,12,0,0)
-    plsql.test_date(now).should == now + 1
+    now = DateTime.new(1901,1,1,12,0,0)
+    result = plsql.test_date(now)
+    unless defined?(JRUBY_VERSION)
+      result.class.should == DateTime
+      result.should == now + 1
+    else
+      result.class.should == Time
+      result.should == Time.parse((now + 1).strftime("%c"))
+    end
   end
 
   it "should process Date parameters" do
     now = Date.new(2008,8,12)
-    plsql.test_date(now).should == now + 1
+    result = plsql.test_date(now)
+    result.class.should == Time    
+    result.should == Time.parse((now + 1).strftime("%c"))
   end
-
+  
   it "should process old Date parameters" do
-    now = Date.new(1900,1,1)
-    plsql.test_date(now).should == now + 1
+    now = Date.new(1901,1,1)
+    result = plsql.test_date(now)
+    unless defined?(JRUBY_VERSION)
+      # result.class.should == DateTime
+      result.should == now + 1
+    else
+      result.class.should == Time
+      result.should == Time.parse((now + 1).strftime("%c"))
+    end
   end
-
+  
   it "should process nil date parameter as NULL" do
     plsql.test_date(nil).should be_nil
   end
@@ -145,7 +168,7 @@ end
 describe "Function with timestamp parameters" do
   
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_timestamp
         ( p_time TIMESTAMP )
@@ -170,7 +193,7 @@ end
 
 describe "Procedure with output parameters" do
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE PROCEDURE test_copy
         ( p_from VARCHAR2, p_to OUT VARCHAR2, p_to_double OUT VARCHAR2 )
@@ -206,7 +229,7 @@ end
 
 describe "Package with procedures with same name but different argument lists" do
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE PACKAGE test_package2 IS
         FUNCTION test_procedure ( p_string VARCHAR2 )
@@ -295,7 +318,7 @@ end
 
 describe "Function with output parameters" do
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_copy_function
         ( p_from VARCHAR2, p_to OUT VARCHAR2, p_to_double OUT VARCHAR2 )
@@ -334,7 +357,7 @@ end
 
 describe "Function without parameters" do
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE FUNCTION test_no_params
         RETURN VARCHAR2

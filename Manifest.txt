@@ -5,6 +5,8 @@ README.txt
 Rakefile
 config/hoe.rb
 config/requirements.rb
+lib/oradate_patch.rb
+lib/plsql/connection.rb
 lib/plsql/package.rb
 lib/plsql/procedure.rb
 lib/plsql/schema.rb

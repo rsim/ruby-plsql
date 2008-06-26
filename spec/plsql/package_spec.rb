@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 
 describe "Package" do
   before(:all) do
-    plsql.connection = conn = OCI8.new("hr","hr","xe")
+    plsql.connection = get_connection
     plsql.connection.exec <<-EOS
       CREATE OR REPLACE PACKAGE test_package IS
         FUNCTION test_procedure ( p_string VARCHAR2 )

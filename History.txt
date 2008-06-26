@@ -1,3 +1,13 @@
+== 0.2.0 2008-06-26
+
+* New features
+  * Added JRuby and Oracle JDBC driver support with the same functionality as in case of MRI and ruby-oci8 driver
+  * All database driver specifics are extracted in separate Connection class with OCIConnection and JDBCConnection subclasses
+* Improvements
+  * PL/SQL functions/procedures with DATE return values and output parameters returns Time values by default (previously DateTime values
+    were returned by default). If value is too old then DateTime value is returned. From Ruby Time, DateTime and Date values can be
+    passed as arguments to DATE parameters.
+
 == 0.1.6 2008-06-16
 
 * Improvements

@@ -5,7 +5,9 @@ h1. &#x2192; 'ruby-plsql'
 
 h2. What
 
-ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. This gem requires ruby-oci8 for connection to Oracle database.
+ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.
+ruby-plsql support both MRI and JRuby runtime environments.
+This gem requires ruby-oci8 library (if MRI is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
 
 h2. Installing
 
@@ -41,9 +43,9 @@ Submit your feedback as comments "here.":http://blog.rayapps.com/2008/03/15/ruby
 
 h2. How to submit patches
 
-Submit bugs and patches to "RubyForge":http://rubyforge.org/tracker/?group_id=5816
+Submit bugs and patches to "Lighthouse":http://rsim.lighthouseapp.com/projects/11470-ruby-plsql
 
-The trunk repository is <code>http://ruby-plsql.rubyforge.org/svn/</code> for anonymous access.
+Source code is located at "GitHub":http://github.com/rsim/ruby-plsql
 
 h2. License
 

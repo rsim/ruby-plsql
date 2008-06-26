@@ -76,7 +76,7 @@ module PLSQL
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
         @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
-        @out_list[overload] = @argument_list[overload].select {|k| @arguments[overload][k][:in_out] == 'OUT'}
+        @out_list[overload] = @argument_list[overload].select {|k| @arguments[overload][k][:in_out] =~ /OUT/}
       end
     end
     
@@ -145,12 +145,13 @@ module PLSQL
       
       args_list.each do |k|
         data_type, data_length = plsql_to_ruby_data_type(@arguments[overload][k])
-        cursor.bind_param(":#{k.to_s}", ruby_value_to_ora_value(args_hash[k], data_type), data_type, data_length)
+        cursor.bind_param(":#{k.to_s}", ruby_value_to_ora_value(args_hash[k], data_type),
+                                        data_type, data_length, @arguments[overload][k][:in_out])
       end
       
       if @return[overload]
         data_type, data_length = plsql_to_ruby_data_type(@return[overload])
-        cursor.bind_param(":return", nil, data_type, data_length)
+        cursor.bind_param(":return", nil, data_type, data_length, 'OUT')
       end
       
       cursor.exec
@@ -181,47 +182,15 @@ module PLSQL
     private
     
     def plsql_to_ruby_data_type(argument)
-      case argument[:data_type]
-      when "VARCHAR2"
-        [String, argument[:data_length] ? argument[:data_length] : 4000]
-      when "NUMBER"
-        [OraNumber, nil]
-      when "DATE"
-        [DateTime, nil]
-      when "TIMESTAMP"
-        [Time, nil]
-      # CLOB
-      # BLOB
-      else
-        [String, 4000]
-      end
+      @schema.connection.plsql_to_ruby_data_type(argument[:data_type],argument[:data_length])
     end
     
     def ruby_value_to_ora_value(val, type)
-      if type == OraNumber
-        val.nil? || val.is_a?(Fixnum) ? val : val.to_f
-      elsif type == DateTime
-        val ? val.to_datetime : nil
-      else
-        val
-      end
-    end
-    
-    def ora_number_to_ruby_number(num)
-      if num.to_i == num.to_f
-        num.to_i
-      else
-        num.to_f
-      end
+      @schema.connection.ruby_value_to_ora_value(val, type)
     end
     
     def ora_value_to_ruby_value(val)
-      case val
-      when OraNumber
-        ora_number_to_ruby_number(val)
-      else
-        val
-      end
+      @schema.connection.ora_value_to_ruby_value(val)
     end
 
   end
