@@ -4,7 +4,9 @@
 
 == DESCRIPTION:
 
-ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. Currently ruby-plsql requires ruby-oci8 for connection to Oracle database, it is planned to add JRuby/JDBC support in the future.
+ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.
+ruby-plsql support both MRI and JRuby runtime environments.
+This gem requires ruby-oci8 library (if MRI is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
 
 See http://blog.rayapps.com for more information.
 
@@ -34,7 +36,10 @@ plsql.logoff
 
 == REQUIREMENTS:
 
+MRI
 * Requires ruby-oci8 library to connect to Oracle
+JRuby
+* Requires Oracle JDBC driver (ojdbc14.jar should be somewhere in PATH) to connect to Oracle
 
 == INSTALL:
 
