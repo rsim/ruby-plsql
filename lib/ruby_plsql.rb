@@ -15,6 +15,10 @@ unless defined?(JRUBY_VERSION)
 else
   begin
     require "java"
+    require "jruby"
+    # Adds JRuby classloader to current thread classloader - as a result ojdbc14.jar should not be in $JRUBY_HOME/lib
+    java.lang.Thread.currentThread.setContextClassLoader(JRuby.runtime.jruby_class_loader)
+
     ojdbc_jar = "ojdbc14.jar"
     if ojdbc_jar_path = ENV["PATH"].split(":").find{|d| File.exists?(File.join(d,ojdbc_jar))}
       require File.join(ojdbc_jar_path,ojdbc_jar)
