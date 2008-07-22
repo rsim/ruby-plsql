@@ -30,6 +30,22 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
+    def commit
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
+    def rollback
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
+    def autocommit?
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
+    def autocommit=(value)
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
     def select_first(sql, *bindvars)
       raise NoMethodError, "Not implemented for this raw driver"
     end
@@ -53,7 +69,23 @@ module PLSQL
     def logoff
       raw_connection.logoff
     end
+
+    def commit
+      raw_connection.commit
+    end
+
+    def rollback
+      raw_connection.rollback
+    end
     
+    def autocommit?
+      raw_connection.autocommit?
+    end
+
+    def autocommit=(value)
+      raw_connection.autocommit = value
+    end
+
     def select_first(sql, *bindvars)
       cursor = raw_connection.exec(sql, *bindvars)
       result = cursor.fetch
@@ -183,6 +215,22 @@ module PLSQL
       true
     rescue
       false
+    end
+
+    def commit
+      raw_connection.commit
+    end
+
+    def rollback
+      raw_connection.rollback
+    end
+
+    def autocommit?
+      raw_connection.getAutoCommit
+    end
+
+    def autocommit=(value)
+      raw_connection.setAutoCommit(value)
     end
 
     def select_first(sql, *bindvars)

@@ -69,3 +69,21 @@ describe "Named Schema" do
   end
 
 end
+
+describe "Schema commit and rollback" do
+  before(:all) do
+    plsql.connection = @conn = get_connection
+  end
+
+  after(:all) do
+    plsql.connection.logoff
+  end
+
+  it "should do commit" do
+    plsql.commit
+  end
+  
+  it "should do rollback" do
+    plsql.rollback
+  end
+end

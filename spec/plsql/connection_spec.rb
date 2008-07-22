@@ -7,11 +7,17 @@ describe "Connection" do
     before(:all) do
       @raw_conn = OCI8.new("hr","hr","xe")    
     end
+    after(:all) do
+      @raw_conn.logoff rescue nil
+    end
 
   else
 
     before(:all) do
       @raw_conn = DriverManager.getConnection("jdbc:oracle:thin:@ubuntu710:1521:XE","hr","hr")
+    end
+    after(:all) do
+      @raw_conn.close rescue nil
     end
 
   end
@@ -246,6 +252,39 @@ describe "Connection" do
       cursor.close.should be_nil
     end
   
+  end
+  
+  describe "commit and rollback" do
+    before(:each) do
+      sql = "CREATE TABLE test_commit (dummy VARCHAR2(100))"
+      @conn.exec(sql).should be_true
+      @conn.autocommit = false
+      @conn.should_not be_autocommit
+    end
+    after(:each) do
+      sql = "DROP TABLE test_commit"
+      @conn.exec(sql).should be_true      
+    end
+    
+    it "should do commit" do
+      @conn.exec("INSERT INTO test_commit VALUES ('test')")
+      @conn.commit
+      @conn.select_first("SELECT COUNT(*) FROM test_commit")[0].should == 1
+    end
+
+    it "should do rollback" do
+      @conn.exec("INSERT INTO test_commit VALUES ('test')")
+      @conn.rollback
+      @conn.select_first("SELECT COUNT(*) FROM test_commit")[0].should == 0
+    end
+
+    it "should do commit and rollback should not undo commited transaction" do
+      @conn.exec("INSERT INTO test_commit VALUES ('test')")
+      @conn.commit
+      @conn.rollback
+      @conn.select_first("SELECT COUNT(*) FROM test_commit")[0].should == 1
+    end
+
   end
 
 end

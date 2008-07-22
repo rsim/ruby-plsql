@@ -1,3 +1,12 @@
+== 0.2.1 2008-07-22
+
+* Improvements
+  * Implemented plsql.commit and plsql.rollback methods which call corresponding Connection methods.
+    In addition plsql.connection.autocommit= and plsql.connection.autocommit? methods are added.
+* Bug fixes
+  * Fixed loading of ojdbc14.jar from PATH directory
+  * Workaround for slow SELECT from all_arguments in Oracle 10gR2
+
 == 0.2.0 2008-06-26
 
 * New features

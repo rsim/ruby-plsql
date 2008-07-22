@@ -34,16 +34,22 @@ module PLSQL
       @out_list = {}
       @return = {}
       @overloaded = false
-      num_rows = @schema.connection.select_all("
-        SELECT a.argument_name, a.position, a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.overload
-        FROM all_arguments a, all_objects o
+      # RSI: due to 10gR2 all_arguments performance issue SELECT spllit into two statements
+      object_id = @schema.connection.select_first("
+        SELECT o.object_id
+        FROM all_objects o
         WHERE o.owner = :owner
         AND o.object_name = :object_name
-        AND a.owner = o.owner
-        AND a.object_id = o.object_id
+        ", @schema.schema_name, @package ? @package : @procedure
+      )[0] rescue nil
+      num_rows = @schema.connection.select_all("
+        SELECT a.argument_name, a.position, a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.overload
+        FROM all_arguments a
+        WHERE a.object_id = :object_id
+        AND a.owner = :owner
         AND a.object_name = :procedure_name
         AND NVL(a.package_name,'nil') = :package
-        ", @schema.schema_name, @package ? @package : @procedure, @procedure, @package ? @package : 'nil'
+        ", object_id, @schema.schema_name, @procedure, @package ? @package : 'nil'
       ) do |r|
 
         argument_name, position, data_type, in_out, data_length, data_precision, data_scale, overload = r
