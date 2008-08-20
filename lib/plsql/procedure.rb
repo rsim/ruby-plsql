@@ -34,12 +34,14 @@ module PLSQL
       @out_list = {}
       @return = {}
       @overloaded = false
-      # RSI: due to 10gR2 all_arguments performance issue SELECT spllit into two statements
+      # RSI: due to 10gR2 all_arguments performance issue SELECT split into two statements
+      # added condition to ensure that if object is package then package specification not body is selected
       object_id = @schema.connection.select_first("
         SELECT o.object_id
         FROM all_objects o
         WHERE o.owner = :owner
         AND o.object_name = :object_name
+        AND o.object_type <> 'PACKAGE BODY'
         ", @schema.schema_name, @package ? @package : @procedure
       )[0] rescue nil
       num_rows = @schema.connection.select_all("
@@ -69,7 +71,8 @@ module PLSQL
             :data_precision => data_precision,
             :data_scale => data_scale
           }
-        else
+        # if function has return value
+        elsif position == 0 && in_out == 'OUT'
           @return[overload] = {
             :data_type => data_type,
             :in_out => in_out,

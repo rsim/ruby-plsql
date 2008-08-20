@@ -1,3 +1,7 @@
+== 0.2.2 2008-08-20
+* Bug fixes
+  * Workaround for strange Oracle data dictionary bug when procedure with no parameters has row with empty fields in all_arguments
+
 == 0.2.1 2008-07-22
 
 * Improvements
