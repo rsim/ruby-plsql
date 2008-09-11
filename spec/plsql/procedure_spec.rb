@@ -376,3 +376,61 @@ describe "Function without parameters" do
     plsql.test_no_params.should == "dummy"
   end
 end
+
+describe "Function with CLOB parameter and return value" do
+  
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE FUNCTION test_clob
+        ( p_clob CLOB )
+        RETURN CLOB
+      IS
+      BEGIN
+        RETURN p_clob;
+      END test_clob;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+  
+  it "should find existing procedure" do
+    PLSQL::Procedure.find(plsql, :test_clob).should_not be_nil
+  end
+
+  it "should execute function and return correct value" do
+    large_text = 'abcdefghij' * 10_000
+    plsql.test_clob(large_text).should == large_text
+  end
+end
+
+describe "Procedrue with CLOB parameter and return value" do
+  
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE PROCEDURE test_clob_proc
+        ( p_clob CLOB,
+          p_return OUT CLOB)
+      IS
+      BEGIN
+        p_return := p_clob;
+      END test_clob_proc;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+  
+  it "should find existing procedure" do
+    PLSQL::Procedure.find(plsql, :test_clob_proc).should_not be_nil
+  end
+
+  it "should execute function and return correct value" do
+    large_text = 'abcdefghij' * 10_000
+    plsql.test_clob_proc(large_text)[:p_return].should == large_text
+  end
+end

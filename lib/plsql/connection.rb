@@ -153,6 +153,8 @@ module PLSQL
       case data_type
       when "VARCHAR2"
         [String, data_length || 4000]
+      when "CLOB"
+        [OCI8::CLOB, nil]
       when "NUMBER"
         [OraNumber, nil]
       when "DATE"
@@ -171,6 +173,8 @@ module PLSQL
         val.nil? || val.is_a?(Fixnum) ? val : val.to_f
       elsif type == DateTime
         val ? val.to_datetime : nil
+      elsif type == OCI8::CLOB
+        OCI8::CLOB.new(raw_connection, val)
       else
         val
       end
@@ -182,6 +186,9 @@ module PLSQL
         ora_number_to_ruby_number(val)
       when DateTime, OraDate
         ora_date_to_ruby_date(val)
+      when OCI8::CLOB
+        val.rewind
+        val.read
       else
         val
       end

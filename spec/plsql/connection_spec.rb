@@ -5,7 +5,7 @@ describe "Connection" do
   unless defined?(JRUBY_VERSION)
 
     before(:all) do
-      @raw_conn = OCI8.new("hr","hr","xe")    
+      @raw_conn = get_connection
     end
     after(:all) do
       @raw_conn.logoff rescue nil
@@ -53,6 +53,11 @@ describe "Connection" do
         @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 4000]
       end
 
+      it "should translate PL/SQL CLOB to Ruby String" do
+        @conn.plsql_to_ruby_data_type("CLOB", 100_000).should == [OCI8::CLOB, nil]
+        @conn.plsql_to_ruby_data_type("CLOB", nil).should == [OCI8::CLOB, nil]
+      end
+
       it "should translate PL/SQL NUMBER to Ruby OraNumber" do
         @conn.plsql_to_ruby_data_type("NUMBER", 15).should == [OraNumber, nil]
       end
@@ -78,6 +83,15 @@ describe "Connection" do
         @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
       end
 
+      it "should translate Ruby String value to OCI8::CLOB when OCI8::CLOB type specified" do
+        large_text = "x" * 100_000
+        ora_value = @conn.ruby_value_to_ora_value(large_text, OCI8::CLOB)
+        ora_value.class.should == OCI8::CLOB
+        ora_value.size.should == 100_000
+        ora_value.rewind
+        ora_value.read.should == large_text
+      end
+
       it "should translate Oracle OraNumber integer value to Fixnum" do
         @conn.ora_value_to_ruby_value(OraNumber.new(100)).should eql(100)
       end
@@ -91,6 +105,12 @@ describe "Connection" do
         @conn.ora_value_to_ruby_value(now).should eql(now.to_time)
       end
 
+      it "should translate Oracle CLOB value to String" do
+        large_text = "x" * 100_000
+        clob = OCI8::CLOB.new(@raw_conn, large_text)
+        @conn.ora_value_to_ruby_value(clob).should == large_text
+      end
+      
     end
 
   else
