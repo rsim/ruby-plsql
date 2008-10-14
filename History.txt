@@ -2,6 +2,7 @@
 * Improvements
   * Added CLOB data type support for input and output parameters and function return values
     (both for MRI/OCI and JRuby/JDBC)
+    (ruby-oci8 version should be at least 1.0.3 as it contains CLOB handling bug fixes)
 * Bug fixes
   * Fixed calling of procedures without parameters
 

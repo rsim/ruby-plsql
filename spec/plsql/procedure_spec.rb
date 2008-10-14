@@ -421,7 +421,7 @@ describe "Function with CLOB parameter and return value" do
   end
 
   it "should execute function and return correct value" do
-    large_text = 'abcdefghij' * 10_000
+    large_text = 'ābčdēfghij' * 10_000
     plsql.test_clob(large_text).should == large_text
   end
 end
@@ -450,7 +450,7 @@ describe "Procedrue with CLOB parameter and return value" do
   end
 
   it "should execute function and return correct value" do
-    large_text = 'abcdefghij' * 10_000
+    large_text = 'ābčdēfghij' * 10_000
     plsql.test_clob_proc(large_text)[:p_return].should == large_text
   end
 end

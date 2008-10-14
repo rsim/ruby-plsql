@@ -14,7 +14,7 @@ Look ar RSpec tests under spec directory for usage examples.
 
 == FEATURES/PROBLEMS:
 
-* Currently just NUMBER, VARCHAR2, DATE, TIMESTAMP argument types are supported for PL/SQL procedures
+* Currently just NUMBER, VARCHAR2, DATE, TIMESTAMP, CLOB argument types are supported for PL/SQL procedures
 
 == SYNOPSIS:
 
@@ -37,7 +37,7 @@ plsql.logoff
 == REQUIREMENTS:
 
 MRI
-* Requires ruby-oci8 library to connect to Oracle
+* Requires ruby-oci8 library to connect to Oracle (please use version 1.0.3 or later)
 JRuby
 * Requires Oracle JDBC driver (ojdbc14.jar should be somewhere in PATH) to connect to Oracle
 
