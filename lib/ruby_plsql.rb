@@ -20,7 +20,7 @@ else
     java.lang.Thread.currentThread.setContextClassLoader(JRuby.runtime.jruby_class_loader)
 
     ojdbc_jar = "ojdbc14.jar"
-    if ojdbc_jar_path = ENV["PATH"].split(":").find{|d| File.exists?(File.join(d,ojdbc_jar))}
+    if ojdbc_jar_path = ENV["PATH"].split(/[:;]/).find{|d| File.exists?(File.join(d,ojdbc_jar))}
       require File.join(ojdbc_jar_path,ojdbc_jar)
     else
       require ojdbc_jar
