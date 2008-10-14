@@ -42,6 +42,6 @@ require "time"
 require "date"
 require "bigdecimal"
 
-%w(connection schema procedure package).each do |file|
+%w(connection oci_connection jdbc_connection schema procedure package).each do |file|
   require File.dirname(__FILE__) + "/plsql/#{file}"
 end
