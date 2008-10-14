@@ -355,7 +355,7 @@ describe "Function with output parameters" do
 
 end
 
-describe "Function without parameters" do
+describe "Function or procedure without parameters" do
   before(:all) do
     plsql.connection = get_connection
     plsql.connection.exec <<-EOS
@@ -366,15 +366,35 @@ describe "Function without parameters" do
         RETURN 'dummy';
       END test_no_params;
     EOS
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE PROCEDURE test_proc_no_params
+      IS
+      BEGIN
+        NULL;
+      END test_proc_no_params;
+    EOS
   end
   
   after(:all) do
     plsql.logoff
   end
 
-  it "should return value" do
+  it "should find function" do
+    PLSQL::Procedure.find(plsql, :test_no_params).should_not be_nil
+  end
+
+  it "should return function value" do
     plsql.test_no_params.should == "dummy"
   end
+
+  it "should find procedure" do
+    PLSQL::Procedure.find(plsql, :test_proc_no_params).should_not be_nil
+  end
+
+  it "should execute procedure" do
+    plsql.test_proc_no_params.should be_nil
+  end
+
 end
 
 describe "Function with CLOB parameter and return value" do

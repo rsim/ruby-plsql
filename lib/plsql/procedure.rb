@@ -82,6 +82,9 @@ module PLSQL
           }
         end
       end
+      # if procedure is without arguments then create default empty argument list for default overload
+      @arguments[0] = {} if @arguments.keys.empty?
+      
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
         @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
