@@ -53,6 +53,7 @@ module PLSQL
 
     def exec(sql, *bindvars)
       raw_connection.exec(sql, *bindvars)
+      true
     end
 
     class Cursor
