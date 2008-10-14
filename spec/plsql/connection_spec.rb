@@ -146,6 +146,21 @@ describe "Connection" do
       #   @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
       # end
       
+      it "should translate Ruby String value to Java::OracleSql::CLOB when Java::OracleSql::CLOB type specified" do
+        large_text = "x" * 100_000
+        ora_value = @conn.ruby_value_to_ora_value(large_text, Java::OracleSql::CLOB)
+        ora_value.class.should == Java::OracleSql::CLOB
+        ora_value.length.should == 100_000
+        ora_value.getSubString(1, ora_value.length) == large_text
+        ora_value.freeTemporary
+      end
+
+      it "should translate Ruby nil value to empty Java::OracleSql::CLOB when Java::OracleSql::CLOB type specified" do
+        ora_value = @conn.ruby_value_to_ora_value(nil, Java::OracleSql::CLOB)
+        ora_value.class.should == Java::OracleSql::CLOB
+        ora_value.isEmptyLob.should be_true
+      end
+
       it "should translate Oracle BigDecimal integer value to Fixnum" do
         @conn.ora_value_to_ruby_value(BigDecimal.new("100")).should eql(100)
       end
@@ -158,6 +173,18 @@ describe "Connection" do
       #   now = OraDate.now
       #   @conn.ora_value_to_ruby_value(now).should eql(now.to_time)
       # end
+
+      it "should translate Oracle CLOB value to String" do
+        large_text = "āčē" * 100_000
+        clob = @conn.ruby_value_to_ora_value(large_text, Java::OracleSql::CLOB)
+        @conn.ora_value_to_ruby_value(clob).should == large_text
+        clob.freeTemporary
+      end
+
+      it "should translate empty Oracle CLOB value to nil" do
+        clob = @conn.ruby_value_to_ora_value(nil, Java::OracleSql::CLOB)
+        @conn.ora_value_to_ruby_value(clob).should be_nil
+      end
 
     end
     

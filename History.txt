@@ -1,7 +1,7 @@
-== 0.2.3 2008-09-12
+== 0.2.3 2008-10-14
 * Improvements
   * Added CLOB data type support for input and output parameters and function return values
-    (currently works just with MRI and ruby-oci8)
+    (both for MRI/OCI and JRuby/JDBC)
 * Bug fixes
   * Fixed calling of procedures without parameters
 

@@ -18,6 +18,12 @@ def get_connection
       OCI8.new("hr","hr","xe")
     end
   else
-    DriverManager.getConnection("jdbc:oracle:thin:@ubuntu710:1521:XE","hr","hr")
+    begin
+      DriverManager.getConnection("jdbc:oracle:thin:@ubuntu710:1521:XE","hr","hr")
+    # if connection fails then sleep 5 seconds and retry
+    rescue NativeException
+      sleep 5
+      DriverManager.getConnection("jdbc:oracle:thin:@ubuntu710:1521:XE","hr","hr")
+    end
   end
 end

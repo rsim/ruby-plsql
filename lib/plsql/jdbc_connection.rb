@@ -143,6 +143,8 @@ module PLSQL
         java.sql.Types::NUMERIC
       when 'String'
         java.sql.Types::VARCHAR
+      when 'Java::OracleSql::CLOB'
+        Java::oracle.jdbc.OracleTypes::CLOB
       when 'Date'
         java.sql.Types::DATE
       when 'Time'
@@ -165,6 +167,8 @@ module PLSQL
         stmt.send("setBigDecimal#{key && "AtName"}", key || i, java.math.BigDecimal.new(value.to_s))
       when 'String'
         stmt.send("setString#{key && "AtName"}", key || i, value)
+      when 'Java::OracleSql::CLOB'
+        stmt.send("setClob#{key && "AtName"}", key || i, value)
       when 'Date'
         stmt.send("setDate#{key && "AtName"}", key || i, java.sql.Date.new(Time.parse(value.to_s).to_i*1000))
       when 'Time'
@@ -187,6 +191,8 @@ module PLSQL
         bd && BigDecimal.new(bd.to_s)
       when 'String'
         stmt.getString(i)
+      when 'Java::OracleSql::CLOB'
+        stmt.getClob(i)
       when 'Date','Time','DateTime'
         ts = stmt.getTimestamp(i)
         # ts && Time.parse(Time.at(ts.getTime/1000).iso8601)
@@ -198,6 +204,8 @@ module PLSQL
       case type_name
       when "CHAR", "VARCHAR2"
         rset.getString(i)
+      when "CLOB"
+        ora_value_to_ruby_value(rset.getClob(i))
       when "NUMBER"
         d = rset.getBigDecimal(i)
         if d.nil?
@@ -218,6 +226,8 @@ module PLSQL
       case data_type
       when "VARCHAR2"
         [String, data_length || 4000]
+      when "CLOB"
+        [Java::OracleSql::CLOB, nil]
       when "NUMBER"
         [BigDecimal, nil]
       when "DATE"
@@ -236,6 +246,14 @@ module PLSQL
         val.nil? || val.is_a?(Fixnum) ? val : val.to_f
       elsif type == Time
         date_to_time(val)
+      elsif type == Java::OracleSql::CLOB
+        if val
+          clob = Java::OracleSql::CLOB.createTemporary(raw_connection, false, Java::OracleSql::CLOB::DURATION_SESSION)
+          clob.setString(1,val)
+          clob
+        else
+          Java::OracleSql::CLOB.getEmptyCLOB
+        end
       else
         val
       end
@@ -247,6 +265,12 @@ module PLSQL
         ora_number_to_ruby_number(val)
       # when OraDate
       #   ora_date_to_ruby_date(val)
+      when Java::OracleSql::CLOB
+        if val.isEmptyLob
+          nil
+        else
+          val.getSubString(1, val.length)
+        end
       else
         val
       end
