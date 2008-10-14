@@ -174,7 +174,7 @@ module PLSQL
       elsif type == DateTime
         val ? val.to_datetime : nil
       elsif type == OCI8::CLOB
-        OCI8::CLOB.new(raw_connection, val)
+        OCI8::CLOB.new(raw_oci_connection, val)
       else
         val
       end
@@ -196,6 +196,16 @@ module PLSQL
 
 
     private
+    
+    def raw_oci_connection
+      if raw_connection.is_a? OCI8
+        raw_connection
+      # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
+      # in this case we need to pass original OCI8 connection
+      else
+        raw_connection.instance_variable_get(:@connection)
+      end
+    end
     
     def ora_number_to_ruby_number(num)
       num.to_i == num.to_f ? num.to_i : num.to_f
