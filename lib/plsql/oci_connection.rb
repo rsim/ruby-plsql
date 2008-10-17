@@ -110,6 +110,8 @@ module PLSQL
       elsif type == DateTime
         val ? val.to_datetime : nil
       elsif type == OCI8::CLOB
+        # ruby-oci8 cannot create CLOB from ''
+        val = nil if val == ''
         OCI8::CLOB.new(raw_oci_connection, val)
       else
         val

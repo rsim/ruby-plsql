@@ -1,4 +1,4 @@
-== 0.2.3 2008-10-14
+== 0.2.3 2008-10-17
 * Improvements
   * Added CLOB data type support for input and output parameters and function return values
     (both for MRI/OCI and JRuby/JDBC)

@@ -424,6 +424,27 @@ describe "Function with CLOB parameter and return value" do
     large_text = 'ābčdēfghij' * 10_000
     plsql.test_clob(large_text).should == large_text
   end
+
+  unless defined?(JRUBY_VERSION)
+
+    it "should execute function with empty string and return nil (oci8 cannot pass empty CLOB parameter)" do
+      text = ''
+      plsql.test_clob(text).should be_nil
+    end
+    
+  else
+
+    it "should execute function with empty string and return empty string" do
+      text = ''
+      plsql.test_clob(text).should == text
+    end
+    
+  end
+
+  it "should execute function with nil and return nil" do
+    plsql.test_clob(nil).should be_nil
+  end
+
 end
 
 describe "Procedrue with CLOB parameter and return value" do
