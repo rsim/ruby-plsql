@@ -225,7 +225,7 @@ module PLSQL
     def plsql_to_ruby_data_type(data_type, data_length)
       case data_type
       when "VARCHAR2"
-        [String, data_length || 4000]
+        [String, data_length || 32767]
       when "CLOB"
         [Java::OracleSql::CLOB, nil]
       when "NUMBER"
@@ -237,7 +237,7 @@ module PLSQL
       # CLOB
       # BLOB
       else
-        [String, 4000]
+        [String, 32767]
       end
     end
 

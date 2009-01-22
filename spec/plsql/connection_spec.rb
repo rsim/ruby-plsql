@@ -50,7 +50,7 @@ describe "Connection" do
     describe "OCI data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         @conn.plsql_to_ruby_data_type("VARCHAR2", 100).should == [String, 100]
-        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 4000]
+        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 32767]
       end
 
       it "should translate PL/SQL CLOB to Ruby String" do
@@ -118,7 +118,7 @@ describe "Connection" do
     describe "JDBC data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         @conn.plsql_to_ruby_data_type("VARCHAR2", 100).should == [String, 100]
-        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 4000]
+        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 32767]
       end
 
       it "should translate PL/SQL NUMBER to Ruby BigDecimal" do
