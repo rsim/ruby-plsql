@@ -33,35 +33,19 @@
     <h1>Ruby API for PL/SQL</h1>
     <div id="version" class="clickable" onclick='document.location = "http://rubyforge.org/projects/ruby-plsql"; return false'>
       <p>Get Version</p>
-      <a href="http://rubyforge.org/projects/ruby-plsql" class="numbers">0.2.3</a>
+      <a href="http://rubyforge.org/projects/ruby-plsql" class="numbers">0.2.4</a>
     </div>
-    <h1>&#x2192; &#8216;ruby-plsql&#8217;</h1>
-
-
-	<h2>What</h2>
-
-
-	<p>ruby-plsql gem provides simple Ruby <span class="caps">API</span> for calling Oracle PL/SQL procedures.
-ruby-plsql support both <span class="caps">MRI</span> and JRuby runtime environments.
+    <h1>&amp;#x2192; &#8216;ruby-plsql&#8217;</h1>
+<h2>What</h2>
+<p>ruby-plsql gem provides simple Ruby <span class="caps">API</span> for calling Oracle PL/<span class="caps">SQL</span> procedures.<br />
+ruby-plsql support both <span class="caps">MRI</span> and JRuby runtime environments.<br />
 This gem requires ruby-oci8 library (if <span class="caps">MRI</span> is used) or Oracle <span class="caps">JDBC</span> driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.</p>
-
-
-	<h2>Installing</h2>
-
-
-	<p><pre class='syntax'><span class="ident">sudo</span> <span class="ident">gem</span> <span class="ident">install</span> <span class="ident">ruby</span><span class="punct">-</span><span class="ident">plsql</span></pre></p>
-
-
-	<h2>The basics</h2>
-
-
-	<p>Read <a href="http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/">this blog post first.</a></p>
-
-
-	<p>Usage examples:</p>
-
-
-	<p><pre class='syntax'>
+<h2>Installing</h2>
+<p><pre class='syntax'><span class="ident">sudo</span> <span class="ident">gem</span> <span class="ident">install</span> <span class="ident">ruby</span><span class="punct">-</span><span class="ident">plsql</span></pre></p>
+<h2>The basics</h2>
+<p>Read <a href="http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/">this blog post first.</a></p>
+<p>Usage examples:</p>
+<p><pre class='syntax'>
 <span class="ident">require</span> <span class="punct">&quot;</span><span class="string">ruby_plsql</span><span class="punct">&quot;</span>
 
 <span class="ident">plsql</span><span class="punct">.</span><span class="ident">connection</span> <span class="punct">=</span> <span class="constant">OCI8</span><span class="punct">.</span><span class="ident">new</span><span class="punct">(&quot;</span><span class="string">hr</span><span class="punct">&quot;,&quot;</span><span class="string">hr</span><span class="punct">&quot;,&quot;</span><span class="string">xe</span><span class="punct">&quot;)</span>
@@ -76,32 +60,16 @@ This gem requires ruby-oci8 library (if <span class="caps">MRI</span> is used) o
 
 <span class="ident">plsql</span><span class="punct">.</span><span class="ident">logoff</span>
 </pre></p>
-
-
-	<p>See more examples in RSpec tests in spec directory of gem.</p>
-
-
-	<h2>Feedback</h2>
-
-
-	<p>Submit your feedback as comments <a href="http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/">here.</a></p>
-
-
-	<h2>How to submit patches</h2>
-
-
-	<p>Submit bugs and patches to <a href="http://rsim.lighthouseapp.com/projects/11470-ruby-plsql">Lighthouse</a></p>
-
-
-	<p>Source code is located at <a href="http://github.com/rsim/ruby-plsql">GitHub</a></p>
-
-
-	<h2>License</h2>
-
-
-	<p>This code is free to use under the terms of the <span class="caps">MIT</span> license.</p>
+<p>See more examples in RSpec tests in spec directory of gem.</p>
+<h2>Feedback</h2>
+<p>Submit your feedback as comments <a href="http://blog.rayapps.com/2008/03/15/ruby-plsql-gem-simple-ruby-api-for-plsql-procedures/">here.</a></p>
+<h2>How to submit patches</h2>
+<p>Submit bugs and patches to <a href="http://rsim.lighthouseapp.com/projects/11470-ruby-plsql">Lighthouse</a></p>
+<p>Source code is located at <a href="http://github.com/rsim/ruby-plsql">GitHub</a></p>
+<h2>License</h2>
+<p>This code is free to use under the terms of the <span class="caps">MIT</span> license.</p>
     <p class="coda">
-      <a href="http://blog.rayapps.com">Raimonds Simanovskis</a>, 26th June 2008<br>
+      <a href="http://blog.rayapps.com">Raimonds Simanovskis</a>, 27th November 2008<br>
       Theme extended from <a href="http://rb2js.rubyforge.org/">Paul Battley</a>
     </p>
 </div>
