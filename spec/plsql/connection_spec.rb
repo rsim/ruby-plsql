@@ -85,14 +85,6 @@ describe "Connection" do
         ora_number.should == OraNumber.new("12345678901234567890") if OCI8::VERSION >= '2.0.0'
       end
 
-      # ruby-oci8 2.0 returns DATE as Time or DateTime
-      if OCI8::VERSION < '2.0.0'
-        it "should translate Ruby OraDate value to DateTime when DateTime type specified" do
-          now = OraDate.now
-          @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
-        end
-      end
-
       it "should translate Ruby String value to OCI8::CLOB when OCI8::CLOB type specified" do
         large_text = "x" * 100_000
         ora_value = @conn.ruby_value_to_ora_value(large_text, OCI8::CLOB)

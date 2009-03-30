@@ -6,7 +6,6 @@ end
 unless defined?(JRUBY_VERSION)
   begin
     require "oci8"
-    require "oradate_patch"
   rescue LoadError
       puts <<-EOS
     To use ruby_plsql you must install ruby-oci8 library.

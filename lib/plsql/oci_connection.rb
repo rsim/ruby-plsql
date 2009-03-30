@@ -107,9 +107,25 @@ module PLSQL
     def ruby_value_to_ora_value(val, type)
       if type == OraNumber
         # pass parameters as OraNumber to avoid rounding errors
-        val.nil? || val.is_a?(Fixnum) ? val : OraNumber.new(val.to_s)
+        case val
+        when Bignum
+          OraNumber.new(val.to_s)
+        when BigDecimal
+          OraNumber.new(val.to_s('F'))
+        else
+          val
+        end
       elsif type == DateTime
-        val ? val.to_datetime : nil
+        case val
+        when Time
+          ::DateTime.civil(val.year, val.month, val.day, val.hour, val.min, val.sec, Rational(val.utc_offset, 86400))
+        when DateTime
+          val
+        when Date
+          ::DateTime.civil(val.year, val.month, val.day, 0, 0, 0, 0)
+        else
+          val
+        end
       elsif type == OCI8::CLOB
         # ruby-oci8 cannot create CLOB from ''
         val = nil if val == ''
@@ -155,9 +171,21 @@ module PLSQL
     def ora_date_to_ruby_date(val)
       case val
       when DateTime
-        Time.parse(val.strftime("%c")) rescue val
+        # similar implementation as in oracle_enhanced adapter
+        begin
+          Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.min, val.sec)
+        rescue
+          offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
+          DateTime.civil(val.year, val.month, val.day, val.hour, val.min, val.sec, offset)
+        end
       when OraDate
-        val.to_time rescue val.to_datetime
+        # similar implementation as in oracle_enhanced adapter
+        begin
+          Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.minute, val.second)
+        rescue
+          offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
+          DateTime.civil(val.year, val.month, val.day, val.hour, val.minute, val.second, offset)
+        end
       else
         val
       end

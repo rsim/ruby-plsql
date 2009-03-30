@@ -3,7 +3,7 @@
 require File.dirname(__FILE__) + '/../spec_helper'
 
 require "rubygems"
-require "activerecord"
+# require "activerecord"
 
 describe "Function with string parameters" do
   
@@ -114,12 +114,22 @@ describe "Function with date parameters" do
     EOS
   end
   
+  before(:each) do
+    plsql.default_timezone = :local
+  end
+
   after(:all) do
     plsql.logoff
   end
   
   it "should process Time parameters" do
     now = Time.local(2008,8,12,14,28,0)
+    plsql.test_date(now).should == now + 60*60*24
+  end
+
+  it "should process UTC Time parameters" do
+    plsql.default_timezone = :utc
+    now = Time.utc(2008,8,12,14,28,0)
     plsql.test_date(now).should == now + 60*60*24
   end
 
@@ -131,7 +141,7 @@ describe "Function with date parameters" do
   end
   
   it "should process old DateTime parameters" do
-    now = DateTime.new(1901,1,1,12,0,0)
+    now = DateTime.civil(1901,1,1,12,0,0,plsql.local_timezone_offset)
     result = plsql.test_date(now)
     unless defined?(JRUBY_VERSION)
       result.class.should == DateTime
@@ -153,8 +163,8 @@ describe "Function with date parameters" do
     now = Date.new(1901,1,1)
     result = plsql.test_date(now)
     unless defined?(JRUBY_VERSION)
-      # result.class.should == DateTime
-      result.should == now + 1
+      result.class.should == DateTime
+      result.strftime("%c").should == (now + 1).strftime("%c")
     else
       result.class.should == Time
       result.should == Time.parse((now + 1).strftime("%c"))

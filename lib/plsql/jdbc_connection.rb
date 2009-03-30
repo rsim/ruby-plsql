@@ -169,12 +169,8 @@ module PLSQL
         stmt.send("setString#{key && "AtName"}", key || i, value)
       when 'Java::OracleSql::CLOB'
         stmt.send("setClob#{key && "AtName"}", key || i, value)
-      when 'Date'
-        stmt.send("setDate#{key && "AtName"}", key || i, java.sql.Date.new(Time.parse(value.to_s).to_i*1000))
-      when 'Time'
-        stmt.send("setTime#{key && "AtName"}", key || i, java.sql.Time.new(value.to_i*1000))
-      when 'DateTime'
-        stmt.send("setTime#{key && "AtName"}", key || i, java.sql.Time.new(Time.parse(value.strftime("%c")).to_i*1000))
+      when 'Date', 'Time', 'DateTime'
+        stmt.send("setDATE#{key && "AtName"}", key || i, Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S")))
       when 'NilClass'
         stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type))
       end
@@ -194,9 +190,13 @@ module PLSQL
       when 'Java::OracleSql::CLOB'
         stmt.getClob(i)
       when 'Date','Time','DateTime'
-        ts = stmt.getTimestamp(i)
-        # ts && Time.parse(Time.at(ts.getTime/1000).iso8601)
-        ts && Time.local(1900+ts.year, ts.month+1, ts.date, ts.hours, ts.minutes, ts.seconds)
+        if dt = stmt.getDATE(i)
+          d = dt.dateValue
+          t = dt.timeValue
+          Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
+        else
+          nil
+        end
       end
     end
 
@@ -215,8 +215,18 @@ module PLSQL
         else
           BigDecimal(d.toString)
         end
-      when "DATE", "TIMESTAMP"
-        Time.at(rset.getTimestamp(i).getTime/1000)
+      when "DATE"
+        if dt = rset.getDATE(i)
+          d = dt.dateValue
+          t = dt.timeValue
+          Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
+        else
+          nil
+        end
+      when /^TIMESTAMP/
+        ts = rset.getTimestamp(i)
+        ts && Time.send(Base.default_timezone, ts.year + 1900, ts.month + 1, ts.date, ts.hours, ts.minutes, ts.seconds,
+          ts.nanos / 1000)
       else
         nil
       end
@@ -234,7 +244,6 @@ module PLSQL
         [Time, nil]
       when "TIMESTAMP"
         [Time, nil]
-      # CLOB
       # BLOB
       else
         [String, 32767]
@@ -245,7 +254,14 @@ module PLSQL
       if type == BigDecimal
         val.nil? || val.is_a?(Fixnum) || val.is_a?(BigDecimal) ? val : BigDecimal(val.to_s)
       elsif type == Time
-        date_to_time(val)
+        case val
+        when DateTime
+          Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.min, val.sec)
+        when Date
+          Time.send(plsql.default_timezone, val.year, val.month, val.day, 0, 0, 0)
+        else
+          val
+        end
       elsif type == Java::OracleSql::CLOB
         if val
           clob = Java::OracleSql::CLOB.createTemporary(raw_connection, false, Java::OracleSql::CLOB::DURATION_SESSION)
@@ -263,8 +279,6 @@ module PLSQL
       case val
       when Float, BigDecimal
         ora_number_to_ruby_number(val)
-      # when OraDate
-      #   ora_date_to_ruby_date(val)
       when Java::OracleSql::CLOB
         if val.isEmptyLob
           nil
@@ -284,21 +298,6 @@ module PLSQL
       num == (num_to_i = num.to_i) ? num_to_i : BigDecimal.new(num.to_s)
     end
     
-    # def ora_date_to_ruby_date(val)
-    #   val.to_time
-    # end
-
-    def date_to_time(val)
-      case val
-      when Time
-        val
-      when DateTime
-        Time.parse(val.strftime("%c"))
-      when Date
-        Time.parse(val.strftime("%c"))
-      end
-    end
-
   end
   
 end

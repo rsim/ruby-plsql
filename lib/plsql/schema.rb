@@ -63,6 +63,26 @@ module PLSQL
       connection.rollback
     end
     
+    # Set to :local or :utc
+    @@default_timezone = :local
+    def default_timezone
+      @@default_timezone
+    end
+    
+    def default_timezone=(value)
+      if [:local, :utc].include?(value)
+        @@default_timezone = value
+      else
+        raise ArgumentError, "default timezone should be :local or :utc"
+      end
+    end
+
+    # Same implementation as for ActiveRecord
+    # DateTimes aren't aware of DST rules, so use a consistent non-DST offset when creating a DateTime with an offset in the local zone
+    def local_timezone_offset
+      ::Time.local(2007).utc_offset.to_r / 86400
+    end
+    
     private
     
     def method_missing(method, *args)

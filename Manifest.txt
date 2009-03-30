@@ -1,7 +1,6 @@
 History.txt
 License.txt
 README.txt
-lib/oradate_patch.rb
 lib/plsql/connection.rb
 lib/plsql/jdbc_connection.rb
 lib/plsql/oci_connection.rb
