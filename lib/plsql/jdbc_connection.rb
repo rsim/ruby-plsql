@@ -211,9 +211,9 @@ module PLSQL
         if d.nil?
           nil
         elsif d.scale == 0
-          d.longValue
+          d.toBigInteger+0
         else
-          d.doubleValue
+          BigDecimal(d.toString)
         end
       when "DATE", "TIMESTAMP"
         Time.at(rset.getTimestamp(i).getTime/1000)
@@ -243,7 +243,7 @@ module PLSQL
 
     def ruby_value_to_ora_value(val, type)
       if type == BigDecimal
-        val.nil? || val.is_a?(Fixnum) ? val : val.to_f
+        val.nil? || val.is_a?(Fixnum) || val.is_a?(BigDecimal) ? val : BigDecimal(val.to_s)
       elsif type == Time
         date_to_time(val)
       elsif type == Java::OracleSql::CLOB
@@ -279,7 +279,9 @@ module PLSQL
     private
     
     def ora_number_to_ruby_number(num)
-      num.to_i == num.to_f ? num.to_i : num.to_f
+      # return BigDecimal instead of Float to avoid rounding errors
+      # num.to_i == num.to_f ? num.to_i : num.to_f
+      num == (num_to_i = num.to_i) ? num_to_i : BigDecimal.new(num.to_s)
     end
     
     # def ora_date_to_ruby_date(val)

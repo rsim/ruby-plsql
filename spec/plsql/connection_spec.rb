@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require File.dirname(__FILE__) + '/../spec_helper'
 
 describe "Connection" do
@@ -46,7 +48,8 @@ describe "Connection" do
     @conn.logoff.should be_true
   end
   
-  unless defined?(JRUBY_VERSION)
+  # Ruby 1.8 and 1.9
+  if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
     describe "OCI data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         @conn.plsql_to_ruby_data_type("VARCHAR2", 100).should == [String, 100]
@@ -74,13 +77,20 @@ describe "Connection" do
         @conn.ruby_value_to_ora_value(100, OraNumber).should eql(100)
       end
 
-      it "should translate Ruby Bignum value to Float when OraNumber type specified" do
-        @conn.ruby_value_to_ora_value(12345678901234567890, OraNumber).should be_eql(12345678901234567890.to_f)
+      it "should translate Ruby Bignum value to OraNumber when OraNumber type specified" do
+        ora_number = @conn.ruby_value_to_ora_value(12345678901234567890, OraNumber)
+        ora_number.class.should == OraNumber
+        ora_number.to_s.should == "12345678901234567890"
+        # OraNumber has more numeric comparison methods in ruby-oci8 2.0
+        ora_number.should == OraNumber.new("12345678901234567890") if OCI8::VERSION >= '2.0.0'
       end
 
-      it "should translate Ruby OraDate value to DateTime when DateTime type specified" do
-        now = OraDate.now
-        @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
+      # ruby-oci8 2.0 returns DATE as Time or DateTime
+      if OCI8::VERSION < '2.0.0'
+        it "should translate Ruby OraDate value to DateTime when DateTime type specified" do
+          now = OraDate.now
+          @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
+        end
       end
 
       it "should translate Ruby String value to OCI8::CLOB when OCI8::CLOB type specified" do
@@ -96,13 +106,16 @@ describe "Connection" do
         @conn.ora_value_to_ruby_value(OraNumber.new(100)).should eql(100)
       end
 
-      it "should translate Oracle OraNumber float value to Float" do
-        @conn.ora_value_to_ruby_value(OraNumber.new(100.11)).should eql(100.11)
+      it "should translate Oracle OraNumber float value to BigDecimal" do
+        @conn.ora_value_to_ruby_value(OraNumber.new(100.11)).should eql(BigDecimal("100.11"))
       end
 
-      it "should translate Oracle OraDate value to Time" do
-        now = OraDate.now
-        @conn.ora_value_to_ruby_value(now).should eql(now.to_time)
+      # ruby-oci8 2.0 returns DATE as Time or DateTime
+      if OCI8::VERSION < '2.0.0'
+        it "should translate Oracle OraDate value to Time" do
+          now = OraDate.now
+          @conn.ora_value_to_ruby_value(now).should eql(now.to_time)
+        end
       end
 
       it "should translate Oracle CLOB value to String" do
@@ -113,7 +126,7 @@ describe "Connection" do
       
     end
 
-  else
+  elsif RUBY_ENGINE == 'jruby'
     
     describe "JDBC data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
@@ -137,8 +150,10 @@ describe "Connection" do
         @conn.ruby_value_to_ora_value(100, BigDecimal).should eql(100)
       end
       
-      it "should translate Ruby Bignum value to Float when BigDecimal type specified" do
-        @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal).should be_eql(12345678901234567890.to_f)
+      it "should translate Ruby Bignum value to BigDecimal when BigDecimal type specified" do
+        big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
+        big_decimal.class.should == BigDecimal
+        big_decimal.should == BigDecimal("12345678901234567890")
       end
       
       # it "should translate Ruby OraDate value to DateTime when DateTime type specified" do
@@ -162,11 +177,11 @@ describe "Connection" do
       end
 
       it "should translate Oracle BigDecimal integer value to Fixnum" do
-        @conn.ora_value_to_ruby_value(BigDecimal.new("100")).should eql(100)
+        @conn.ora_value_to_ruby_value(BigDecimal("100")).should eql(100)
       end
       
-      it "should translate Oracle BigDecimal float value to Float" do
-        @conn.ora_value_to_ruby_value(BigDecimal.new("100.11")).should eql(100.11)
+      it "should translate Oracle BigDecimal float value to BigDecimal" do
+        @conn.ora_value_to_ruby_value(BigDecimal("100.11")).should eql(BigDecimal("100.11"))
       end
       
       # it "should translate Oracle OraDate value to Time" do

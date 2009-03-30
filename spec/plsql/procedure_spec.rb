@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require File.dirname(__FILE__) + '/../spec_helper'
 
 require "rubygems"
@@ -83,12 +85,12 @@ describe "Function with numeric parameters" do
     plsql.test_sum(123123123123,456456456456).should == 579579579579
   end
 
-  it "should process float parameters" do
-    plsql.test_sum(123.123,456.456).should == 579.579
+  it "should process float parameters and return BigDecimal" do
+    plsql.test_sum(123.123,456.456).should == BigDecimal("579.579")
   end
 
-  it "should process BigDecimal parameters" do
-    plsql.test_sum(:p_num1 => BigDecimal.new("123.123"), :p_num2 => BigDecimal.new("456.456")).should == 579.579
+  it "should process BigDecimal parameters and return BigDecimal" do
+    plsql.test_sum(:p_num1 => BigDecimal("123.123"), :p_num2 => BigDecimal("456.456")).should == BigDecimal("579.579")
   end
 
   it "should process nil parameter as NULL" do

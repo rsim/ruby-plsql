@@ -106,7 +106,8 @@ module PLSQL
 
     def ruby_value_to_ora_value(val, type)
       if type == OraNumber
-        val.nil? || val.is_a?(Fixnum) ? val : val.to_f
+        # pass parameters as OraNumber to avoid rounding errors
+        val.nil? || val.is_a?(Fixnum) ? val : OraNumber.new(val.to_s)
       elsif type == DateTime
         val ? val.to_datetime : nil
       elsif type == OCI8::CLOB
@@ -146,7 +147,9 @@ module PLSQL
     end
     
     def ora_number_to_ruby_number(num)
-      num.to_i == num.to_f ? num.to_i : num.to_f
+      # return BigDecimal instead of Float to avoid rounding errors
+      # num.to_i == num.to_f ? num.to_i : num.to_f
+      num == (num_to_i = num.to_i) ? num_to_i : BigDecimal.new(num.to_s)
     end
     
     def ora_date_to_ruby_date(val)
