@@ -142,8 +142,12 @@ module PLSQL
       when DateTime, OraDate
         ora_date_to_ruby_date(val)
       when OCI8::CLOB
-        val.rewind
-        val.read
+        if val.available?
+          val.rewind
+          val.read
+        else
+          nil
+        end
       else
         val
       end
