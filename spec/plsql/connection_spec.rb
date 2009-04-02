@@ -16,7 +16,7 @@ describe "Connection" do
   else
 
     before(:all) do
-      @raw_conn = DriverManager.getConnection("jdbc:oracle:thin:@ubuntu810:1521:XE","hr","hr")
+      @raw_conn = java.sql.DriverManager.getConnection("jdbc:oracle:thin:@ubuntu810:1521:XE","hr","hr")
     end
     after(:all) do
       @raw_conn.close rescue nil

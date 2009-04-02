@@ -87,3 +87,26 @@ describe "Schema commit and rollback" do
     plsql.rollback
   end
 end
+
+describe "ActiveRecord connection" do
+  before(:all) do
+    ActiveRecord::Base.establish_connection(CONNECTION_PARAMS)
+  end
+  
+  before(:each) do
+    plsql.activerecord_class = ActiveRecord::Base
+  end
+  
+  it "should connect to test database" do
+    unless defined?(JRUBY_VERSION)
+      plsql.connection.is_a?(PLSQL::OCIConnection).should be_true
+    else
+      plsql.connection.is_a?(PLSQL::JDBCConnection).should be_true
+    end
+  end
+  
+  it "should return schema name" do
+    plsql.schema_name.should == 'HR'
+  end
+  
+end

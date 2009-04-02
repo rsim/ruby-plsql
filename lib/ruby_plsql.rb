@@ -24,12 +24,12 @@ else
     else
       require ojdbc_jar
     end
-    import java.sql.Statement
-    import java.sql.Connection
-    import java.sql.SQLException
-    import java.sql.Types
-    import java.sql.DriverManager
-    DriverManager.registerDriver Java::oracle.jdbc.driver.OracleDriver.new
+    # import java.sql.Statement
+    # import java.sql.Connection
+    # import java.sql.SQLException
+    # import java.sql.Types
+    # import java.sql.DriverManager
+    java.sql.DriverManager.registerDriver Java::oracle.jdbc.driver.OracleDriver.new
   rescue LoadError
       puts <<-EOS
     To use ruby_plsql you must have Oracle JDBC driver installed.

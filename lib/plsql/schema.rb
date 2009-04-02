@@ -26,15 +26,12 @@ module PLSQL
     
     def connection=(raw_conn)
       @connection = raw_conn ? Connection.create(raw_conn) : nil
-      if @connection
-        @procedures = {}
-        @packages = {}
-        @schemas = {}
-      else
-        @procedures = nil
-        @packages = nil
-        @schemas = nil
-      end
+      reset_instance_variables
+    end
+
+    def activerecord_class=(ar_class)
+      @connection = ar_class ? Connection.create(nil, ar_class) : nil
+      reset_instance_variables
     end
     
     def logoff
@@ -84,6 +81,18 @@ module PLSQL
     end
     
     private
+
+    def reset_instance_variables
+      if @connection
+        @procedures = {}
+        @packages = {}
+        @schemas = {}
+      else
+        @procedures = nil
+        @packages = nil
+        @schemas = nil
+      end
+    end
     
     def method_missing(method, *args)
       raise ArgumentError, "No PL/SQL connection" unless connection
