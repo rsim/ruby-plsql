@@ -487,3 +487,32 @@ describe "Procedrue with CLOB parameter and return value" do
     plsql.test_clob_proc(large_text)[:p_return].should == large_text
   end
 end
+
+describe "Procedrue with BLOB parameter and return value" do
+  
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE PROCEDURE test_blob_proc
+        ( p_blob BLOB,
+          p_return OUT BLOB)
+      IS
+      BEGIN
+        p_return := p_blob;
+      END test_blob_proc;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+  
+  it "should find existing procedure" do
+    PLSQL::Procedure.find(plsql, :test_blob_proc).should_not be_nil
+  end
+
+  it "should execute function and return correct value" do
+    large_binary = '\000\001\002\003\004\005\006\007\010\011' * 10_000
+    plsql.test_blob_proc(large_binary)[:p_return].should == large_binary
+  end
+end

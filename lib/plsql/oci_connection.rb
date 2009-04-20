@@ -91,6 +91,8 @@ module PLSQL
         [String, data_length || 32767]
       when "CLOB"
         [OCI8::CLOB, nil]
+      when "BLOB"
+        [OCI8::BLOB, nil]
       when "NUMBER"
         [OraNumber, nil]
       when "DATE"
@@ -130,6 +132,10 @@ module PLSQL
         # ruby-oci8 cannot create CLOB from ''
         val = nil if val == ''
         OCI8::CLOB.new(raw_oci_connection, val)
+      elsif type == OCI8::BLOB
+        # ruby-oci8 cannot create BLOB from ''
+        val = nil if val == ''
+        OCI8::BLOB.new(raw_oci_connection, val)
       else
         val
       end
@@ -141,7 +147,7 @@ module PLSQL
         ora_number_to_ruby_number(val)
       when DateTime, OraDate
         ora_date_to_ruby_date(val)
-      when OCI8::CLOB
+      when OCI8::LOB
         if val.available?
           val.rewind
           val.read

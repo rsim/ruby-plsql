@@ -145,6 +145,8 @@ module PLSQL
         java.sql.Types::VARCHAR
       when 'Java::OracleSql::CLOB'
         Java::oracle.jdbc.OracleTypes::CLOB
+      when 'Java::OracleSql::BLOB'
+        Java::oracle.jdbc.OracleTypes::BLOB
       when 'Date'
         java.sql.Types::DATE
       when 'Time'
@@ -169,6 +171,8 @@ module PLSQL
         stmt.send("setString#{key && "AtName"}", key || i, value)
       when 'Java::OracleSql::CLOB'
         stmt.send("setClob#{key && "AtName"}", key || i, value)
+      when 'Java::OracleSql::BLOB'
+        stmt.send("setBlob#{key && "AtName"}", key || i, value)
       when 'Date', 'Time', 'DateTime'
         stmt.send("setDATE#{key && "AtName"}", key || i, Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S")))
       when 'NilClass'
@@ -189,6 +193,8 @@ module PLSQL
         stmt.getString(i)
       when 'Java::OracleSql::CLOB'
         stmt.getClob(i)
+      when 'Java::OracleSql::BLOB'
+        stmt.getBlob(i)
       when 'Date','Time','DateTime'
         if dt = stmt.getDATE(i)
           d = dt.dateValue
@@ -206,6 +212,8 @@ module PLSQL
         rset.getString(i)
       when "CLOB"
         ora_value_to_ruby_value(rset.getClob(i))
+      when "BLOB"
+        ora_value_to_ruby_value(rset.getBlob(i))
       when "NUMBER"
         d = rset.getBigDecimal(i)
         if d.nil?
@@ -238,13 +246,14 @@ module PLSQL
         [String, data_length || 32767]
       when "CLOB"
         [Java::OracleSql::CLOB, nil]
+      when "BLOB"
+        [Java::OracleSql::BLOB, nil]
       when "NUMBER"
         [BigDecimal, nil]
       when "DATE"
         [Time, nil]
       when "TIMESTAMP"
         [Time, nil]
-      # BLOB
       else
         [String, 32767]
       end
@@ -270,6 +279,14 @@ module PLSQL
         else
           Java::OracleSql::CLOB.getEmptyCLOB
         end
+      elsif type == Java::OracleSql::BLOB
+        if val
+          blob = Java::OracleSql::BLOB.createTemporary(raw_connection, false, Java::OracleSql::BLOB::DURATION_SESSION)
+          blob.setBytes(1, val.to_java_bytes)
+          blob
+        else
+          Java::OracleSql::BLOB.getEmptyBLOB
+        end
       else
         val
       end
@@ -284,6 +301,12 @@ module PLSQL
           nil
         else
           val.getSubString(1, val.length)
+        end
+      when Java::OracleSql::BLOB
+        if val.isEmptyLob
+          nil
+        else
+          String.from_java_bytes(val.getBytes(1, val.length))
         end
       else
         val
