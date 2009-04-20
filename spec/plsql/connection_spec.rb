@@ -4,24 +4,16 @@ require File.dirname(__FILE__) + '/../spec_helper'
 
 describe "Connection" do
 
-  unless defined?(JRUBY_VERSION)
+  before(:all) do
+    @raw_conn = get_connection
+  end
 
-    before(:all) do
-      @raw_conn = get_connection
-    end
-    after(:all) do
+  after(:all) do
+    unless defined?(JRUBY_VERSION)
       @raw_conn.logoff rescue nil
-    end
-
-  else
-
-    before(:all) do
-      @raw_conn = java.sql.DriverManager.getConnection("jdbc:oracle:thin:@ubuntu810:1521:XE","hr","hr")
-    end
-    after(:all) do
+    else
       @raw_conn.close rescue nil
     end
-
   end
 
   before(:each) do
