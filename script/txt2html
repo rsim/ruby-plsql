@@ -1,20 +1,17 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-begin
-  require 'newgem'
-rescue LoadError
-  puts "\n\nGenerating the website requires the newgem RubyGem"
-  puts "Install: gem install newgem\n\n"
-  exit(1)
-end
+load File.dirname(__FILE__) + "/../Rakefile"
+require 'rubyforge'
 require 'redcloth'
 require 'syntax/convertors/html'
 require 'erb'
-require File.dirname(__FILE__) + '/../lib/ruby_plsql/version.rb'
 
-version  = RubyPlsql::VERSION::STRING
-download = 'http://rubyforge.org/projects/ruby-plsql'
+download = "http://rubyforge.org/projects/#{$hoe.rubyforge_name}"
+version  = $hoe.version
+
+def rubyforge_project_id
+  RubyForge.new.configure.autoconfig["group_ids"][$hoe.rubyforge_name]
+end
 
 class Fixnum
   def ordinal
@@ -42,10 +39,9 @@ end
 
 if ARGV.length >= 1
   src, template = ARGV
-  template ||= File.join(File.dirname(__FILE__), '/../website/template.rhtml')
-  
+  template ||= File.join(File.dirname(__FILE__), '/../website/template.html.erb')
 else
-  puts("Usage: #{File.split($0).last} source.txt [template.rhtml] > output.html")
+  puts("Usage: #{File.split($0).last} source.txt [template.html.erb] > output.html")
   exit!
 end
 
@@ -55,7 +51,8 @@ title = nil
 body = nil
 File.open(src) do |fsrc|
   title_text = fsrc.readline
-  body_text = fsrc.read
+  body_text_template = fsrc.read
+  body_text = ERB.new(body_text_template).result(binding)
   syntax_items = []
   body_text.gsub!(%r!<(pre|code)[^>]*?syntax=['"]([^'"]+)[^>]*>(.*?)</\1>!m){
     ident = syntax_items.length

@@ -1,7 +1,6 @@
+h1. ruby-plsql
+
 h1. Ruby API for PL/SQL
-
-h1. &#x2192; 'ruby-plsql'
-
 
 h2. What
 
