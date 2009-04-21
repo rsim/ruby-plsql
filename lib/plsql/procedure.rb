@@ -1,21 +1,37 @@
 module PLSQL
 
   module ProcedureClassMethods
-    def find(schema, procedure, package = nil)
-      if package.nil? && schema.select_first("
+    def find(schema, procedure, package = nil, override_schema_name = nil)
+      if package.nil?
+        if schema.select_first("
             SELECT object_name FROM all_objects
             WHERE owner = :owner
               AND object_name = :object_name
-              AND object_type IN ('PROCEDURE','FUNCTION')
-          ", schema.schema_name, procedure.to_s.upcase)
-        new(schema, procedure)
+              AND object_type IN ('PROCEDURE','FUNCTION')",
+            schema.schema_name, procedure.to_s.upcase)
+          new(schema, procedure)
+        # search for synonym
+        elsif (row = schema.select_first("
+            SELECT o.owner, o.object_name
+            FROM all_synonyms s, all_objects o
+            WHERE s.owner IN (:owner, 'PUBLIC')
+              AND s.synonym_name = :synonym_name
+              AND o.owner = s.table_owner
+              AND o.object_name = s.table_name
+              AND o.object_type IN ('PROCEDURE','FUNCTION')
+              ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
+            schema.schema_name, procedure.to_s.upcase))
+          new(schema, row[1], nil, row[0])
+        else
+          nil
+        end
       elsif package && schema.select_first("
             SELECT object_name FROM all_procedures
             WHERE owner = :owner
               AND object_name = :object_name
               AND procedure_name = :procedure_name
-          ", schema.schema_name, package, procedure.to_s.upcase)
-        new(schema, procedure, package)
+          ", override_schema_name || schema.schema_name, package, procedure.to_s.upcase)
+        new(schema, procedure, package, override_schema_name)
       else
         nil
       end
@@ -25,8 +41,9 @@ module PLSQL
   class Procedure
     extend ProcedureClassMethods
 
-    def initialize(schema, procedure, package = nil)
+    def initialize(schema, procedure, package = nil, override_schema_name = nil)
       @schema = schema
+      @schema_name = override_schema_name || schema.schema_name
       @procedure = procedure.to_s.upcase
       @package = package
       @arguments = {}
@@ -42,7 +59,7 @@ module PLSQL
         WHERE o.owner = :owner
         AND o.object_name = :object_name
         AND o.object_type <> 'PACKAGE BODY'
-        ", @schema.schema_name, @package ? @package : @procedure
+        ", @schema_name, @package ? @package : @procedure
       )[0] rescue nil
       num_rows = @schema.connection.select_all("
         SELECT a.argument_name, a.position, a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.overload
@@ -51,7 +68,7 @@ module PLSQL
         AND a.owner = :owner
         AND a.object_name = :procedure_name
         AND NVL(a.package_name,'nil') = :package
-        ", object_id, @schema.schema_name, @procedure, @package ? @package : 'nil'
+        ", object_id, @schema_name, @procedure, @package ? @package : 'nil'
       ) do |r|
 
         argument_name, position, data_type, in_out, data_length, data_precision, data_scale, overload = r
@@ -122,7 +139,7 @@ module PLSQL
 
       sql = "BEGIN\n"
       sql << ":return := " if @return[overload]
-      sql << "#{@schema.schema_name}." if @schema
+      sql << "#{@schema_name}." if @schema_name
       sql << "#{@package}." if @package
       sql << "#{@procedure}("
 

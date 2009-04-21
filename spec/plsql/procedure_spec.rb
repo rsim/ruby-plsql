@@ -516,3 +516,72 @@ describe "Procedrue with BLOB parameter and return value" do
     plsql.test_blob_proc(large_binary)[:p_return].should == large_binary
   end
 end
+
+describe "Synonym to function" do
+  
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE FUNCTION hr.test_uppercase
+        ( p_string VARCHAR2 )
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN UPPER(p_string);
+      END test_uppercase;
+    EOS
+    plsql.connection.exec "CREATE SYNONYM test_synonym FOR hr.test_uppercase"
+  end
+  
+  after(:all) do
+    plsql.connection.exec "DROP SYNONYM test_synonym" rescue nil
+    plsql.logoff
+  end
+  
+  it "should find synonym to function" do
+    PLSQL::Procedure.find(plsql, :test_synonym).should_not be_nil
+  end
+
+  it "should execute function using synonym and return correct value" do
+    plsql.test_synonym('xxx').should == 'XXX'
+  end
+
+end
+
+describe "Public synonym to function" do
+  
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-EOS
+      CREATE OR REPLACE FUNCTION hr.test_ora_login_user
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN 'XXX';
+      END test_ora_login_user;
+    EOS
+  end
+  
+  after(:all) do
+    plsql.logoff
+  end
+  
+  it "should find public synonym to function" do
+    PLSQL::Procedure.find(plsql, :ora_login_user).should_not be_nil
+  end
+
+  it "should execute function using public synonym and return correct value" do
+    plsql.ora_login_user.should == 'HR'
+  end
+
+  it "should find private synonym before public synonym" do
+    # should reconnect to force clearing of procedure cache
+    plsql.connection = get_connection
+    plsql.connection.exec "CREATE SYNONYM ora_login_user FOR hr.test_ora_login_user"
+    plsql.ora_login_user.should == 'XXX'
+    plsql.connection.exec "DROP SYNONYM ora_login_user"
+    plsql.connection = get_connection
+    plsql.ora_login_user.should == 'HR'
+  end
+
+end
