@@ -10,18 +10,17 @@ module PLSQL
     end
     
     def self.create(raw_conn, ar_class = nil)
+      if ar_class && !(defined?(::ActiveRecord) && [ar_class, ar_class.superclass].include?(::ActiveRecord::Base))
+        raise ArgumentError, "Wrong ActiveRecord class"
+      end
       # MRI 1.8.6 or YARV 1.9.1
-      if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") &&
-            (defined?(OCI8) && raw_conn.is_a?(OCI8) ||
-            defined?(::ActiveRecord) && [ar_class, ar_class.superclass].include?(::ActiveRecord::Base))
+      if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && defined?(OCI8)
         OCIConnection.new(:oci, raw_conn, ar_class)
       # JRuby
-      elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby") &&
-            (raw_conn.respond_to?(:java_class) && raw_conn.java_class.to_s =~ /jdbc/ ||
-            defined?(::ActiveRecord) && [ar_class, ar_class.superclass].include?(::ActiveRecord::Base))
+      elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby")
         JDBCConnection.new(:jdbc, raw_conn, ar_class)
       else
-        raise ArgumentError, "Unknown raw driver or ActiveRecord class"
+        raise ArgumentError, "Unknown raw driver"
       end
     end
     
