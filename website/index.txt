@@ -5,8 +5,8 @@ h1. Ruby API for PL/SQL
 h2. What
 
 ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.
-ruby-plsql support both MRI and JRuby runtime environments.
-This gem requires ruby-oci8 library (if MRI is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
+ruby-plsql support both Ruby 1.8 MRI, Ruby 1.9.1 YARV and JRuby runtime environments.
+This gem requires ruby-oci8 library version 1.x (if MRI is used) or 2.x (if Ruby 1.9.1 is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
 
 h2. Installing
 

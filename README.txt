@@ -5,8 +5,8 @@
 == DESCRIPTION:
 
 ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.
-ruby-plsql support both MRI and JRuby runtime environments.
-This gem requires ruby-oci8 library (if MRI is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
+ruby-plsql support both Ruby 1.8 MRI, Ruby 1.9.1 YARV and JRuby runtime environments.
+This gem requires ruby-oci8 library version 1.x (if MRI is used) or 2.x (if Ruby 1.9.1 is used) or Oracle JDBC driver (ojdbc14.jar) (if JRuby is used) for connection to Oracle database.
 
 See http://blog.rayapps.com for more information.
 
@@ -14,7 +14,7 @@ Look ar RSpec tests under spec directory for usage examples.
 
 == FEATURES/PROBLEMS:
 
-* Currently just NUMBER, VARCHAR2, DATE, TIMESTAMP, CLOB argument types are supported for PL/SQL procedures
+* Currently just NUMBER, VARCHAR2, DATE, TIMESTAMP, CLOB, BLOB argument types are supported for PL/SQL procedures
 
 == SYNOPSIS:
 
@@ -34,10 +34,19 @@ plsql.test_package.test_uppercase('xxx') # => 'XXX'
 
 plsql.logoff
 
+
+If using with Rails then include in initializer file:
+
+plsql.activerecord_class = ActiveRecord::Base
+
+and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
+
 == REQUIREMENTS:
 
-MRI
+Ruby 1.8 MRI
 * Requires ruby-oci8 library to connect to Oracle (please use version 1.0.3 or later)
+Ruby 1.9.1
+* Requires ruby-oci8 library to connect to Oracle (please use version 2.0 or later)
 JRuby
 * Requires Oracle JDBC driver (ojdbc14.jar should be somewhere in PATH) to connect to Oracle
 
@@ -49,7 +58,7 @@ JRuby
 
 (The MIT License)
 
-Copyright (c) 2008 Raimonds Simanovskis
+Copyright (c) 2009 Raimonds Simanovskis
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
