@@ -1,6 +1,7 @@
 module PLSQL
   class Connection
     attr_reader :raw_driver
+    attr_reader :activerecord_class
 
     def initialize(raw_drv, raw_conn, ar_class = nil)
       @raw_driver = raw_drv

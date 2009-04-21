@@ -61,9 +61,13 @@ module PLSQL
     end
     
     # Set to :local or :utc
-    @@default_timezone = :local
+    @@default_timezone = nil
     def default_timezone
-      @@default_timezone
+      @@default_timezone ||
+        # Use ActiveRecord class default_timezone when ActiveRecord connection is used
+        (@connection && (ar_class = @connection.activerecord_class) && ar_class.default_timezone) ||
+        # default to local timezone
+        :local
     end
     
     def default_timezone=(value)
@@ -92,6 +96,7 @@ module PLSQL
         @packages = nil
         @schemas = nil
       end
+      @@default_timezone = nil
     end
     
     def method_missing(method, *args)

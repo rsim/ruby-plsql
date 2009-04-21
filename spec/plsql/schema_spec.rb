@@ -109,4 +109,9 @@ describe "ActiveRecord connection" do
     plsql.schema_name.should == 'HR'
   end
   
+  it "should user ActiveRecord::Base.default_timezone as default" do
+    ActiveRecord::Base.default_timezone = :utc
+    plsql.default_timezone.should == :utc
+  end
+  
 end
