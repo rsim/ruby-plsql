@@ -24,9 +24,18 @@ module PLSQL
       @connection
     end
     
-    def connection=(raw_conn)
+    def raw_connection=(raw_conn)
       @connection = raw_conn ? Connection.create(raw_conn) : nil
       reset_instance_variables
+    end
+
+    def connection=(conn)
+      if conn.is_a?(::PLSQL::Connection)
+        @connection = conn
+        reset_instance_variables
+      else
+        self.raw_connection = conn
+      end
     end
 
     def activerecord_class=(ar_class)
@@ -122,7 +131,7 @@ module PLSQL
     def find_other_schema(name)
       return nil unless @first && connection
       if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
-        Schema.new(connection.raw_connection, name, false)
+        Schema.new(connection, name, false)
       else
         nil
       end

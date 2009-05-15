@@ -114,4 +114,7 @@ describe "ActiveRecord connection" do
     plsql.default_timezone.should == :utc
   end
   
+  it "should have the same connection as default schema" do
+    plsql.hr.connection.should == plsql.connection
+  end
 end
