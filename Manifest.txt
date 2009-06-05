@@ -1,6 +1,6 @@
 History.txt
 License.txt
-README.txt
+README.rdoc
 lib/plsql/connection.rb
 lib/plsql/jdbc_connection.rb
 lib/plsql/oci_connection.rb

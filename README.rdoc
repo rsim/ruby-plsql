@@ -54,6 +54,11 @@ JRuby
 
 * sudo gem install ruby-plsql
 
+== CONTRIBUTORS:
+
+* Raimonds Simanovskis
+* Edgars Beigarts
+
 == LICENSE:
 
 (The MIT License)

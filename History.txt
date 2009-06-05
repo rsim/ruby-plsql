@@ -1,3 +1,8 @@
+== 0.3.1 2009-06-05
+
+* Bug fixes
+  * fixed usage of plsql.activerecord_class = ... (fixes OCIInvalidHandle exception in development mode with ActiveRecord 2.2+)
+
 == 0.3.0 2009-04-21
 
 * New features
