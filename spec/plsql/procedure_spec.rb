@@ -143,13 +143,8 @@ describe "Function with date parameters" do
   it "should process old DateTime parameters" do
     now = DateTime.civil(1901,1,1,12,0,0,plsql.local_timezone_offset)
     result = plsql.test_date(now)
-    unless defined?(JRUBY_VERSION)
-      result.class.should == DateTime
-      result.should == now + 1
-    else
-      result.class.should == Time
-      result.should == Time.parse((now + 1).strftime("%c"))
-    end
+    result.class.should == Time
+    result.should == Time.parse((now + 1).strftime("%c"))
   end
 
   it "should process Date parameters" do
@@ -162,13 +157,8 @@ describe "Function with date parameters" do
   it "should process old Date parameters" do
     now = Date.new(1901,1,1)
     result = plsql.test_date(now)
-    unless defined?(JRUBY_VERSION)
-      result.class.should == DateTime
-      result.strftime("%c").should == (now + 1).strftime("%c")
-    else
-      result.class.should == Time
-      result.should == Time.parse((now + 1).strftime("%c"))
-    end
+    result.class.should == Time
+    result.should == Time.parse((now + 1).strftime("%c"))
   end
   
   it "should process nil date parameter as NULL" do
