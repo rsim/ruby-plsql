@@ -1,24 +1,26 @@
-%w[rubygems rake rake/clean fileutils newgem rubigen].each { |f| require f }
+require 'rubygems'
+gem 'hoe', '>= 2.3.0'
+require 'hoe'
+require 'fileutils'
+
+Hoe.plugin :newgem
+Hoe.plugin :website
+
 require File.dirname(__FILE__) + '/lib/ruby_plsql/version'
+
+# do not generate dot graphics for RDoc
+ENV['NODOT'] = 'true'
 
 # Generate all the Rake tasks
 # Run 'rake -T' to see list of generated tasks (from gem root directory)
-$hoe = Hoe.new('ruby-plsql', RubyPlsql::VERSION) do |p|
-  p.developer('Raimonds Simanovskis', 'raimonds.simanovskis@gmail.com')
-  p.changes              = p.paragraphs_of("History.txt", 0..1).join("\n\n")
-  p.rubyforge_name       = p.name # TODO this is default value
-  p.summary              = "ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures."
-  # p.extra_deps         = [
-  #   ['activesupport','>= 2.0.2'],
-  # ]
-  p.extra_dev_deps = [
-    ['newgem', ">= #{::Newgem::VERSION}"]
-  ]
-  
-  p.clean_globs |= %w[**/.DS_Store tmp *.log]
-  path = (p.rubyforge_name == p.name) ? p.rubyforge_name : "\#{p.rubyforge_name}/\#{p.name}"
-  p.remote_rdoc_dir = File.join(path.gsub(/^#{p.rubyforge_name}\/?/,''), 'rdoc')
-  p.rsync_args = '-av --delete --ignore-errors'
+$hoe = Hoe.spec('ruby-plsql') do
+  developer 'Raimonds Simanovskis', 'raimonds.simanovskis@gmail.com'
+  self.version           = RubyPlsql::VERSION
+  self.changes           = paragraphs_of("History.txt", 0..1).join("\n\n")
+  self.rubyforge_name    = name
+  self.summary           = "ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures."
+  self.extra_rdoc_files  = ['README.rdoc']
+  self.clean_globs |= %w[**/.DS_Store tmp *.log]
 end
 
 require 'newgem/tasks' # load /tasks/*.rake
