@@ -1,3 +1,13 @@
+begin
+  require "oci8"
+rescue LoadError
+  # OCI8 driver is unavailable.
+  error_message = "ERROR: ruby-plsql could not load ruby-oci8 library. "+
+                  "Please install ruby-oci8 gem."
+  STDERR.puts error_message
+  raise LoadError
+end
+
 module PLSQL
   class OCIConnection < Connection
     

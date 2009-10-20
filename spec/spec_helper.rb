@@ -6,7 +6,9 @@ gem "activerecord"
 require "activerecord"
 gem "activerecord-oracle_enhanced-adapter"
 
-require File.expand_path(File.dirname(__FILE__) + "/../lib/ruby_plsql")
+$:.unshift(File.dirname(__FILE__) + '/../lib')
+
+require "ruby_plsql"
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'

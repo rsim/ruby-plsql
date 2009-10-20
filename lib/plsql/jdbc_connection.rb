@@ -1,3 +1,36 @@
+begin
+  require "java"
+  require "jruby"
+
+  # ojdbc14.jar file should be in JRUBY_HOME/lib or should be in ENV['PATH'] or load path
+
+  ojdbc_jar = "ojdbc14.jar"
+
+  unless ENV_JAVA['java.class.path'] =~ Regexp.new(ojdbc_jar)
+    # Adds JRuby classloader to current thread classloader - as a result ojdbc14.jar should not be in $JRUBY_HOME/lib
+    # not necessary anymore for JRuby 1.3
+    # java.lang.Thread.currentThread.setContextClassLoader(JRuby.runtime.jruby_class_loader)
+
+    if ojdbc_jar_path = ENV["PATH"].split(/[:;]/).concat($LOAD_PATH).find{|d| File.exists?(File.join(d,ojdbc_jar))}
+      require File.join(ojdbc_jar_path,ojdbc_jar)
+    end
+  end
+
+  java.sql.DriverManager.registerDriver Java::oracle.jdbc.driver.OracleDriver.new
+
+  # set tns_admin property from TNS_ADMIN environment variable
+  if !java.lang.System.get_property("oracle.net.tns_admin") && ENV["TNS_ADMIN"]
+    java.lang.System.set_property("oracle.net.tns_admin", ENV["TNS_ADMIN"])
+  end
+
+rescue LoadError, NameError
+  # JDBC driver is unavailable.
+  error_message = "ERROR: ruby-plsql could not load Oracle JDBC driver. "+
+                  "Please install ojdbc14.jar library."
+  STDERR.puts error_message
+  raise LoadError
+end
+
 module PLSQL
   class JDBCConnection < Connection
     def logoff

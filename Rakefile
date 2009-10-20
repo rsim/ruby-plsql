@@ -6,7 +6,7 @@ require 'fileutils'
 Hoe.plugin :newgem
 Hoe.plugin :website
 
-require File.dirname(__FILE__) + '/lib/ruby_plsql/version'
+require File.dirname(__FILE__) + '/lib/plsql/version'
 
 # do not generate dot graphics for RDoc
 ENV['NODOT'] = 'true'
@@ -15,7 +15,7 @@ ENV['NODOT'] = 'true'
 # Run 'rake -T' to see list of generated tasks (from gem root directory)
 $hoe = Hoe.spec('ruby-plsql') do
   developer 'Raimonds Simanovskis', 'raimonds.simanovskis@gmail.com'
-  self.version           = RubyPlsql::VERSION
+  self.version           = PLSQL::VERSION
   self.changes           = paragraphs_of("History.txt", 0..1).join("\n\n")
   self.rubyforge_name    = name
   self.summary           = "ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures."
