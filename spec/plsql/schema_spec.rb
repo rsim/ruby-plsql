@@ -34,7 +34,14 @@ describe "Schema connection" do
   
   it "should return schema name" do
     plsql.connection = @conn
-    plsql.schema_name.should == 'HR'
+    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
+  end
+
+  it "should return new schema name after reconnection" do
+    plsql.connection = @conn
+    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
+    plsql.connection = get_connection(1)
+    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[1][0].upcase
   end
 
   it "should return nil schema name if not connected" do

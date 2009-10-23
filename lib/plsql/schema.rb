@@ -105,6 +105,7 @@ module PLSQL
         @packages = nil
         @schemas = nil
       end
+      @schema_name = nil
       @@default_timezone = nil
     end
     
