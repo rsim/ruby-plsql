@@ -7,8 +7,9 @@ lib/plsql/oci_connection.rb
 lib/plsql/package.rb
 lib/plsql/procedure.rb
 lib/plsql/schema.rb
+lib/plsql/version.rb
+lib/ruby-plsql.rb
 lib/ruby_plsql.rb
-lib/ruby_plsql/version.rb
 spec/plsql/connection_spec.rb
 spec/plsql/package_spec.rb
 spec/plsql/procedure_spec.rb
