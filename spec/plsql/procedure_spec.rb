@@ -528,6 +528,12 @@ describe "Function with record parameter" do
         RETURN p_employee.first_name || ' ' || p_employee.last_name;
       END test_full_name;
     SQL
+    @p_employee = {
+      :employee_id => 1,
+      :first_name => 'First',
+      :last_name => 'Last',
+      :hire_date => Date.new(2000,01,31)
+    }
   end
 
   after(:all) do
@@ -541,13 +547,11 @@ describe "Function with record parameter" do
   end
 
   it "should execute function with named parameter and return correct value" do
-    p_employee = {
-      :employee_id => 1,
-      :first_name => 'First',
-      :last_name => 'Last',
-      :hire_date => Date.new(2000,01,31)
-    }
-    plsql.test_full_name(:p_employee => p_employee).should == 'First Last'
+    plsql.test_full_name(:p_employee => @p_employee).should == 'First Last'
+  end
+
+  it "should execute function with sequential parameter and return correct value" do
+    plsql.test_full_name(@p_employee).should == 'First Last'
   end
 
 end
