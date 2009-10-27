@@ -287,10 +287,10 @@ describe "Connection" do
         END;
       EOS
       cursor = @conn.parse(sql)
-      cursor.bind_param(":result",nil,Fixnum,nil,'OUT')
-      cursor.bind_param(":p_number",100,Fixnum,3)
-      cursor.bind_param(":p_varchar","abc",String,100,'IN/OUT')
-      cursor.bind_param(":p_date",@now,Time,100,'IN/OUT')
+      cursor.bind_param(":result", nil, :data_type => 'NUMBER', :in_out => 'OUT')
+      cursor.bind_param(":p_number", 100, :data_type => 'NUMBER', :in_out => 'IN')
+      cursor.bind_param(":p_varchar", "abc", :data_type => 'VARCHAR2', :in_out => 'IN/OUT')
+      cursor.bind_param(":p_date", @now, :data_type => 'DATE', :in_out => 'IN/OUT')
       cursor.exec
       cursor[":result"].should == @random + 100
       cursor[":p_varchar"].should == "abc"

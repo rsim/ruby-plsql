@@ -114,12 +114,14 @@ module PLSQL
         @statement = @connection.prepare_call(sql)
       end
 
-      def bind_param(key, value, type=nil, length=nil, in_out='IN')
-        @connection.set_bind_variable(@statement, key, value, type, length)
-        if in_out =~ /OUT/
-          @out_types[key] = type || value.class
-          @out_index[key] = bind_param_index(key)
-          @statement.registerOutParameter(@out_index[key],@connection.get_java_sql_type(value,type))
+      def bind_param(arg, value, metadata)
+        type, length = @connection.plsql_to_ruby_data_type(metadata[:data_type], metadata[:data_length])
+        ora_value = @connection.ruby_value_to_ora_value(value, type)
+        @connection.set_bind_variable(@statement, arg, ora_value, type, length)
+        if metadata[:in_out] =~ /OUT/
+          @out_types[arg] = type || ora_value.class
+          @out_index[arg] = bind_param_index(arg)
+          @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
         end
       end
       
@@ -128,7 +130,7 @@ module PLSQL
       end
 
       def [](key)
-        @connection.get_bind_variable(@statement, @out_index[key], @out_types[key])
+        @connection.ora_value_to_ruby_value(@connection.get_bind_variable(@statement, @out_index[key], @out_types[key]))
       end
 
       def close

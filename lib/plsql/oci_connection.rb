@@ -67,33 +67,34 @@ module PLSQL
     end
 
     class Cursor
-      attr_accessor :raw_cursor
-      
-      def initialize(raw_cur)
-        @raw_cursor = raw_cur
+      def initialize(sql, conn)
+        @connection = conn
+        @raw_cursor = @connection.raw_connection.parse(sql)
       end
 
-      def bind_param(key, value, type=nil, length=nil, in_out='IN')
-        raw_cursor.bind_param(key, value, type, length)
+      def bind_param(arg, value, metadata)
+        type, length = @connection.plsql_to_ruby_data_type(metadata[:data_type], metadata[:data_length])
+        ora_value = @connection.ruby_value_to_ora_value(value, type)
+        @raw_cursor.bind_param(arg, ora_value, type, length)
       end
       
       def exec(*bindvars)
-        raw_cursor.exec(*bindvars)
+        @raw_cursor.exec(*bindvars)
       end
 
       def [](key)
-        raw_cursor[key]
+        @connection.ora_value_to_ruby_value(@raw_cursor[key])
       end
 
       def close
-        raw_cursor.close
+        @raw_cursor.close
       end
+
     end
 
     def parse(sql)
-      Cursor.new(raw_connection.parse(sql))
+      Cursor.new(sql, self)
     end
-    
 
     def plsql_to_ruby_data_type(data_type, data_length)
       case data_type

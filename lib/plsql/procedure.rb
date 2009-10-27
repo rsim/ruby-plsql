@@ -51,6 +51,10 @@ module PLSQL
       @out_list = {}
       @return = {}
       @overloaded = false
+
+      # store reference to previous level record or collection metadata
+      previous_level_argument_metadata = {}
+
       # RSI: due to 10gR2 all_arguments performance issue SELECT split into two statements
       # added condition to ensure that if object is package then package specification not body is selected
       object_id = @schema.connection.select_first("
@@ -62,16 +66,19 @@ module PLSQL
         ", @schema_name, @package ? @package : @procedure
       )[0] rescue nil
       num_rows = @schema.connection.select_all("
-        SELECT a.argument_name, a.position, a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.overload
+        SELECT a.argument_name, a.position, a.sequence, a.data_level,
+              a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used, a.overload
         FROM all_arguments a
         WHERE a.object_id = :object_id
         AND a.owner = :owner
         AND a.object_name = :procedure_name
         AND NVL(a.package_name,'nil') = :package
+        ORDER BY a.overload, a.sequence
         ", object_id, @schema_name, @procedure, @package ? @package : 'nil'
       ) do |r|
 
-        argument_name, position, data_type, in_out, data_length, data_precision, data_scale, overload = r
+        argument_name, position, sequence, data_level,
+            data_type, in_out, data_length, data_precision, data_scale, char_used, overload = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -79,24 +86,38 @@ module PLSQL
         @arguments[overload] ||= {}
         @return[overload] ||= nil
         
+        argument_metadata = {
+          :position => position,
+          :data_type => data_type,
+          :in_out => in_out,
+          :data_length => data_length,
+          :data_precision => data_precision,
+          :data_scale => data_scale,
+          :char_used => char_used
+        }
+        if composite_type?(data_type)
+          case data_type
+          when 'PL/SQL RECORD'
+            argument_metadata[:fields] = {}
+          end
+          previous_level_argument_metadata[data_level] = argument_metadata
+        end
+
+        # if parameter
         if argument_name
-          @arguments[overload][argument_name.downcase.to_sym] = {
-            :position => position,
-            :data_type => data_type,
-            :in_out => in_out,
-            :data_length => data_length,
-            :data_precision => data_precision,
-            :data_scale => data_scale
-          }
+          # top level parameter
+          if data_level == 0
+            @arguments[overload][argument_name.downcase.to_sym] = argument_metadata
+          # or lower level part of composite type
+          else
+            case previous_level_argument_metadata[data_level - 1][:data_type]
+            when 'PL/SQL RECORD'
+              previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
+            end
+          end
         # if function has return value
-        elsif position == 0 && in_out == 'OUT'
-          @return[overload] = {
-            :data_type => data_type,
-            :in_out => in_out,
-            :data_length => data_length,
-            :data_precision => data_precision,
-            :data_scale => data_scale
-          }
+        elsif argument_name.nil? && data_level == 0 && in_out == 'OUT'
+          @return[overload] = argument_metadata
         end
       end
       # if procedure is without arguments then create default empty argument list for default overload
@@ -108,12 +129,110 @@ module PLSQL
         @out_list[overload] = @argument_list[overload].select {|k| @arguments[overload][k][:in_out] =~ /OUT/}
       end
     end
-    
+
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE', 'OBJECT', 'REF CURSOR'].freeze
+    def composite_type?(data_type)
+      PLSQL_COMPOSITE_TYPES.include? data_type
+    end
+
     def overloaded?
       @overloaded
     end
 
     def exec(*args)
+      overload = get_overload_from_arguments_list(args)
+
+      declare_sql = "DECLARE\n"
+      assignment_sql = "BEGIN\n"
+      call_sql = ""
+      call_sql << ":return := " if @return[overload]
+      call_sql << "#{@schema_name}." if @schema_name
+      call_sql << "#{@package}." if @package
+      call_sql << "#{@procedure}("
+
+      bind_values = {}
+      bind_metadata = {}
+
+      # Named arguments
+      if args.size == 1 and args[0].is_a?(Hash)
+        call_sql << args[0].map do |arg, value|
+          argument_metadata = @arguments[overload][arg]
+          raise ArgumentError, "Wrong argument passed to PL/SQL procedure" unless argument_metadata
+          case argument_metadata[:data_type]
+          when 'PL/SQL RECORD'
+            declare_sql << record_declaration_sql(arg, argument_metadata)
+            record_assignment_sql, record_bind_values, record_bind_metadata =
+              record_assignment_sql_values_metadata(arg, argument_metadata, value)
+            assignment_sql << record_assignment_sql
+            bind_values.merge!(record_bind_values)
+            bind_metadata.merge!(record_bind_metadata)
+            "#{arg} => l_#{arg}"
+          else
+            # args_list << k
+            bind_values[arg] = value
+            bind_metadata[arg] = argument_metadata
+            "#{arg} => :#{arg}"
+          end
+        end.join(', ')
+
+      # Sequential arguments
+      else
+        argument_count = @argument_list[overload].size
+        raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
+        # Add missing arguments with nil value
+        args += [nil] * (argument_count - args.size) if args.size < argument_count
+        call_sql << (0...args.size).map do |i|
+          arg = @argument_list[overload][i]
+          value = args[i]
+          argument_metadata = @arguments[overload][arg]
+          bind_values[arg] = value
+          bind_metadata[arg] = argument_metadata
+          ":#{arg}"
+        end.join(', ')
+      end
+
+      call_sql << ");\n"
+      sql_block = "" << declare_sql << assignment_sql << call_sql << "END;\n"
+      # puts "DEBUG: sql_block = #{sql_block.gsub "\n", "<br/>\n"}"
+      cursor = @schema.connection.parse(sql_block)
+      
+      bind_values.each do |arg, value|
+        cursor.bind_param(":#{arg}", value, bind_metadata[arg])
+      end
+
+      if @return[overload]
+        cursor.bind_param(":return", nil, @return[overload])
+      end
+      
+      cursor.exec
+
+      # if function with output parameters
+      if @return[overload] && @out_list[overload].size > 0
+        result = [cursor[':return'], {}]
+        @out_list[overload].each do |k|
+          result[1][k] = cursor[":#{k}"]
+        end
+      # if function without output parameters
+      elsif @return[overload]
+        result = cursor[':return']
+      # if procedure with output parameters
+      elsif @out_list[overload].size > 0
+        result = {}
+        @out_list[overload].each do |k|
+          result[k] = cursor[":#{k}"]
+        end
+      # if procedure without output parameters
+      else
+        result = nil
+      end
+      result
+    ensure
+      cursor.close if defined?(cursor) && cursor
+    end
+    
+    private
+
+    def get_overload_from_arguments_list(args)
       # find which overloaded definition to use
       # if definition is overloaded then match by number of arguments
       if @overloaded
@@ -133,93 +252,55 @@ module PLSQL
           end
         end
         raise ArgumentError, "Wrong number of arguments passed to overloaded PL/SQL procedure" unless overload
+        overload
       else
-        overload = 0
+        0
       end
+    end
 
-      sql = "BEGIN\n"
-      sql << ":return := " if @return[overload]
-      sql << "#{@schema_name}." if @schema_name
-      sql << "#{@package}." if @package
-      sql << "#{@procedure}("
-
-      # Named arguments
-      args_list = []
-      args_hash = {}
-      if args.size == 1 and args[0].is_a?(Hash)
-        sql << args[0].map do |k,v|
-          raise ArgumentError, "Wrong argument passed to PL/SQL procedure" unless @arguments[overload][k]
-          args_list << k
-          args_hash[k] = v
-          "#{k.to_s} => :#{k.to_s}"
-        end.join(', ')
-      # Sequential arguments
-      else
-        raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > @argument_list[overload].size
-        # Add missing arguments with nil value
-        args = args + [nil]*(@argument_list[overload].size-args.size) if args.size < @argument_list[overload].size
-        i = 0
-        sql << args.map do |v|
-          k = @argument_list[overload][i]
-          i += 1
-          args_list << k
-          args_hash[k] = v
-          ":#{k.to_s}"
-        end.join(', ')
-      end
+    def record_declaration_sql(argument, argument_metadata)
+      fields_metadata = argument_metadata[:fields]
+      sql = "TYPE t_#{argument} IS RECORD (\n"
+      fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
+      sql << fields_sorted_by_position.map do |field|
+        metadata = fields_metadata[field]
+        "#{field} #{type_to_sql(metadata)}"
+      end.join(",\n")
       sql << ");\n"
-      sql << "END;\n"
+      sql << "l_#{argument} t_#{argument};\n"
+    end
 
-      cursor = @schema.connection.parse(sql)
-      
-      args_list.each do |k|
-        data_type, data_length = plsql_to_ruby_data_type(@arguments[overload][k])
-        cursor.bind_param(":#{k.to_s}", ruby_value_to_ora_value(args_hash[k], data_type),
-                                        data_type, data_length, @arguments[overload][k][:in_out])
+    def record_assignment_sql_values_metadata(argument, argument_metadata, record_value)
+      sql = ""
+      bind_values = {}
+      bind_metadata = {}
+      argument_metadata[:fields].each do |field, metadata|
+        if value = record_value[field] || record_value[field.to_s]
+          bind_variable = :"#{argument}_#{field}"
+          sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
+          bind_values[bind_variable] = value
+          bind_metadata[bind_variable] = metadata
+        end
       end
-      
-      if @return[overload]
-        data_type, data_length = plsql_to_ruby_data_type(@return[overload])
-        cursor.bind_param(":return", nil, data_type, data_length, 'OUT')
-      end
-      
-      cursor.exec
+      [sql, bind_values, bind_metadata]
+    end
 
-      # if function with output parameters
-      if @return[overload] && @out_list[overload].size > 0
-        result = [ora_value_to_ruby_value(cursor[':return']), {}]
-        @out_list[overload].each do |k|
-          result[1][k] = ora_value_to_ruby_value(cursor[":#{k}"])
+    def type_to_sql(metadata)
+      case metadata[:data_type]
+      when 'NUMBER'
+        precision, scale = metadata[:data_precision], metadata[:data_scale]
+        "NUMBER#{precision ? "(#{precision.to_i}#{scale ? ",#{scale.to_i}": ""})" : ""}"
+      when 'VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR'
+        if length = metadata[:data_length]
+          length = length.to_i
         end
-      # if function without output parameters
-      elsif @return[overload]
-        result = ora_value_to_ruby_value(cursor[':return'])
-      # if procedure with output parameters
-      elsif @out_list[overload].size > 0
-        result = {}
-        @out_list[overload].each do |k|
-          result[k] = ora_value_to_ruby_value(cursor[":#{k}"])
+        if length && (char_used = metadata[:char_used])
+          length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
         end
-      # if procedure without output parameters
+        "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
       else
-        result = nil
+        metadata[:data_type]
       end
-      cursor.close
-      result
-    end
-    
-    private
-    
-    def plsql_to_ruby_data_type(argument)
-      @schema.connection.plsql_to_ruby_data_type(argument[:data_type],argument[:data_length])
-    end
-    
-    def ruby_value_to_ora_value(val, type)
-      @schema.connection.ruby_value_to_ora_value(val, type)
-    end
-    
-    def ora_value_to_ruby_value(val)
-      @schema.connection.ora_value_to_ruby_value(val)
     end
 
   end

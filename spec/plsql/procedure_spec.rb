@@ -507,6 +507,51 @@ describe "Procedrue with BLOB parameter and return value" do
   end
 end
 
+describe "Function with record parameter" do
+
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec "DROP TABLE test_employees" rescue nil
+    plsql.connection.exec <<-SQL
+      CREATE TABLE test_employees (
+        employee_id   NUMBER(15),
+        first_name    VARCHAR2(50),
+        last_name     VARCHAR2(50),
+        hire_date     DATE
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_full_name (p_employee test_employees%ROWTYPE)
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN p_employee.first_name || ' ' || p_employee.last_name;
+      END test_full_name;
+    SQL
+  end
+
+  after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_full_name"
+    plsql.connection.exec "DROP TABLE test_employees"
+    plsql.logoff
+  end
+
+  it "should find existing procedure" do
+    PLSQL::Procedure.find(plsql, :test_full_name).should_not be_nil
+  end
+
+  it "should execute function with named parameter and return correct value" do
+    p_employee = {
+      :employee_id => 1,
+      :first_name => 'First',
+      :last_name => 'Last',
+      :hire_date => Date.new(2000,01,31)
+    }
+    plsql.test_full_name(:p_employee => p_employee).should == 'First Last'
+  end
+
+end
+
 describe "Synonym to function" do
   
   before(:all) do
