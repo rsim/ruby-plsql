@@ -14,8 +14,8 @@ module PLSQL
         @cursor.bind_param(":#{arg}", value, @bind_metadata[arg])
       end
 
-      if return_metadata
-        @cursor.bind_param(":return", nil, return_metadata)
+      @return_vars.each do |var|
+        @cursor.bind_param(":#{var}", nil, @return_vars_metadata[var])
       end
 
       @cursor.exec
@@ -57,7 +57,12 @@ module PLSQL
       @declare_sql = "DECLARE\n"
       @assignment_sql = "BEGIN\n"
       @call_sql = ""
-      @call_sql << ":return := " if return_metadata
+      @return_sql = ""
+      @return_vars = []
+      @return_vars_metadata = {}
+      if return_metadata
+        @call_sql << add_return
+      end
       @call_sql << "#{schema_name}." if schema_name
       @call_sql << "#{package_name}." if package_name
       @call_sql << "#{procedure_name}("
@@ -90,14 +95,15 @@ module PLSQL
         end.join(', ')
       end
 
-      @call_sql << ");\n"
-      @sql = "" << @declare_sql << @assignment_sql << @call_sql << "END;\n"
+      @call_sql << ");\n"      
+      add_out_vars
+      @sql = "" << @declare_sql << @assignment_sql << @call_sql << @return_sql << "END;\n"
       # puts "DEBUG: sql = #{@sql.gsub "\n", "<br/>\n"}"
     end
 
     def add_argument(arg, value)
       argument_metadata = arguments[arg]
-      raise ArgumentError, "Wrong argument passed to PL/SQL procedure" unless argument_metadata
+      raise ArgumentError, "Wrong argument #{arg.inspect} passed to PL/SQL procedure" unless argument_metadata
       case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
         @declare_sql << record_declaration_sql(arg, argument_metadata)
@@ -130,26 +136,58 @@ module PLSQL
       sql = ""
       bind_values = {}
       bind_metadata = {}
-      argument_metadata[:fields].each do |field, metadata|
-        if value = record_value[field] || record_value[field.to_s]
-          bind_variable = :"#{argument}_#{field}"
-          sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
-          bind_values[bind_variable] = value
-          bind_metadata[bind_variable] = metadata
-        end
+      (record_value||{}).each do |key, value|
+        field = key.is_a?(Symbol) ? key : key.to_s.downcase.to_sym
+        metadata = argument_metadata[:fields][field]
+        raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
+        bind_variable = :"#{argument}_f#{metadata[:position]}"
+        sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
+        bind_values[bind_variable] = value
+        bind_metadata[bind_variable] = metadata
       end
       [sql, bind_values, bind_metadata]
+    end
+
+    def add_return
+      case return_metadata[:data_type]
+      when 'PL/SQL RECORD'
+        @declare_sql << record_declaration_sql('return', return_metadata)
+        return_metadata[:fields].each do |field, metadata|
+          bind_variable = :"return_f#{metadata[:position]}"
+          @return_vars << bind_variable
+          @return_vars_metadata[bind_variable] = metadata
+          @return_sql << ":#{bind_variable} := l_return.#{field};\n"
+        end
+        "l_return := "
+      else
+        @return_vars << :return
+        @return_vars_metadata[:return] = return_metadata
+        ':return := '
+      end
+    end
+
+    def add_out_vars
+      out_list.each do |argument|
+        argument_metadata = arguments[argument]
+        case argument_metadata[:data_type]
+        when 'PL/SQL RECORD'
+          argument_metadata[:fields].each do |field, metadata|
+            bind_variable = :"#{argument}_o#{metadata[:position]}"
+            @return_vars << bind_variable
+            @return_vars_metadata[bind_variable] = metadata
+            @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
+          end
+        end
+      end
     end
 
     def type_to_sql(metadata)
       case metadata[:data_type]
       when 'NUMBER'
         precision, scale = metadata[:data_precision], metadata[:data_scale]
-        "NUMBER#{precision ? "(#{precision.to_i}#{scale ? ",#{scale.to_i}": ""})" : ""}"
+        "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
       when 'VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR'
-        if length = metadata[:data_length]
-          length = length.to_i
-        end
+        length = metadata[:data_length]
         if length && (char_used = metadata[:char_used])
           length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
         end
@@ -162,24 +200,53 @@ module PLSQL
     def get_return_value
       # if function with output parameters
       if return_metadata && out_list.size > 0
-        result = [@cursor[':return'], {}]
+        result = [function_return_value, {}]
         out_list.each do |k|
-          result[1][k] = @cursor[":#{k}"]
+          result[1][k] = out_var_value(k)
         end
       # if function without output parameters
       elsif return_metadata
-        result = @cursor[':return']
+        result = function_return_value
       # if procedure with output parameters
       elsif out_list.size > 0
         result = {}
         out_list.each do |k|
-          result[k] = @cursor[":#{k}"]
+          result[k] = out_var_value(k)
         end
       # if procedure without output parameters
       else
         result = nil
       end
       result
+    end
+
+    def function_return_value
+      case return_metadata[:data_type]
+      when 'PL/SQL RECORD'
+        return_value = {}
+        return_metadata[:fields].each do |field, metadata|
+          bind_variable = :"return_f#{metadata[:position]}"
+          return_value[field] = @cursor[":#{bind_variable}"]
+        end
+        return_value
+      else
+        @cursor[':return']
+      end
+    end
+
+    def out_var_value(argument)
+      argument_metadata = arguments[argument]
+      case argument_metadata[:data_type]
+      when 'PL/SQL RECORD'
+        return_value = {}
+        argument_metadata[:fields].each do |field, metadata|
+          bind_variable = :"#{argument}_o#{metadata[:position]}"
+          return_value[field] = @cursor[":#{bind_variable}"]
+        end
+        return_value
+      else
+        @cursor[":#{argument}"]
+      end
     end
 
     def overload_argument_list

@@ -90,12 +90,12 @@ module PLSQL
         @return[overload] ||= nil
         
         argument_metadata = {
-          :position => position,
+          :position => position && position.to_i,
           :data_type => data_type,
           :in_out => in_out,
-          :data_length => data_length,
-          :data_precision => data_precision,
-          :data_scale => data_scale,
+          :data_length => data_length && data_length.to_i,
+          :data_precision => data_precision && data_precision.to_i,
+          :data_scale => data_scale && data_scale.to_i,
           :char_used => char_used
         }
         if composite_type?(data_type)

@@ -528,21 +528,49 @@ describe "Function with record parameter" do
         RETURN p_employee.first_name || ' ' || p_employee.last_name;
       END test_full_name;
     SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_employee_record (p_employee test_employees%ROWTYPE)
+        RETURN test_employees%ROWTYPE
+      IS
+      BEGIN
+        RETURN p_employee;
+      END test_employee_record;
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_employee_record2 (p_employee test_employees%ROWTYPE, x_employee OUT test_employees%ROWTYPE)
+        RETURN test_employees%ROWTYPE
+      IS
+      BEGIN
+        x_employee.employee_id := p_employee.employee_id;
+        x_employee.first_name := p_employee.first_name;
+        x_employee.last_name := p_employee.last_name;
+        x_employee.hire_date := p_employee.hire_date;
+        RETURN p_employee;
+      END test_employee_record2;
+    SQL
     @p_employee = {
       :employee_id => 1,
       :first_name => 'First',
       :last_name => 'Last',
-      :hire_date => Date.new(2000,01,31)
+      :hire_date => Time.local(2000,01,31)
+    }
+    @p_employee2 = {
+      'employee_id' => 1,
+      'FIRST_NAME' => 'Second',
+      'last_name' => 'Last',
+      'hire_date' => Time.local(2000,01,31)
     }
   end
 
   after(:all) do
     plsql.connection.exec "DROP FUNCTION test_full_name"
-    plsql.connection.exec "DROP TABLE test_employees"
+    # plsql.connection.exec "DROP FUNCTION test_employee_record"
+    # plsql.connection.exec "DROP FUNCTION test_employee_record2"
+    # plsql.connection.exec "DROP TABLE test_employees"
     plsql.logoff
   end
 
-  it "should find existing procedure" do
+  it "should find existing function" do
     PLSQL::Procedure.find(plsql, :test_full_name).should_not be_nil
   end
 
@@ -552,6 +580,24 @@ describe "Function with record parameter" do
 
   it "should execute function with sequential parameter and return correct value" do
     plsql.test_full_name(@p_employee).should == 'First Last'
+  end
+
+  it "should execute function with Hash parameter using strings as keys" do
+    plsql.test_full_name(@p_employee2).should == 'Second Last'
+  end
+
+  it "should raise error if wrong field name is passed for record parameter" do
+    lambda do
+      plsql.test_full_name(@p_employee.merge :xxx => 'xxx').should == 'Second Last'
+    end.should raise_error(ArgumentError)
+  end
+
+  it "should return record return value" do
+    plsql.test_employee_record(@p_employee).should == @p_employee
+  end
+
+  it "should return record return value and output record parameter value" do
+    plsql.test_employee_record2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
   end
 
 end
