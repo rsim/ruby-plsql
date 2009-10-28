@@ -2,9 +2,6 @@
 
 require File.dirname(__FILE__) + '/../spec_helper'
 
-require "rubygems"
-# require "activerecord"
-
 describe "Function with string parameters" do
   
   before(:all) do
@@ -92,7 +89,7 @@ describe "Function with numeric parameters" do
   
   after(:all) do
     plsql.connection.exec "DROP FUNCTION test_sum"
-    # plsql.connection.exec "DROP FUNCTION test_number_1"
+    plsql.connection.exec "DROP FUNCTION test_number_1"
     plsql.logoff
   end
   
@@ -625,6 +622,61 @@ describe "Function with record parameter" do
 
   it "should return record return value and output record parameter value" do
     plsql.test_employee_record2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
+  end
+
+end
+
+describe "Function with boolean parameters" do
+
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_boolean
+        ( p_boolean BOOLEAN )
+        RETURN BOOLEAN
+      IS
+      BEGIN
+        RETURN p_boolean;
+      END test_boolean;
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE PROCEDURE test_boolean2
+          ( p_boolean BOOLEAN, x_boolean OUT BOOLEAN )
+      IS
+      BEGIN
+        x_boolean := p_boolean;
+      END test_boolean2;
+    SQL
+  end
+
+  after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_boolean"
+    plsql.connection.exec "DROP PROCEDURE test_boolean2"
+    plsql.logoff
+  end
+
+  it "should accept true value and return true value" do
+    plsql.test_boolean(true).should == true
+  end
+
+  it "should accept false value and return false value" do
+    plsql.test_boolean(false).should == false
+  end
+
+  it "should accept nil value and return nil value" do
+    plsql.test_boolean(nil).should be_nil
+  end
+
+  it "should accept true value and assign true value to output parameter" do
+    plsql.test_boolean2(true, nil).should == {:x_boolean => true}
+  end
+
+  it "should accept false value and assign false value to output parameter" do
+    plsql.test_boolean2(false, nil).should == {:x_boolean => false}
+  end
+
+  it "should accept nil value and assign nil value to output parameter" do
+    plsql.test_boolean2(nil, nil).should == {:x_boolean => nil}
   end
 
 end

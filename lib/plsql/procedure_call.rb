@@ -101,22 +101,28 @@ module PLSQL
       # puts "DEBUG: sql = #{@sql.gsub "\n", "<br/>\n"}"
     end
 
-    def add_argument(arg, value)
-      argument_metadata = arguments[arg]
-      raise ArgumentError, "Wrong argument #{arg.inspect} passed to PL/SQL procedure" unless argument_metadata
+    def add_argument(argument, value)
+      argument_metadata = arguments[argument]
+      raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
       case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
-        @declare_sql << record_declaration_sql(arg, argument_metadata)
+        @declare_sql << record_declaration_sql(argument, argument_metadata)
         record_assignment_sql, record_bind_values, record_bind_metadata =
-          record_assignment_sql_values_metadata(arg, argument_metadata, value)
+          record_assignment_sql_values_metadata(argument, argument_metadata, value)
         @assignment_sql << record_assignment_sql
         @bind_values.merge!(record_bind_values)
         @bind_metadata.merge!(record_bind_metadata)
-        "l_#{arg}"
+        "l_#{argument}"
+      when 'PL/SQL BOOLEAN'
+        @declare_sql << "l_#{argument} BOOLEAN;\n"
+        @assignment_sql << "l_#{argument} := (:#{argument} = 1);\n"
+        @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
+        @bind_metadata[argument] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        "l_#{argument}"
       else
-        @bind_values[arg] = value
-        @bind_metadata[arg] = argument_metadata
-        ":#{arg}"
+        @bind_values[argument] = value
+        @bind_metadata[argument] = argument_metadata
+        ":#{argument}"
       end
     end
 
@@ -159,6 +165,14 @@ module PLSQL
           @return_sql << ":#{bind_variable} := l_return.#{field};\n"
         end
         "l_return := "
+      when 'PL/SQL BOOLEAN'
+        @declare_sql << "l_return BOOLEAN;\n"
+        @declare_sql << "x_return NUMBER(1);\n"
+        @return_vars << :return
+        @return_vars_metadata[:return] = return_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        @return_sql << "IF l_return IS NULL THEN\nx_return := NULL;\nELSIF l_return THEN\nx_return := 1;\nELSE\nx_return := 0;\nEND IF;\n" <<
+                        ":return := x_return;\n"
+        "l_return := "
       else
         @return_vars << :return
         @return_vars_metadata[:return] = return_metadata
@@ -177,6 +191,14 @@ module PLSQL
             @return_vars_metadata[bind_variable] = metadata
             @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
           end
+        when 'PL/SQL BOOLEAN'
+          @declare_sql << "x_#{argument} NUMBER(1);\n"
+          bind_variable = :"o_#{argument}"
+          @return_vars << bind_variable
+          @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+          @return_sql << "IF l_#{argument} IS NULL THEN\nx_#{argument} := NULL;\n" <<
+                        "ELSIF l_#{argument} THEN\nx_#{argument} := 1;\nELSE\nx_#{argument} := 0;\nEND IF;\n" <<
+                        ":#{bind_variable} := x_#{argument};\n"
         end
       end
     end
@@ -229,6 +251,9 @@ module PLSQL
           return_value[field] = @cursor[":#{bind_variable}"]
         end
         return_value
+      when 'PL/SQL BOOLEAN'
+        numeric_value = @cursor[':return']
+        numeric_value.nil? ? nil : numeric_value == 1
       else
         @cursor[':return']
       end
@@ -244,6 +269,9 @@ module PLSQL
           return_value[field] = @cursor[":#{bind_variable}"]
         end
         return_value
+      when 'PL/SQL BOOLEAN'
+        numeric_value = @cursor[":o_#{argument}"]
+        numeric_value.nil? ? nil : numeric_value == 1
       else
         @cursor[":#{argument}"]
       end
