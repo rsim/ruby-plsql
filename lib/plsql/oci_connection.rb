@@ -126,9 +126,9 @@ module PLSQL
         when BigDecimal
           OraNumber.new(val.to_s('F'))
         when TrueClass
-          OraNumber(1)
+          OraNumber.new(1)
         when FalseClass
-          OraNumber(0)
+          OraNumber.new(0)
         else
           val
         end
