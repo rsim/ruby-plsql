@@ -62,7 +62,7 @@ describe "Function with numeric parameters" do
   
   before(:all) do
     plsql.connection = get_connection
-    plsql.connection.exec <<-EOS
+    plsql.connection.exec <<-SQL
       CREATE OR REPLACE FUNCTION test_sum
         ( p_num1 NUMBER, p_num2 NUMBER )
         RETURN NUMBER
@@ -70,10 +70,29 @@ describe "Function with numeric parameters" do
       BEGIN
         RETURN p_num1 + p_num2;
       END test_sum;
-    EOS
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_number_1
+        ( p_num NUMBER )
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        IF p_num = 1 THEN
+          RETURN 'Y';
+        ELSIF p_num = 0 THEN
+          RETURN 'N';
+        ELSIF p_num IS NULL THEN
+          RETURN NULL;
+        ELSE
+          RETURN 'UNKNOWN';
+        END IF;
+      END test_number_1;
+    SQL
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_sum"
+    # plsql.connection.exec "DROP FUNCTION test_number_1"
     plsql.logoff
   end
   
@@ -95,6 +114,14 @@ describe "Function with numeric parameters" do
 
   it "should process nil parameter as NULL" do
     plsql.test_sum(123,nil).should be_nil
+  end
+
+  it "should convert true value to 1 for NUMBER parameter" do
+    plsql.test_number_1(true).should == 'Y'
+  end
+
+  it "should convert false value to 0 for NUMBER parameter" do
+    plsql.test_number_1(false).should == 'N'
   end
 
 end
@@ -564,9 +591,9 @@ describe "Function with record parameter" do
 
   after(:all) do
     plsql.connection.exec "DROP FUNCTION test_full_name"
-    # plsql.connection.exec "DROP FUNCTION test_employee_record"
-    # plsql.connection.exec "DROP FUNCTION test_employee_record2"
-    # plsql.connection.exec "DROP TABLE test_employees"
+    plsql.connection.exec "DROP FUNCTION test_employee_record"
+    plsql.connection.exec "DROP FUNCTION test_employee_record2"
+    plsql.connection.exec "DROP TABLE test_employees"
     plsql.logoff
   end
 

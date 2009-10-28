@@ -294,7 +294,16 @@ module PLSQL
 
     def ruby_value_to_ora_value(val, type)
       if type == BigDecimal
-        val.nil? || val.is_a?(Fixnum) || val.is_a?(BigDecimal) ? val : BigDecimal(val.to_s)
+        case val
+        when NilClass, Fixnum, BigDecimal
+          val
+        when TrueClass
+          1
+        when FalseClass
+          0
+        else
+          BigDecimal(val.to_s)
+        end
       elsif type == Time
         case val
         when DateTime
