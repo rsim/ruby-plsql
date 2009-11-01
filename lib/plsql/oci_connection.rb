@@ -73,7 +73,7 @@ module PLSQL
       end
 
       def bind_param(arg, value, metadata)
-        type, length = @connection.plsql_to_ruby_data_type(metadata[:data_type], metadata[:data_length])
+        type, length = @connection.plsql_to_ruby_data_type(metadata)
         ora_value = @connection.ruby_value_to_ora_value(value, type)
         @raw_cursor.bind_param(arg, ora_value, type, length)
       end
@@ -96,7 +96,8 @@ module PLSQL
       Cursor.new(sql, self)
     end
 
-    def plsql_to_ruby_data_type(data_type, data_length)
+    def plsql_to_ruby_data_type(metadata)
+      data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
       when "VARCHAR2"
         [String, data_length || 32767]
@@ -110,8 +111,11 @@ module PLSQL
         [DateTime, nil]
       when "TIMESTAMP"
         [Time, nil]
-      # CLOB
-      # BLOB
+      when "TABLE"
+        # create Ruby class for collection
+        klass = Class.new(OCI8::Object::Base)
+        klass.set_typename metadata[:sql_type_name]
+        [klass, nil]
       else
         [String, 32767]
       end
@@ -168,6 +172,10 @@ module PLSQL
           val.read
         else
           nil
+        end
+      when OCI8::Object::Base
+        if val.instance_variable_get(:@attributes).is_a? Array
+          val.to_ary.map{|e| ora_value_to_ruby_value(e)}
         end
       else
         val

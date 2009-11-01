@@ -69,26 +69,30 @@ module PLSQL
         ", @schema_name, @package ? @package : @procedure
       )[0] rescue nil
       num_rows = @schema.connection.select_all("
-        SELECT a.argument_name, a.position, a.sequence, a.data_level,
-              a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used, a.overload
-        FROM all_arguments a
-        WHERE a.object_id = :object_id
-        AND a.owner = :owner
-        AND a.object_name = :procedure_name
-        AND NVL(a.package_name,'nil') = :package
-        ORDER BY a.overload, a.sequence
+        SELECT overload, argument_name, position, data_level,
+              data_type, in_out, data_length, data_precision, data_scale, char_used,
+              type_owner, type_name, type_subname
+        FROM all_arguments
+        WHERE object_id = :object_id
+        AND owner = :owner
+        AND object_name = :procedure_name
+        AND NVL(package_name,'nil') = :package
+        ORDER BY overload, sequence
         ", object_id, @schema_name, @procedure, @package ? @package : 'nil'
       ) do |r|
 
-        argument_name, position, sequence, data_level,
-            data_type, in_out, data_length, data_precision, data_scale, char_used, overload = r
+        overload, argument_name, position, data_level,
+            data_type, in_out, data_length, data_precision, data_scale, char_used,
+            type_owner, type_name, type_subname = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
         overload ||= 0
         @arguments[overload] ||= {}
         @return[overload] ||= nil
-        
+
+        raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if type_subname
+
         argument_metadata = {
           :position => position && position.to_i,
           :data_type => data_type,
@@ -96,7 +100,11 @@ module PLSQL
           :data_length => data_length && data_length.to_i,
           :data_precision => data_precision && data_precision.to_i,
           :data_scale => data_scale && data_scale.to_i,
-          :char_used => char_used
+          :char_used => char_used,
+          :type_owner => type_owner,
+          :type_name => type_name,
+          :type_subname => type_subname,
+          :sql_type_name => "#{type_owner}.#{type_name}"
         }
         if composite_type?(data_type)
           case data_type
@@ -116,6 +124,8 @@ module PLSQL
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'PL/SQL RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
+            when 'TABLE'
+              previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
         # if function has return value

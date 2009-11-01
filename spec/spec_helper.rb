@@ -6,6 +6,11 @@ gem "activerecord"
 require "activerecord"
 gem "activerecord-oracle_enhanced-adapter"
 
+if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
+  # gem "ruby-oci8", "=2.0.2"
+  gem "ruby-oci8", "=2.0.3"
+end
+
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require "ruby_plsql"

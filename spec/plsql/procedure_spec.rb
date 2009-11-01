@@ -681,6 +681,136 @@ describe "Function with boolean parameters" do
 
 end
 
+describe "Function with table parameter" do
+
+  before(:all) do
+    plsql.connection = get_connection
+
+    # Array of numbers
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_numbers AS TABLE OF NUMBER(15)
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_sum (p_numbers IN t_numbers)
+        RETURN NUMBER
+      IS
+        l_sum   NUMBER(15) := 0;
+      BEGIN
+        IF p_numbers.COUNT > 0 THEN
+          FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+            IF p_numbers.EXISTS(i) THEN
+              l_sum := l_sum + p_numbers(i);
+            END IF;
+          END LOOP;
+          RETURN l_sum;
+        ELSE
+          RETURN NULL;
+        END IF;
+      END;
+    SQL
+
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_increment(p_numbers IN t_numbers, p_increment_by IN NUMBER DEFAULT 1)
+        RETURN t_numbers
+      IS
+        l_numbers t_numbers := t_numbers();
+      BEGIN
+        FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+          IF p_numbers.EXISTS(i) THEN
+            l_numbers.EXTEND;
+            l_numbers(i) := p_numbers(i) + p_increment_by;
+          END IF;
+        END LOOP;
+        RETURN l_numbers;
+      END;
+    SQL
+
+    # Array of strings
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_strings AS TABLE OF VARCHAR2(4000)
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_copy_strings(p_strings IN t_strings, x_strings OUT t_strings)
+        RETURN t_strings
+      IS
+      BEGIN
+        x_strings := t_strings();
+        FOR i IN p_strings.FIRST..p_strings.LAST LOOP
+          IF p_strings.EXISTS(i) THEN
+            x_strings.EXTEND;
+            x_strings(i) := p_strings(i);
+          END IF;
+        END LOOP;
+        RETURN x_strings;
+      END;
+    SQL
+
+    # Wrong type definition inside package
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE PACKAGE test_collections IS
+        TYPE t_numbers IS TABLE OF NUMBER(15);
+        FUNCTION test_sum (p_numbers IN t_numbers)
+          RETURN NUMBER;
+      END;
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_collections IS
+        FUNCTION test_sum (p_numbers IN t_numbers)
+        RETURN NUMBER
+        IS
+          l_sum   NUMBER(15) := 0;
+        BEGIN
+          IF p_numbers.COUNT > 0 THEN
+            FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+              IF p_numbers.EXISTS(i) THEN
+                l_sum := l_sum + p_numbers(i);
+              END IF;
+            END LOOP;
+            RETURN l_sum;
+          ELSE
+            RETURN NULL;
+          END IF;
+        END;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_sum"
+    plsql.connection.exec "DROP FUNCTION test_increment"
+    plsql.connection.exec "DROP FUNCTION test_copy_strings"
+    plsql.connection.exec "DROP PACKAGE test_collections"
+    plsql.connection.exec "DROP TYPE t_numbers"
+    plsql.connection.exec "DROP TYPE t_strings"
+    plsql.logoff
+  end
+
+  it "should find existing function" do
+    PLSQL::Procedure.find(plsql, :test_sum).should_not be_nil
+  end
+
+  it "should execute function with number array parameter" do
+    plsql.test_sum([1,2,3,4]).should == 10
+  end
+
+  it "should return number array return value" do
+    plsql.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+  end
+
+  it "should execute function with string array and return string array output parameter" do
+    pending "ruby-oci8 gives segmentation fault" if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
+    strings = ['1','2','3','4']
+    plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+  end
+
+  it "should raise error if parameter type is defined inside package" do
+    lambda do
+      plsql.test_collections.test_sum([1,2,3,4])
+    end.should raise_error(ArgumentError)
+  end
+
+end
+
 describe "Synonym to function" do
   
   before(:all) do

@@ -44,25 +44,25 @@ describe "Connection" do
   if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
     describe "OCI data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
-        @conn.plsql_to_ruby_data_type("VARCHAR2", 100).should == [String, 100]
-        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 32767]
+        @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100).should == [String, 100]
+        @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil).should == [String, 32767]
       end
 
       it "should translate PL/SQL CLOB to Ruby String" do
-        @conn.plsql_to_ruby_data_type("CLOB", 100_000).should == [OCI8::CLOB, nil]
-        @conn.plsql_to_ruby_data_type("CLOB", nil).should == [OCI8::CLOB, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "CLOB", :data_length => 100_000).should == [OCI8::CLOB, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "CLOB", :data_length => nil).should == [OCI8::CLOB, nil]
       end
 
       it "should translate PL/SQL NUMBER to Ruby OraNumber" do
-        @conn.plsql_to_ruby_data_type("NUMBER", 15).should == [OraNumber, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15).should == [OraNumber, nil]
       end
 
       it "should translate PL/SQL DATE to Ruby DateTime" do
-        @conn.plsql_to_ruby_data_type("DATE", nil).should == [DateTime, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil).should == [DateTime, nil]
       end
 
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
-        @conn.plsql_to_ruby_data_type("TIMESTAMP", nil).should == [Time, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil).should == [Time, nil]
       end
 
       it "should not translate Ruby Fixnum when OraNumber type specified" do
@@ -114,20 +114,20 @@ describe "Connection" do
     
     describe "JDBC data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
-        @conn.plsql_to_ruby_data_type("VARCHAR2", 100).should == [String, 100]
-        @conn.plsql_to_ruby_data_type("VARCHAR2", nil).should == [String, 32767]
+        @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100).should == [String, 100]
+        @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil).should == [String, 32767]
       end
 
       it "should translate PL/SQL NUMBER to Ruby BigDecimal" do
-        @conn.plsql_to_ruby_data_type("NUMBER", 15).should == [BigDecimal, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15).should == [BigDecimal, nil]
       end
       
       it "should translate PL/SQL DATE to Ruby DateTime" do
-        @conn.plsql_to_ruby_data_type("DATE", nil).should == [Time, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil).should == [Time, nil]
       end
       
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
-        @conn.plsql_to_ruby_data_type("TIMESTAMP", nil).should == [Time, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil).should == [Time, nil]
       end
       
       it "should not translate Ruby Fixnum when BigDecimal type specified" do

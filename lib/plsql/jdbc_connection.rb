@@ -115,13 +115,18 @@ module PLSQL
       end
 
       def bind_param(arg, value, metadata)
-        type, length = @connection.plsql_to_ruby_data_type(metadata[:data_type], metadata[:data_length])
-        ora_value = @connection.ruby_value_to_ora_value(value, type)
-        @connection.set_bind_variable(@statement, arg, ora_value, type, length)
+        type, length = @connection.plsql_to_ruby_data_type(metadata)
+        ora_value = @connection.ruby_value_to_ora_value(value, type, metadata)
+        @connection.set_bind_variable(@statement, arg, ora_value, type, length, metadata)
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
+          if metadata[:data_type] == 'TABLE'
+            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
+              metadata[:sql_type_name])
+          else
+            @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
+          end
         end
       end
       
@@ -186,12 +191,14 @@ module PLSQL
         java.sql.Types::DATE
       when 'DateTime'
         java.sql.Types::DATE
+      when 'Java::OracleSql::ARRAY'
+        Java::oracle.jdbc.OracleTypes::ARRAY
       else
         java.sql.Types::VARCHAR
       end
     end
 
-    def set_bind_variable(stmt, i, value, type=nil, length=nil)
+    def set_bind_variable(stmt, i, value, type=nil, length=nil, metadata={})
       key = i.kind_of?(Integer) ? nil : i.to_s.gsub(':','')
       case !value.nil? && type ? type.to_s : value.class.to_s
       when 'Fixnum', 'Bignum', 'Integer'
@@ -209,7 +216,14 @@ module PLSQL
       when 'Date', 'Time', 'DateTime'
         stmt.send("setDATE#{key && "AtName"}", key || i, Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S")))
       when 'NilClass'
-        stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type))
+        if metadata[:data_type] == 'TABLE'
+          stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
+            metadata[:sql_type_name])
+        else
+          stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type))
+        end
+      when 'Java::OracleSql::ARRAY'
+        stmt.send("setARRAY#{key && "AtName"}", key || i, value)
       end
     end
     
@@ -236,6 +250,8 @@ module PLSQL
         else
           nil
         end
+      when 'Java::OracleSql::ARRAY'
+        stmt.getArray(i)
       end
     end
 
@@ -273,7 +289,8 @@ module PLSQL
       end
     end
     
-    def plsql_to_ruby_data_type(data_type, data_length)
+    def plsql_to_ruby_data_type(metadata)
+      data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
       when "VARCHAR2"
         [String, data_length || 32767]
@@ -287,12 +304,14 @@ module PLSQL
         [Time, nil]
       when "TIMESTAMP"
         [Time, nil]
+      when "TABLE"
+        [Java::OracleSql::ARRAY, nil]
       else
         [String, 32767]
       end
     end
 
-    def ruby_value_to_ora_value(val, type)
+    def ruby_value_to_ora_value(val, type, metadata={})
       if type == BigDecimal
         case val
         when NilClass, Fixnum, BigDecimal
@@ -329,6 +348,11 @@ module PLSQL
         else
           Java::OracleSql::BLOB.getEmptyBLOB
         end
+      elsif type == Java::OracleSql::ARRAY
+        if val
+          descriptor = Java::OracleSql::ArrayDescriptor.createDescriptor(metadata[:sql_type_name], raw_connection)
+          Java::OracleSql::ARRAY.new(descriptor, raw_connection, val.to_java)
+        end
       else
         val
       end
@@ -338,6 +362,8 @@ module PLSQL
       case val
       when Float, BigDecimal
         ora_number_to_ruby_number(val)
+      when Java::JavaMath::BigDecimal
+        val && ora_number_to_ruby_number(BigDecimal.new(val.to_s))
       when Java::OracleSql::CLOB
         if val.isEmptyLob
           nil
@@ -350,6 +376,8 @@ module PLSQL
         else
           String.from_java_bytes(val.getBytes(1, val.length))
         end
+      when Java::OracleSql::ARRAY
+        val.getArray.map{|e| ora_value_to_ruby_value(e)}
       else
         val
       end
