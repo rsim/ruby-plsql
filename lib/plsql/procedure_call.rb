@@ -72,11 +72,11 @@ module PLSQL
 
       # Named arguments
       if args.size == 1 && args[0].is_a?(Hash) &&
-            # do not use named arguments if procedure has just one PL/SQL record argument -
+            # do not use named arguments if procedure has just one PL/SQL record or object type argument -
             # in that case passed Hash should be used as value for this PL/SQL record argument
             # (which will be processed in sequential arguments bracnh)
             !(argument_list.size == 1 &&
-              arguments[(only_argument=argument_list[0])][:data_type] == 'PL/SQL RECORD' &&
+              ['PL/SQL RECORD','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
               args[0].keys != [only_argument])
         @call_sql << args[0].map do |arg, value|
           "#{arg} => " << add_argument(arg, value)

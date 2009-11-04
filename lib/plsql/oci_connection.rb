@@ -111,74 +111,118 @@ module PLSQL
         [DateTime, nil]
       when "TIMESTAMP"
         [Time, nil]
-      when "TABLE"
+      when "TABLE", "OBJECT"
         # create Ruby class for collection
-        klass = Class.new(OCI8::Object::Base)
-        klass.set_typename metadata[:sql_type_name]
+        klass = OCI8::Object::Base.get_class_by_typename(metadata[:sql_type_name])
+        unless klass
+          klass = Class.new(OCI8::Object::Base)
+          klass.set_typename metadata[:sql_type_name]
+        end
         [klass, nil]
       else
         [String, 32767]
       end
     end
 
-    def ruby_value_to_ora_value(val, type)
-      if type == OraNumber
+    def ruby_value_to_ora_value(value, type=nil)
+      type ||= value.class
+      case type.to_s.to_sym
+      when :Fixnum, :BigDecimal, :String
+        value
+      when :OraNumber
         # pass parameters as OraNumber to avoid rounding errors
-        case val
+        case value
         when Bignum
-          OraNumber.new(val.to_s)
+          OraNumber.new(value.to_s)
         when BigDecimal
-          OraNumber.new(val.to_s('F'))
+          OraNumber.new(value.to_s('F'))
         when TrueClass
           OraNumber.new(1)
         when FalseClass
           OraNumber.new(0)
         else
-          val
+          value
         end
-      elsif type == DateTime
-        case val
+      when :DateTime
+        case value
         when Time
-          ::DateTime.civil(val.year, val.month, val.day, val.hour, val.min, val.sec, Rational(val.utc_offset, 86400))
+          ::DateTime.civil(value.year, value.month, value.day, value.hour, value.min, value.sec, Rational(value.utc_offset, 86400))
         when DateTime
-          val
+          value
         when Date
-          ::DateTime.civil(val.year, val.month, val.day, 0, 0, 0, 0)
+          ::DateTime.civil(value.year, value.month, value.day, 0, 0, 0, 0)
         else
-          val
+          value
         end
-      elsif type == OCI8::CLOB
-        # ruby-oci8 cannot create CLOB from ''
-        val = nil if val == ''
-        OCI8::CLOB.new(raw_oci_connection, val)
-      elsif type == OCI8::BLOB
-        # ruby-oci8 cannot create BLOB from ''
-        val = nil if val == ''
-        OCI8::BLOB.new(raw_oci_connection, val)
+      when :"OCI8::CLOB", :"OCI8::BLOB"
+        # ruby-oci8 cannot create CLOB/BLOB from ''
+        value = nil if value == ''
+        type.new(raw_oci_connection, value)
       else
-        val
+        # collections and object types
+        if type.superclass == OCI8::Object::Base
+          return nil if value.nil?
+          tdo = raw_oci_connection.get_tdo_by_class(type)
+          if tdo.is_collection?
+            raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
+            elem_list = value.map do |elem|
+              if (attr_tdo = tdo.coll_attr.typeinfo)
+                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
+              else
+                attr_type = elem.class
+              end
+              ruby_value_to_ora_value(elem, attr_type)
+            end
+            # construct collection value
+            # TODO: change setting instance variable to appropriate ruby-oci8 method call when available
+            collection = type.new(raw_oci_connection)
+            collection.instance_variable_set('@attributes', elem_list)
+            collection
+          else # object type
+            raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
+            object_attrs = value.dup
+            object_attrs.keys.each do |key|
+              raise ArgumentError, "Wrong object type field passed to PL/SQL procedure" unless (attr = tdo.attr_getters[key])
+              case attr.datatype
+              when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
+                # nested object type or collection
+                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
+                object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
+              end
+            end
+            type.new(raw_oci_connection, object_attrs)
+          end
+        # all other cases
+        else
+          value
+        end
       end
     end
 
-    def ora_value_to_ruby_value(val)
-      case val
+    def ora_value_to_ruby_value(value)
+      case value
       when Float, OraNumber
-        ora_number_to_ruby_number(val)
+        ora_number_to_ruby_number(value)
       when DateTime, OraDate
-        ora_date_to_ruby_date(val)
+        ora_date_to_ruby_date(value)
       when OCI8::LOB
-        if val.available?
-          val.rewind
-          val.read
+        if value.available?
+          value.rewind
+          value.read
         else
           nil
         end
       when OCI8::Object::Base
-        if val.instance_variable_get(:@attributes).is_a? Array
-          val.to_ary.map{|e| ora_value_to_ruby_value(e)}
+        tdo = raw_oci_connection.get_tdo_by_class(value.class)
+        if tdo.is_collection?
+          value.to_ary.map{|e| ora_value_to_ruby_value(e)}
+        else # object type
+          Hash[tdo.attributes.map do |attr|
+            [attr.name, ora_value_to_ruby_value(value.instance_variable_get(:@attributes)[attr.name])]
+          end]
         end
       else
-        val
+        value
       end
     end
 

@@ -143,7 +143,7 @@ module PLSQL
       end
     end
 
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE', 'OBJECT', 'REF CURSOR'].freeze
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE'].freeze
     def composite_type?(data_type)
       PLSQL_COMPOSITE_TYPES.include? data_type
     end

@@ -681,6 +681,113 @@ describe "Function with boolean parameters" do
 
 end
 
+describe "Function with object type parameter" do
+
+  before(:all) do
+    plsql.connection = get_connection
+    plsql.connection.exec "DROP TYPE t_employee" rescue nil
+    plsql.connection.exec "DROP TYPE t_phones" rescue nil
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_address AS OBJECT (
+        street    VARCHAR2(50),
+        city      VARCHAR2(50),
+        country   VARCHAR2(50)
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phone AS OBJECT (
+        type            VARCHAR2(10),
+        phone_number    VARCHAR2(50)
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phones AS TABLE OF T_PHONE
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_employee AS OBJECT (
+        employee_id   NUMBER(15),
+        first_name    VARCHAR2(50),
+        last_name     VARCHAR2(50),
+        hire_date     DATE,
+        address       t_address,
+        phones        t_phones
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_full_name (p_employee t_employee)
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN p_employee.first_name || ' ' || p_employee.last_name;
+      END;
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_employee_object (p_employee t_employee)
+        RETURN t_employee
+      IS
+      BEGIN
+        RETURN p_employee;
+      END;
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_employee_object2 (p_employee t_employee, x_employee OUT t_employee)
+        RETURN t_employee
+      IS
+      BEGIN
+        x_employee := p_employee;
+        RETURN p_employee;
+      END;
+    SQL
+    @p_employee = {
+      :employee_id => 1,
+      :first_name => 'First',
+      :last_name => 'Last',
+      :hire_date => Time.local(2000,01,31),
+      :address => {:street => 'Main street 1', :city => 'Riga', :country => 'Latvia'},
+      :phones => [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+    }
+  end
+
+  after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_full_name"
+    plsql.connection.exec "DROP FUNCTION test_employee_object"
+    plsql.connection.exec "DROP FUNCTION test_employee_object2"
+    plsql.connection.exec "DROP TYPE t_employee"
+    plsql.connection.exec "DROP TYPE t_address"
+    plsql.connection.exec "DROP TYPE t_phones"
+    plsql.connection.exec "DROP TYPE t_phone"
+    plsql.logoff
+  end
+
+  it "should find existing function" do
+    PLSQL::Procedure.find(plsql, :test_full_name).should_not be_nil
+  end
+
+  it "should execute function with named parameter and return correct value" do
+    plsql.test_full_name(:p_employee => @p_employee).should == 'First Last'
+  end
+
+  it "should execute function with sequential parameter and return correct value" do
+    plsql.test_full_name(@p_employee).should == 'First Last'
+  end
+
+  it "should raise error if wrong field name is passed for record parameter" do
+    lambda do
+      plsql.test_full_name(@p_employee.merge :xxx => 'xxx')
+    end.should raise_error(ArgumentError)
+  end
+
+  it "should return object type return value" do
+    plsql.test_employee_object(@p_employee).should == @p_employee
+  end
+
+  it "should return object type return value and output object type parameter value" do
+    plsql.test_employee_object2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
+  end
+
+end
+
+
 describe "Function with table parameter" do
 
   before(:all) do
@@ -773,6 +880,26 @@ describe "Function with table parameter" do
         END;
       END;
     SQL
+
+    # Array of objects
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phone AS OBJECT (
+        type            VARCHAR2(10),
+        phone_number    VARCHAR2(50)
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phones AS TABLE OF T_PHONE
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_copy_objects(p_phones IN t_phones, x_phones OUT t_phones)
+        RETURN t_phones
+      IS
+      BEGIN
+        x_phones := p_phones;
+        RETURN x_phones;
+      END;
+    SQL
   end
 
   after(:all) do
@@ -782,6 +909,8 @@ describe "Function with table parameter" do
     plsql.connection.exec "DROP PACKAGE test_collections"
     plsql.connection.exec "DROP TYPE t_numbers"
     plsql.connection.exec "DROP TYPE t_strings"
+    plsql.connection.exec "DROP TYPE t_phones"
+    plsql.connection.exec "DROP TYPE t_phone"
     plsql.logoff
   end
 
@@ -798,7 +927,6 @@ describe "Function with table parameter" do
   end
 
   it "should execute function with string array and return string array output parameter" do
-    pending "ruby-oci8 gives segmentation fault" if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
     strings = ['1','2','3','4']
     plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
   end
@@ -807,6 +935,16 @@ describe "Function with table parameter" do
     lambda do
       plsql.test_collections.test_sum([1,2,3,4])
     end.should raise_error(ArgumentError)
+  end
+
+  it "should execute function with object array and return object array output parameter" do
+    phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+    plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+  end
+
+  it "should execute function with empty object array" do
+    phones = []
+    plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
   end
 
 end
