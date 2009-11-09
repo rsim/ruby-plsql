@@ -131,13 +131,12 @@ describe "Connection" do
       end
       
       it "should not translate Ruby Fixnum when BigDecimal type specified" do
-        @conn.ruby_value_to_ora_value(100, BigDecimal).should eql(100)
+        @conn.ruby_value_to_ora_value(100, BigDecimal).should == java.math.BigDecimal.new(100)
       end
       
       it "should translate Ruby Bignum value to BigDecimal when BigDecimal type specified" do
         big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
-        big_decimal.class.should == BigDecimal
-        big_decimal.should == BigDecimal("12345678901234567890")
+        big_decimal.should == java.math.BigDecimal.new("12345678901234567890")
       end
       
       # it "should translate Ruby OraDate value to DateTime when DateTime type specified" do

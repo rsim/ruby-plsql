@@ -76,6 +76,12 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
+    private
+    
+    def arrays_to_hash(keys, values)
+      (0...keys.size).inject({}) { |hash, i| hash[keys[i]] = values[i]; hash }
+    end
+
   end
 
 end

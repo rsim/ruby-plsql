@@ -217,9 +217,10 @@ module PLSQL
         if tdo.is_collection?
           value.to_ary.map{|e| ora_value_to_ruby_value(e)}
         else # object type
-          Hash[tdo.attributes.map do |attr|
-            [attr.name, ora_value_to_ruby_value(value.instance_variable_get(:@attributes)[attr.name])]
-          end]
+          tdo.attributes.inject({}) do |hash, attr|
+            hash[attr.name] = ora_value_to_ruby_value(value.instance_variable_get(:@attributes)[attr.name])
+            hash
+          end
         end
       else
         value
