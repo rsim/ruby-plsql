@@ -275,9 +275,9 @@ describe "Connection" do
       @conn.exec(sql).should be_true
     end
 
-    # it "should execute PL/SQL procedure definition" do
-    #   @conn.select_first("SELECT test_add_random(1) FROM dual").should == [@random + 1]
-    # end
+    after(:each) do
+      @conn.exec "DROP FUNCTION test_add_random"
+    end
 
     it "should parse PL/SQL procedure call and bind parameters and exec and get bind parameter value" do
       sql = <<-EOS

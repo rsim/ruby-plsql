@@ -18,6 +18,7 @@ describe "Function with string parameters" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_uppercase"
     plsql.logoff
   end
   
@@ -143,6 +144,7 @@ describe "Function with date parameters" do
   end
 
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_date"
     plsql.logoff
   end
   
@@ -207,6 +209,7 @@ describe "Function with timestamp parameters" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_timestamp"
     plsql.logoff
   end
   
@@ -232,6 +235,7 @@ describe "Procedure with output parameters" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP PROCEDURE test_copy"
     plsql.logoff
   end
   
@@ -298,6 +302,7 @@ describe "Package with procedures with same name but different argument lists" d
   end
   
   after(:all) do
+    plsql.connection.exec "DROP PACKAGE test_package2"
     plsql.logoff
   end
     
@@ -359,6 +364,7 @@ describe "Function with output parameters" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_copy_function"
     plsql.logoff
   end
   
@@ -402,6 +408,8 @@ describe "Function or procedure without parameters" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_no_params"
+    plsql.connection.exec "DROP PROCEDURE test_proc_no_params"
     plsql.logoff
   end
 
@@ -439,6 +447,7 @@ describe "Function with CLOB parameter and return value" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_clob"
     plsql.logoff
   end
   
@@ -489,6 +498,7 @@ describe "Procedrue with CLOB parameter and return value" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP PROCEDURE test_clob_proc"
     plsql.logoff
   end
   
@@ -518,6 +528,7 @@ describe "Procedrue with BLOB parameter and return value" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP PROCEDURE test_blob_proc"
     plsql.logoff
   end
   
@@ -907,6 +918,7 @@ describe "Function with table parameter" do
     plsql.connection.exec "DROP FUNCTION test_increment"
     plsql.connection.exec "DROP FUNCTION test_copy_strings"
     plsql.connection.exec "DROP PACKAGE test_collections"
+    plsql.connection.exec "DROP FUNCTION test_copy_objects"
     plsql.connection.exec "DROP TYPE t_numbers"
     plsql.connection.exec "DROP TYPE t_strings"
     plsql.connection.exec "DROP TYPE t_phones"
@@ -1033,6 +1045,7 @@ describe "Function with VARRAY parameter" do
     plsql.connection.exec "DROP FUNCTION test_sum"
     plsql.connection.exec "DROP FUNCTION test_increment"
     plsql.connection.exec "DROP FUNCTION test_copy_strings"
+    plsql.connection.exec "DROP FUNCTION test_copy_objects"
     plsql.connection.exec "DROP TYPE t_numbers_array"
     plsql.connection.exec "DROP TYPE t_strings_array"
     plsql.connection.exec "DROP TYPE t_phones_array"
@@ -1086,7 +1099,8 @@ describe "Synonym to function" do
   end
   
   after(:all) do
-    plsql.connection.exec "DROP SYNONYM test_synonym" rescue nil
+    plsql.connection.exec "DROP SYNONYM test_synonym"
+    plsql.connection.exec "DROP FUNCTION hr.test_uppercase"
     plsql.logoff
   end
   
@@ -1115,6 +1129,7 @@ describe "Public synonym to function" do
   end
   
   after(:all) do
+    plsql.connection.exec "DROP FUNCTION hr.test_ora_login_user"
     plsql.logoff
   end
   
