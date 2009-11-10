@@ -203,7 +203,7 @@ describe "Function with timestamp parameters" do
         RETURN TIMESTAMP
       IS
       BEGIN
-        RETURN p_time + 1;
+        RETURN p_time + NUMTODSINTERVAL(1, 'DAY');
       END test_timestamp;
     EOS
   end
@@ -214,6 +214,7 @@ describe "Function with timestamp parameters" do
   end
   
   it "should process timestamp parameters" do
+    # now = Time.now
     now = Time.local(2008,8,12,14,28,0)
     plsql.test_timestamp(now).should == now + 60*60*24
   end
