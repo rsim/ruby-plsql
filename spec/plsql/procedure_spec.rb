@@ -949,6 +949,126 @@ describe "Function with table parameter" do
 
 end
 
+describe "Function with VARRAY parameter" do
+
+  before(:all) do
+    plsql.connection = get_connection
+
+    # Array of numbers
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_numbers_array AS VARRAY(100) OF NUMBER(15)
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_sum (p_numbers IN t_numbers_array)
+        RETURN NUMBER
+      IS
+        l_sum   NUMBER(15) := 0;
+      BEGIN
+        IF p_numbers.COUNT > 0 THEN
+          FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+            l_sum := l_sum + p_numbers(i);
+          END LOOP;
+          RETURN l_sum;
+        ELSE
+          RETURN NULL;
+        END IF;
+      END;
+    SQL
+    
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_increment(p_numbers IN t_numbers_array, p_increment_by IN NUMBER DEFAULT 1)
+        RETURN t_numbers_array
+      IS
+        l_numbers t_numbers_array := t_numbers_array();
+      BEGIN
+        FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+          l_numbers.EXTEND;
+          l_numbers(i) := p_numbers(i) + p_increment_by;
+        END LOOP;
+        RETURN l_numbers;
+      END;
+    SQL
+    
+    # Array of strings
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_strings_array AS VARRAY(100) OF VARCHAR2(4000)
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_copy_strings(p_strings IN t_strings_array, x_strings OUT t_strings_array)
+        RETURN t_strings_array
+      IS
+      BEGIN
+        x_strings := t_strings_array();
+        FOR i IN p_strings.FIRST..p_strings.LAST LOOP
+          x_strings.EXTEND;
+          x_strings(i) := p_strings(i);
+        END LOOP;
+        RETURN x_strings;
+      END;
+    SQL
+
+    # Array of objects
+    plsql.connection.exec "DROP TYPE t_phones_array" rescue nil
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phone AS OBJECT (
+        type            VARCHAR2(10),
+        phone_number    VARCHAR2(50)
+      )
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE TYPE t_phones_array AS ARRAY(100) OF T_PHONE
+    SQL
+    plsql.connection.exec <<-SQL
+      CREATE OR REPLACE FUNCTION test_copy_objects(p_phones IN t_phones_array, x_phones OUT t_phones_array)
+        RETURN t_phones_array
+      IS
+      BEGIN
+        x_phones := p_phones;
+        RETURN x_phones;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.connection.exec "DROP FUNCTION test_sum"
+    plsql.connection.exec "DROP FUNCTION test_increment"
+    plsql.connection.exec "DROP FUNCTION test_copy_strings"
+    plsql.connection.exec "DROP TYPE t_numbers_array"
+    plsql.connection.exec "DROP TYPE t_strings_array"
+    plsql.connection.exec "DROP TYPE t_phones_array"
+    plsql.connection.exec "DROP TYPE t_phone"
+    plsql.logoff
+  end
+
+  it "should find existing function" do
+    PLSQL::Procedure.find(plsql, :test_sum).should_not be_nil
+  end
+
+  it "should execute function with number array parameter" do
+    plsql.test_sum([1,2,3,4]).should == 10
+  end
+
+  it "should return number array return value" do
+    plsql.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+  end
+
+  it "should execute function with string array and return string array output parameter" do
+    strings = ['1','2','3','4']
+    plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+  end
+
+  it "should execute function with object array and return object array output parameter" do
+    phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+    plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+  end
+
+  it "should execute function with empty object array" do
+    phones = []
+    plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+  end
+
+end
+
 describe "Synonym to function" do
   
   before(:all) do

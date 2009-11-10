@@ -124,7 +124,7 @@ module PLSQL
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'PL/SQL RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-            when 'TABLE'
+            when 'TABLE', 'VARRAY'
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
@@ -143,7 +143,7 @@ module PLSQL
       end
     end
 
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE'].freeze
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE', 'VARRAY'].freeze
     def composite_type?(data_type)
       PLSQL_COMPOSITE_TYPES.include? data_type
     end

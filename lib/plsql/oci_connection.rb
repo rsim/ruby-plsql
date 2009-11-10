@@ -111,7 +111,7 @@ module PLSQL
         [DateTime, nil]
       when "TIMESTAMP"
         [Time, nil]
-      when "TABLE", "OBJECT"
+      when "TABLE", "VARRAY", "OBJECT"
         # create Ruby class for collection
         klass = OCI8::Object::Base.get_class_by_typename(metadata[:sql_type_name])
         unless klass

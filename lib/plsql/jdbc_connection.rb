@@ -121,7 +121,7 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','OBJECT'].include?(metadata[:data_type])
+          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
             @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
               metadata[:sql_type_name])
           else
@@ -219,7 +219,7 @@ module PLSQL
       when :Date, :Time, :DateTime, :'Java::OracleSql::DATE'
         stmt.send("setDATE#{key && "AtName"}", key || i, value)
       when :NilClass
-        if ['TABLE', 'OBJECT'].include?(metadata[:data_type])
+        if ['TABLE', 'VARRAY', 'OBJECT'].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
             metadata[:sql_type_name])
         else
@@ -313,7 +313,7 @@ module PLSQL
         [Time, nil]
       when "TIMESTAMP"
         [Time, nil]
-      when "TABLE"
+      when "TABLE", "VARRAY"
         [Java::OracleSql::ARRAY, nil]
       when "OBJECT"
         [Java::OracleSql::STRUCT, nil]
