@@ -20,7 +20,12 @@ module PLSQL
 
       @cursor.exec
 
-      get_return_value
+      if block_given?
+        yield get_return_value
+        nil
+      else
+        get_return_value
+      end
     ensure
       @cursor.close if @cursor
     end

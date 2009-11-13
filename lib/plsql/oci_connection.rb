@@ -67,9 +67,18 @@ module PLSQL
     end
 
     class Cursor
-      def initialize(sql, conn)
+      # stack of open cursors
+      @@open_cursors = []
+
+      def initialize(conn, raw_cursor)
         @connection = conn
-        @raw_cursor = @connection.raw_connection.parse(sql)
+        @raw_cursor = raw_cursor
+        @@open_cursors.push self
+      end
+
+      def self.new_from_parse(conn, sql)
+        raw_cursor = conn.raw_connection.parse(sql)
+        self.new(conn, raw_cursor)
       end
 
       def bind_param(arg, value, metadata)
@@ -86,14 +95,55 @@ module PLSQL
         @connection.ora_value_to_ruby_value(@raw_cursor[key])
       end
 
-      def close
+      def fetch
+        row = @raw_cursor.fetch
+        row && row.map{|v| @connection.ora_value_to_ruby_value(v)}
+      end
+
+      def fetch_hash
+        row = @raw_cursor.fetch
+        if row
+          row = row.map{|v| @connection.ora_value_to_ruby_value(v)}
+          @connection.arrays_to_hash(fields, row)
+        end
+      end
+
+      def fetch_all
+        rows = []
+        while (row = fetch)
+          rows << row
+        end
+        rows
+      end
+
+      def fetch_hash_all
+        rows = []
+        while (row = fetch_hash)
+          rows << row
+        end
+        rows
+      end
+
+      def fields
+        @fields ||= @raw_cursor.get_col_names.map{|c| c.downcase.to_sym}
+      end
+
+      def close_raw_cursor
         @raw_cursor.close
+      end
+
+      def close
+        # close all cursors that were created after this one
+        while (open_cursor = @@open_cursors.pop) && !open_cursor.equal?(self)
+          open_cursor.close_raw_cursor
+        end
+        close_raw_cursor
       end
 
     end
 
     def parse(sql)
-      Cursor.new(sql, self)
+      Cursor.new_from_parse(self, sql)
     end
 
     def plsql_to_ruby_data_type(metadata)
@@ -119,6 +169,8 @@ module PLSQL
           klass.set_typename metadata[:sql_type_name]
         end
         [klass, nil]
+      when "REF CURSOR"
+        [OCI8::Cursor]
       else
         [String, 32767]
       end
@@ -222,6 +274,8 @@ module PLSQL
             hash
           end
         end
+      when OCI8::Cursor
+        Cursor.new(self, value)
       else
         value
       end

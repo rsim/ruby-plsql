@@ -109,13 +109,13 @@ module PLSQL
       @@default_timezone = nil
     end
     
-    def method_missing(method, *args)
+    def method_missing(method, *args, &block)
       raise ArgumentError, "No PL/SQL connection" unless connection
       if procedure = @procedures[method]
-        procedure.exec(*args)
+        procedure.exec(*args, &block)
       elsif procedure = Procedure.find(self, method)
         @procedures[method] = procedure
-        procedure.exec(*args)
+        procedure.exec(*args, &block)
       elsif package = @packages[method]
         package
       elsif package = Package.find(self, method)

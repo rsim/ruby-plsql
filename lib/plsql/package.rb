@@ -39,12 +39,12 @@ module PLSQL
 
     private
     
-    def method_missing(method, *args)
+    def method_missing(method, *args, &block)
       if procedure = @procedures[method]
-        procedure.exec(*args)
+        procedure.exec(*args, &block)
       elsif procedure = Procedure.find(@schema, method, @package, @override_schema_name)
         @procedures[method] = procedure
-        procedure.exec(*args)
+        procedure.exec(*args, &block)
       else
         raise ArgumentError, "No PL/SQL procedure found"
       end

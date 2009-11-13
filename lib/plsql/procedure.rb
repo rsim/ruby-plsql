@@ -152,9 +152,9 @@ module PLSQL
       @overloaded
     end
 
-    def exec(*args)
+    def exec(*args, &block)
       call = ProcedureCall.new(self, args)
-      call.exec
+      call.exec(&block)
     end
 
   end

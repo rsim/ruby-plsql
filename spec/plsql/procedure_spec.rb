@@ -1058,6 +1058,116 @@ describe "Parameter type mapping /" do
 
   end
 
+  describe "Function with cursor return value" do
+
+    before(:all) do
+      plsql.connection.exec "DROP TABLE test_employees" rescue nil
+      plsql.connection.exec <<-SQL
+        CREATE TABLE test_employees (
+          employee_id   NUMBER(15),
+          first_name    VARCHAR2(50),
+          last_name     VARCHAR2(50),
+          hire_date     DATE
+        )
+      SQL
+      plsql.connection.exec <<-SQL
+        CREATE OR REPLACE PROCEDURE test_insert_employee(p_employee test_employees%ROWTYPE)
+        IS
+        BEGIN
+          INSERT INTO test_employees
+          VALUES p_employee;
+        END;
+      SQL
+      plsql.connection.exec <<-SQL
+        CREATE OR REPLACE FUNCTION test_cursor
+          RETURN SYS_REFCURSOR
+        IS
+          l_cursor  SYS_REFCURSOR;
+        BEGIN
+          OPEN l_cursor FOR
+          SELECT * FROM test_employees ORDER BY employee_id;
+          RETURN l_cursor;
+        END;
+      SQL
+      plsql.connection.exec <<-SQL
+        CREATE OR REPLACE PROCEDURE test_cursor_out(x_cursor OUT SYS_REFCURSOR)
+        IS
+        BEGIN
+          OPEN x_cursor FOR
+          SELECT * FROM test_employees ORDER BY employee_id;
+        END;
+      SQL
+      @fields = [:employee_id, :first_name, :last_name, :hire_date]
+      @employees = (1..10).map do |i|
+        {
+          :employee_id => i,
+          :first_name => "First #{i}",
+          :last_name => "Last #{i}",
+          :hire_date => Time.local(2000,01,i)
+        }
+      end
+      @employees.each do |e|
+        plsql.test_insert_employee(e)
+      end
+      plsql.connection.commit
+    end
+
+    after(:all) do
+      # plsql.connection.exec "DROP FUNCTION test_cursor"
+      # plsql.connection.exec "DROP PROCEDURE test_cursor_out"
+      # plsql.connection.exec "DROP PROCEDURE test_insert_employee"
+      # plsql.connection.exec "DROP TABLE test_employees"
+    end
+
+    it "should find existing function" do
+      PLSQL::Procedure.find(plsql, :test_cursor).should_not be_nil
+    end
+
+    it "should return cursor and fetch first row" do
+      plsql.test_cursor do |cursor|
+        cursor.fetch.should == @fields.map{|f| @employees[0][f]}
+      end.should be_nil
+    end
+
+    it "should close all returned cursors after block is executed" do
+      cursor2 = nil
+      plsql.test_cursor do |cursor|
+        cursor2 = cursor
+      end.should be_nil
+      lambda { cursor2.fetch }.should raise_error
+    end
+
+    it "should fetch hash from returned cursor" do
+      plsql.test_cursor do |cursor|
+        cursor.fetch_hash.should == @employees[0]
+      end
+    end
+
+    it "should fetch all rows from returned cursor" do
+      plsql.test_cursor do |cursor|
+        cursor.fetch_all.should == @employees.map{|e| @fields.map{|f| e[f]}}
+      end
+    end
+
+    it "should fetch all rows as hash from returned cursor" do
+      plsql.test_cursor do |cursor|
+        cursor.fetch_hash_all.should == @employees
+      end
+    end
+
+    it "should get field names from returned cursor" do
+      plsql.test_cursor do |cursor|
+        cursor.fields.should == @fields
+      end
+    end
+
+    it "should return output parameter with cursor and fetch first row" do
+      plsql.test_cursor_out do |result|
+        result[:x_cursor].fetch.should == @fields.map{|f| @employees[0][f]}
+      end.should be_nil
+    end
+
+  end
 end
 
 describe "Synonyms /" do
