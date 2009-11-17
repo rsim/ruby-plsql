@@ -1270,6 +1270,7 @@ describe "Synonyms /" do
     it "should find private synonym before public synonym" do
       # should reconnect to force clearing of procedure cache
       plsql.connection = get_connection
+      plsql.connection.exec "DROP SYNONYM ora_login_user" rescue nil
       plsql.connection.exec "CREATE SYNONYM ora_login_user FOR hr.test_ora_login_user"
       plsql.ora_login_user.should == 'XXX'
       plsql.connection.exec "DROP SYNONYM ora_login_user"

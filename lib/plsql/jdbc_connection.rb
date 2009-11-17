@@ -54,47 +54,6 @@ module PLSQL
       raw_connection.setAutoCommit(value)
     end
 
-    def select_first(sql, *bindvars)
-      stmt = prepare_statement(sql, *bindvars)
-      rset = stmt.executeQuery
-      metadata = rset.getMetaData
-      column_count = metadata.getColumnCount
-      if rset.next
-        (1..column_count).map do |i|
-          get_ruby_value_from_result_set(rset,i,:type_name => metadata.getColumnTypeName(i), :sql_type => metadata.getColumnType(i))
-        end
-      else
-        nil
-      end
-    ensure
-      rset.close rescue nil
-      stmt.close rescue nil
-    end
-
-    def select_all(sql, *bindvars, &block)
-      stmt = prepare_statement(sql, *bindvars)
-      results = []
-      row_count = 0
-      rset = stmt.executeQuery
-      metadata = rset.getMetaData
-      column_count = metadata.getColumnCount
-      while rset.next
-        row_with_typecast = (1..column_count).map do |i|
-          get_ruby_value_from_result_set(rset,i,:type_name => metadata.getColumnTypeName(i), :sql_type => metadata.getColumnType(i))
-        end
-        if block_given?
-          yield(row_with_typecast)
-          row_count += 1
-        else
-          results << row_with_typecast
-        end
-      end
-      block_given? ? row_count : results
-    ensure
-      rset.close rescue nil
-      stmt.close rescue nil
-    end
-    
     def exec(sql, *bindvars)
       cs = prepare_call(sql, *bindvars)
       cs.execute
@@ -105,7 +64,7 @@ module PLSQL
 
     class CallableStatement
 
-      def initialize(sql, conn)
+      def initialize(conn, sql)
         @sql = sql
         @connection = conn
         @params = sql.scan(/\:\w+/)
@@ -155,6 +114,7 @@ module PLSQL
       include Connection::CursorCommon
 
       attr_reader :result_set
+      attr_accessor :statement
 
       def initialize(conn, result_set)
         @connection = conn
@@ -165,6 +125,17 @@ module PLSQL
         (1..@column_count).each do |i|
           @column_type_names << {:type_name => @metadata.getColumnTypeName(i), :sql_type => @metadata.getColumnType(i)}
         end
+      end
+
+      def self.new_from_query(conn, sql, *bindvars)
+        stmt = conn.prepare_statement(sql, *bindvars)
+        cursor = Cursor.new(conn, stmt.executeQuery)
+        cursor.statement = stmt
+        cursor
+      rescue
+        # in case of any error close statement
+        stmt.close rescue nil
+        raise
       end
 
       def fetch
@@ -185,11 +156,16 @@ module PLSQL
 
       def close
         @result_set.close
+        @statement.close if @statement
       end
     end
 
     def parse(sql)
-      CallableStatement.new(sql, self)
+      CallableStatement.new(self, sql)
+    end
+
+    def cursor_from_query(sql, *bindvars)
+      Cursor.new_from_query(sql, *bindvars)
     end
 
     def prepare_statement(sql, *bindvars)

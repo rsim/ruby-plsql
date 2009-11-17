@@ -31,36 +31,6 @@ module PLSQL
       raw_connection.autocommit = value
     end
 
-    def select_first(sql, *bindvars)
-      cursor = raw_connection.exec(sql, *bindvars)
-      result = cursor.fetch
-      if result
-        result.map { |val| ora_value_to_ruby_value(val) }
-      else
-        nil
-      end
-    ensure
-      cursor.close rescue nil
-    end
-
-    def select_all(sql, *bindvars, &block)
-      cursor = raw_connection.exec(sql, *bindvars)
-      results = []
-      row_count = 0
-      while row = cursor.fetch
-        row_with_typecast = row.map {|val| ora_value_to_ruby_value(val) }
-        if block_given?
-          yield(row_with_typecast)
-          row_count += 1
-        else
-          results << row_with_typecast
-        end
-      end
-      block_given? ? row_count : results
-    ensure
-      cursor.close rescue nil
-    end
-
     def exec(sql, *bindvars)
       raw_connection.exec(sql, *bindvars)
       true
@@ -82,6 +52,10 @@ module PLSQL
       def self.new_from_parse(conn, sql)
         raw_cursor = conn.raw_connection.parse(sql)
         self.new(conn, raw_cursor)
+      end
+
+      def self.new_from_query(conn, sql, *bindvars)
+        Cursor.new(conn, conn.raw_connection.exec(sql, *bindvars))
       end
 
       def bind_param(arg, value, metadata)
@@ -123,6 +97,10 @@ module PLSQL
 
     def parse(sql)
       Cursor.new_from_parse(self, sql)
+    end
+
+    def cursor_from_query(sql, *bindvars)
+      Cursor.new_from_query(sql, *bindvars)
     end
 
     def plsql_to_ruby_data_type(metadata)

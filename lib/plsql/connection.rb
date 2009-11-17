@@ -61,11 +61,27 @@ module PLSQL
     end
 
     def select_first(sql, *bindvars)
-      raise NoMethodError, "Not implemented for this raw driver"
+      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor.fetch
+    ensure
+      cursor.close rescue nil
     end
 
     def select_all(sql, *bindvars, &block)
-      raise NoMethodError, "Not implemented for this raw driver"
+      cursor = cursor_from_query(self, sql, *bindvars)
+      results = []
+      row_count = 0
+      while row = cursor.fetch
+        if block_given?
+          yield(row)
+          row_count += 1
+        else
+          results << row
+        end
+      end
+      block_given? ? row_count : results
+    ensure
+      cursor.close rescue nil
     end
 
     def exec(sql, *bindvars)
