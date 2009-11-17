@@ -67,6 +67,8 @@ module PLSQL
     end
 
     class Cursor
+      include Connection::CursorCommon
+
       # stack of open cursors
       @@open_cursors = []
       attr_reader :raw_cursor
@@ -99,30 +101,6 @@ module PLSQL
       def fetch
         row = @raw_cursor.fetch
         row && row.map{|v| @connection.ora_value_to_ruby_value(v)}
-      end
-
-      def fetch_hash
-        row = @raw_cursor.fetch
-        if row
-          row = row.map{|v| @connection.ora_value_to_ruby_value(v)}
-          @connection.arrays_to_hash(fields, row)
-        end
-      end
-
-      def fetch_all
-        rows = []
-        while (row = fetch)
-          rows << row
-        end
-        rows
-      end
-
-      def fetch_hash_all
-        rows = []
-        while (row = fetch_hash)
-          rows << row
-        end
-        rows
       end
 
       def fields

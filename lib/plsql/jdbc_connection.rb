@@ -61,7 +61,7 @@ module PLSQL
       column_count = metadata.getColumnCount
       if rset.next
         (1..column_count).map do |i|
-          get_ruby_value_from_result_set(rset,i,metadata.getColumnTypeName(i))
+          get_ruby_value_from_result_set(rset,i,:type_name => metadata.getColumnTypeName(i), :sql_type => metadata.getColumnType(i))
         end
       else
         nil
@@ -80,7 +80,7 @@ module PLSQL
       column_count = metadata.getColumnCount
       while rset.next
         row_with_typecast = (1..column_count).map do |i|
-          get_ruby_value_from_result_set(rset,i,metadata.getColumnTypeName(i))
+          get_ruby_value_from_result_set(rset,i,:type_name => metadata.getColumnTypeName(i), :sql_type => metadata.getColumnType(i))
         end
         if block_given?
           yield(row_with_typecast)
@@ -103,7 +103,7 @@ module PLSQL
       cs.close rescue nil
     end
 
-    class Cursor
+    class CallableStatement
 
       def initialize(sql, conn)
         @sql = sql
@@ -121,7 +121,7 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
+          if ['TABLE','VARRAY','OBJECT','REF CURSOR'].include?(metadata[:data_type])
             @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
               metadata[:sql_type_name])
           else
@@ -151,8 +151,45 @@ module PLSQL
       end
     end
 
+    class Cursor
+      include Connection::CursorCommon
+
+      attr_reader :result_set
+
+      def initialize(conn, result_set)
+        @connection = conn
+        @result_set = result_set
+        @metadata = @result_set.getMetaData
+        @column_count = @metadata.getColumnCount
+        @column_type_names = [nil] # column numbering starts at 1
+        (1..@column_count).each do |i|
+          @column_type_names << {:type_name => @metadata.getColumnTypeName(i), :sql_type => @metadata.getColumnType(i)}
+        end
+      end
+
+      def fetch
+        if @result_set.next
+          (1..@column_count).map do |i|
+            @connection.get_ruby_value_from_result_set(@result_set, i, @column_type_names[i])
+          end
+        else
+          nil
+        end
+      end
+
+      def fields
+        @fields ||= (1..@column_count).map do |i|
+          @metadata.getColumnName(i).downcase.to_sym
+        end
+      end
+
+      def close
+        @result_set.close
+      end
+    end
+
     def parse(sql)
-      Cursor.new(sql, self)
+      CallableStatement.new(sql, self)
     end
 
     def prepare_statement(sql, *bindvars)
@@ -171,33 +208,42 @@ module PLSQL
       stmt
     end
 
+    RUBY_CLASS_TO_SQL_TYPE = {
+      Fixnum => java.sql.Types::INTEGER,
+      Bignum => java.sql.Types::INTEGER,
+      Integer => java.sql.Types::INTEGER,
+      Float => java.sql.Types::FLOAT,
+      BigDecimal => java.sql.Types::NUMERIC,
+      String => java.sql.Types::VARCHAR,
+      Java::OracleSql::CLOB => Java::oracle.jdbc.OracleTypes::CLOB,
+      Java::OracleSql::BLOB => Java::oracle.jdbc.OracleTypes::BLOB,
+      Date => java.sql.Types::DATE,
+      Time => java.sql.Types::DATE,
+      DateTime => java.sql.Types::DATE,
+      Java::OracleSql::ARRAY => Java::oracle.jdbc.OracleTypes::ARRAY,
+      Array => Java::oracle.jdbc.OracleTypes::ARRAY,
+      Java::OracleSql::STRUCT => Java::oracle.jdbc.OracleTypes::STRUCT,
+      Hash => Java::oracle.jdbc.OracleTypes::STRUCT,
+      java.sql.ResultSet => Java::oracle.jdbc.OracleTypes::CURSOR,
+    }
+    
+    SQL_TYPE_TO_RUBY_CLASS = {
+      java.sql.Types::CHAR => String,
+      java.sql.Types::VARCHAR => String,
+      java.sql.Types::NUMERIC => BigDecimal,
+      java.sql.Types::DATE => Time,
+      java.sql.Types::TIMESTAMP => Time,
+      Java::oracle.jdbc.OracleTypes::TIMESTAMPTZ => Time,
+      Java::oracle.jdbc.OracleTypes::TIMESTAMPLTZ => Time,
+      java.sql.Types::BLOB => String,
+      java.sql.Types::CLOB => String,
+      java.sql.Types::ARRAY => Array,
+      java.sql.Types::STRUCT => Hash,
+      Java::oracle.jdbc.OracleTypes::CURSOR => java.sql.ResultSet
+    }
+
     def get_java_sql_type(value, type)
-      case type ? type.to_s.to_sym : value.class.to_s.to_sym
-      when :Fixnum, :Bignum, :Integer
-        java.sql.Types::INTEGER
-      when :Float
-        java.sql.Types::FLOAT
-      when :BigDecimal
-        java.sql.Types::NUMERIC
-      when :String
-        java.sql.Types::VARCHAR
-      when :'Java::OracleSql::CLOB'
-        Java::oracle.jdbc.OracleTypes::CLOB
-      when :'Java::OracleSql::BLOB'
-        Java::oracle.jdbc.OracleTypes::BLOB
-      when :Date
-        java.sql.Types::DATE
-      when :Time
-        java.sql.Types::DATE
-      when :DateTime
-        java.sql.Types::DATE
-      when :'Java::OracleSql::ARRAY'
-        Java::oracle.jdbc.OracleTypes::ARRAY
-      when :'Java::OracleSql::STRUCT'
-        Java::oracle.jdbc.OracleTypes::STRUCT
-      else
-        java.sql.Types::VARCHAR
-      end
+      RUBY_CLASS_TO_SQL_TYPE[type || value.class] || java.sql.Types::VARCHAR
     end
 
     def set_bind_variable(stmt, i, value, type=nil, length=nil, metadata={})
@@ -222,6 +268,11 @@ module PLSQL
         if ['TABLE', 'VARRAY', 'OBJECT'].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
             metadata[:sql_type_name])
+        elsif metadata[:data_type] == 'REF CURSOR'
+          # TODO: cannot bind NULL value to cursor parameter, getting error
+          # java.sql.SQLException: Unsupported feature: sqlType=-10
+          # Currently do nothing and assume that NULL values will not be passed to IN parameters
+          # If cursor is IN/OUT or OUT parameter then it should work
         else
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type))
         end
@@ -229,81 +280,57 @@ module PLSQL
         stmt.send("setARRAY#{key && "AtName"}", key || i, value)
       when :'Java::OracleSql::STRUCT'
         stmt.send("setSTRUCT#{key && "AtName"}", key || i, value)
+      when :'Java::JavaSql::ResultSet'
+        # TODO: cannot find how to pass cursor parameter from JDBC
+        # setCursor is giving exception java.sql.SQLException: Unsupported feature
+        stmt.send("setCursor#{key && "AtName"}", key || i, value)
       else
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
       end
     end
     
     def get_bind_variable(stmt, i, type)
-      case type.to_s
-      when 'Fixnum', 'Bignum', 'Integer'
+      case type.to_s.to_sym
+      when :Fixnum, :Bignum, :Integer
         stmt.getInt(i)
-      when 'Float'
+      when :Float
         stmt.getFloat(i)
-      when 'BigDecimal'
+      when :BigDecimal
         bd = stmt.getBigDecimal(i)
         bd && BigDecimal.new(bd.to_s)
-      when 'String'
+      when :String
         stmt.getString(i)
-      when 'Java::OracleSql::CLOB'
+      when :'Java::OracleSql::CLOB'
         stmt.getClob(i)
-      when 'Java::OracleSql::BLOB'
+      when :'Java::OracleSql::BLOB'
         stmt.getBlob(i)
-      when 'Date','Time','DateTime'
-        if dt = stmt.getDATE(i)
-          d = dt.dateValue
-          t = dt.timeValue
-          Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
-        else
-          nil
-        end
-      when 'Java::OracleSql::ARRAY'
+      when :Date, :Time, :DateTime
+        stmt.getDATE(i)
+      when :'Java::OracleSql::ARRAY'
         stmt.getArray(i)
-      when 'Java::OracleSql::STRUCT'
+      when :'Java::OracleSql::STRUCT'
         stmt.getSTRUCT(i)
+      when :'Java::JavaSql::ResultSet'
+        stmt.getCursor(i)
       end
     end
 
-    def get_ruby_value_from_result_set(rset, i, type_name)
-      case type_name
-      when "CHAR", "VARCHAR2"
-        rset.getString(i)
-      when "CLOB"
-        ora_value_to_ruby_value(rset.getClob(i))
-      when "BLOB"
-        ora_value_to_ruby_value(rset.getBlob(i))
-      when "NUMBER"
-        d = rset.getBigDecimal(i)
-        if d.nil?
-          nil
-        elsif d.scale == 0
-          d.toBigInteger+0
-        else
-          BigDecimal(d.toString)
-        end
-      when "DATE"
-        if dt = rset.getDATE(i)
-          d = dt.dateValue
-          t = dt.timeValue
-          Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
-        else
-          nil
-        end
-      when /^TIMESTAMP/
-        ts = rset.getTimestamp(i)
-        ts && Time.send(Base.default_timezone, ts.year + 1900, ts.month + 1, ts.date, ts.hours, ts.minutes, ts.seconds,
-          ts.nanos / 1000)
-      else
-        nil
-      end
+    def get_ruby_value_from_result_set(rset, i, metadata)
+      ruby_type = SQL_TYPE_TO_RUBY_CLASS[metadata[:sql_type]]
+      ora_value = get_bind_variable(rset, i, ruby_type)
+      result_new = ora_value_to_ruby_value(ora_value)
     end
-    
+
+    def result_set_to_ruby_data_type(column_type, column_type_name)
+      
+    end
+
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
-      when "VARCHAR2"
+      when "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
         [String, data_length || 32767]
-      when "CLOB"
+      when "CLOB", "NCLOB"
         [Java::OracleSql::CLOB, nil]
       when "BLOB"
         [Java::OracleSql::BLOB, nil]
@@ -311,12 +338,14 @@ module PLSQL
         [BigDecimal, nil]
       when "DATE"
         [Time, nil]
-      when "TIMESTAMP"
+      when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
       when "TABLE", "VARRAY"
         [Java::OracleSql::ARRAY, nil]
       when "OBJECT"
         [Java::OracleSql::STRUCT, nil]
+      when "REF CURSOR"
+        [java.sql.ResultSet, nil]
       else
         [String, 32767]
       end
@@ -345,7 +374,7 @@ module PLSQL
         else
           java_date(value)
         end
-      when :"Java::OracleSql::CLOB"
+      when :'Java::OracleSql::CLOB'
         if value
           clob = Java::OracleSql::CLOB.createTemporary(raw_connection, false, Java::OracleSql::CLOB::DURATION_SESSION)
           clob.setString(1, value)
@@ -353,7 +382,7 @@ module PLSQL
         else
           Java::OracleSql::CLOB.getEmptyCLOB
         end
-      when :"Java::OracleSql::BLOB"
+      when :'Java::OracleSql::BLOB'
         if value
           blob = Java::OracleSql::BLOB.createTemporary(raw_connection, false, Java::OracleSql::BLOB::DURATION_SESSION)
           blob.setBytes(1, value.to_java_bytes)
@@ -361,7 +390,7 @@ module PLSQL
         else
           Java::OracleSql::BLOB.getEmptyBLOB
         end
-      when :"Java::OracleSql::ARRAY"
+      when :'Java::OracleSql::ARRAY'
         if value
           raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
           descriptor = Java::OracleSql::ArrayDescriptor.createDescriptor(metadata[:sql_type_name], raw_connection)
@@ -379,7 +408,7 @@ module PLSQL
           end
           Java::OracleSql::ARRAY.new(descriptor, raw_connection, elem_list.to_java)
         end
-      when :"Java::OracleSql::STRUCT"
+      when :'Java::OracleSql::STRUCT'
         if value
           raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
           descriptor = Java::OracleSql::StructDescriptor.createDescriptor(metadata[:sql_type_name], raw_connection)
@@ -405,6 +434,10 @@ module PLSQL
           end
           Java::OracleSql::STRUCT.new(descriptor, raw_connection, object_attrs)
         end
+      when :'Java::JavaSql::ResultSet'
+        if value
+          value.result_set
+        end
       else
         value
       end
@@ -416,6 +449,12 @@ module PLSQL
         ora_number_to_ruby_number(value)
       when Java::JavaMath::BigDecimal
         value && ora_number_to_ruby_number(BigDecimal.new(value.to_s))
+      when Java::OracleSql::DATE
+        if value
+          d = value.dateValue
+          t = value.timeValue
+          Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
+        end
       when Java::OracleSql::CLOB
         if value.isEmptyLob
           nil
@@ -436,6 +475,8 @@ module PLSQL
         field_names = (1..descriptor.getLength).map {|i| struct_metadata.getColumnName(i).downcase.to_sym}
         field_values = value.getAttributes.map{|e| ora_value_to_ruby_value(e)}
         arrays_to_hash(field_names, field_values)
+      when Java::java.sql.ResultSet
+        Cursor.new(self, value)
       else
         value
       end
@@ -453,7 +494,6 @@ module PLSQL
 
     def ora_number_to_ruby_number(num)
       # return BigDecimal instead of Float to avoid rounding errors
-      # num.to_i == num.to_f ? num.to_i : num.to_f
       num == (num_to_i = num.to_i) ? num_to_i : BigDecimal.new(num.to_s)
     end
     

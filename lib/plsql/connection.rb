@@ -80,6 +80,28 @@ module PLSQL
       (0...keys.size).inject({}) { |hash, i| hash[keys[i]] = values[i]; hash }
     end
 
+    module CursorCommon
+      def fetch_all
+        rows = []
+        while (row = fetch)
+          rows << row
+        end
+        rows
+      end
+
+      def fetch_hash_all
+        rows = []
+        while (row = fetch_hash)
+          rows << row
+        end
+        rows
+      end
+
+      def fetch_hash
+        (row = fetch) && @connection.arrays_to_hash(fields, row)
+      end
+    end
+
   end
 
 end

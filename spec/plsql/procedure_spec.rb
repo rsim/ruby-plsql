@@ -1193,6 +1193,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should execute function with cursor parameter and return record" do
+      pending "not possible from JDBC" if defined?(JRUBY_VERSION)
       plsql.test_cursor do |cursor|
         plsql.test_cursor_fetch(cursor).should == @employees[0]
       end
