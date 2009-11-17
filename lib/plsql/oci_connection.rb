@@ -69,6 +69,7 @@ module PLSQL
     class Cursor
       # stack of open cursors
       @@open_cursors = []
+      attr_reader :raw_cursor
 
       def initialize(conn, raw_cursor)
         @connection = conn
@@ -210,6 +211,8 @@ module PLSQL
         # ruby-oci8 cannot create CLOB/BLOB from ''
         value = nil if value == ''
         type.new(raw_oci_connection, value)
+      when :"OCI8::Cursor"
+        value && value.raw_cursor
       else
         # collections and object types
         if type.superclass == OCI8::Object::Base

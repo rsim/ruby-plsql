@@ -1058,7 +1058,7 @@ describe "Parameter type mapping /" do
 
   end
 
-  describe "Function with cursor return value" do
+  describe "Function with cursor return value or parameter" do
 
     before(:all) do
       plsql.connection.exec "DROP TABLE test_employees" rescue nil
@@ -1097,6 +1097,16 @@ describe "Parameter type mapping /" do
           SELECT * FROM test_employees ORDER BY employee_id;
         END;
       SQL
+      plsql.connection.exec <<-SQL
+        CREATE OR REPLACE FUNCTION test_cursor_fetch(p_cursor SYS_REFCURSOR)
+          RETURN test_employees%ROWTYPE
+        IS
+          l_record  test_employees%ROWTYPE;
+        BEGIN
+          FETCH p_cursor INTO l_record;
+          RETURN l_record;
+        END;
+      SQL
       @fields = [:employee_id, :first_name, :last_name, :hire_date]
       @employees = (1..10).map do |i|
         {
@@ -1113,10 +1123,11 @@ describe "Parameter type mapping /" do
     end
 
     after(:all) do
-      # plsql.connection.exec "DROP FUNCTION test_cursor"
-      # plsql.connection.exec "DROP PROCEDURE test_cursor_out"
-      # plsql.connection.exec "DROP PROCEDURE test_insert_employee"
-      # plsql.connection.exec "DROP TABLE test_employees"
+      plsql.connection.exec "DROP FUNCTION test_cursor"
+      plsql.connection.exec "DROP PROCEDURE test_cursor_out"
+      plsql.connection.exec "DROP PROCEDURE test_insert_employee"
+      plsql.connection.exec "DROP FUNCTION test_cursor_fetch"
+      plsql.connection.exec "DROP TABLE test_employees"
     end
 
     it "should find existing function" do
@@ -1135,6 +1146,14 @@ describe "Parameter type mapping /" do
         cursor2 = cursor
       end.should be_nil
       lambda { cursor2.fetch }.should raise_error
+    end
+
+    it "should not raise error if cursor is closed inside block" do
+      lambda do
+        plsql.test_cursor do |cursor|
+          cursor.close
+        end
+      end.should_not raise_error
     end
 
     it "should fetch hash from returned cursor" do
@@ -1165,6 +1184,18 @@ describe "Parameter type mapping /" do
       plsql.test_cursor_out do |result|
         result[:x_cursor].fetch.should == @fields.map{|f| @employees[0][f]}
       end.should be_nil
+    end
+
+    it "should return output parameter with cursor and fetch all rows as hash" do
+      plsql.test_cursor_out do |result|
+        result[:x_cursor].fetch_hash_all.should == @employees
+      end.should be_nil
+    end
+
+    it "should execute function with cursor parameter and return record" do
+      plsql.test_cursor do |cursor|
+        plsql.test_cursor_fetch(cursor).should == @employees[0]
+      end
     end
 
   end
