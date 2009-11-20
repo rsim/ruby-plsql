@@ -3,6 +3,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 describe "SQL statements /" do
   before(:all) do
     plsql.connection = get_connection
+    plsql.connection.autocommit = false
   end
 
   after(:all) do
@@ -13,7 +14,7 @@ describe "SQL statements /" do
     plsql.rollback
   end
 
-  describe "SQL SELECT statements" do
+  describe "SELECT" do
     before(:all) do
       plsql.execute "DROP TABLE test_employees" rescue nil
       plsql.execute <<-SQL
@@ -73,36 +74,36 @@ describe "SQL statements /" do
 
   end
 
-  describe "SQL INSERT statements" do
-    before(:all) do
-      plsql.execute "DROP TABLE test_employees" rescue nil
-      plsql.execute <<-SQL
-        CREATE TABLE test_employees (
-          employee_id   NUMBER(15),
-          first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
-          hire_date     DATE
-        )
-      SQL
-      @employees = (1..10).map do |i|
-        {
-          :employee_id => i,
-          :first_name => "First #{i}",
-          :last_name => "Last #{i}",
-          :hire_date => Time.local(2000,01,i)
-        }
-      end
-    end
-
-    after(:all) do
-      plsql.execute "DROP TABLE test_employees"
-    end
-
-    # it "should insert a record in table" do
-    #   plsql.test_employees.insert @employees.first
-    #   plsql.test_employees.select(:all).should == [@employees.first]
-    # end
-
-  end
+  # describe "INSERT" do
+  #   before(:all) do
+  #     plsql.execute "DROP TABLE test_employees" rescue nil
+  #     plsql.execute <<-SQL
+  #       CREATE TABLE test_employees (
+  #         employee_id   NUMBER(15),
+  #         first_name    VARCHAR2(50),
+  #         last_name     VARCHAR2(50),
+  #         hire_date     DATE
+  #       )
+  #     SQL
+  #     @employees = (1..10).map do |i|
+  #       {
+  #         :employee_id => i,
+  #         :first_name => "First #{i}",
+  #         :last_name => "Last #{i}",
+  #         :hire_date => Time.local(2000,01,i)
+  #       }
+  #     end
+  #   end
+  # 
+  #   after(:all) do
+  #     plsql.execute "DROP TABLE test_employees"
+  #   end
+  # 
+  #   # it "should insert a record in table" do
+  #   #   plsql.test_employees.insert @employees.first
+  #   #   plsql.test_employees.select(:all).should == [@employees.first]
+  #   # end
+  # 
+  # end
 
 end

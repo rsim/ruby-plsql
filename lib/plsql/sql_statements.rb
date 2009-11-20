@@ -23,12 +23,6 @@ module PLSQL
       end
     end
 
-    # def insert(params)
-    #   raise ArgumentError, "Wrong parameter passed to plsql.insert" unless params.is_a?(Hash) &&
-    #     params.keys.all?(|k| [:into, :values].include? k)
-    # 
-    # end
-
     def execute(*args)
       @connection.exec(*args)
     end

@@ -83,13 +83,9 @@ module PLSQL
 
     def reset_instance_variables
       if @connection
-        @procedures = {}
-        @packages = {}
-        @schemas = {}
+        @schema_objects = {}
       else
-        @procedures = nil
-        @packages = nil
-        @schemas = nil
+        @schema_objects = nil
       end
       @schema_name = nil
       @@default_timezone = nil
@@ -97,19 +93,23 @@ module PLSQL
     
     def method_missing(method, *args, &block)
       raise ArgumentError, "No PL/SQL connection" unless connection
-      if procedure = @procedures[method]
-        procedure.exec(*args, &block)
+      # look in cache at first
+      if schema_object = @schema_objects[method]
+        if schema_object.is_a?(Procedure)
+          schema_object.exec(*args, &block)
+        else
+          schema_object
+        end
+      # search in database
       elsif procedure = Procedure.find(self, method)
-        @procedures[method] = procedure
+        @schema_objects[method] = procedure
         procedure.exec(*args, &block)
-      elsif package = @packages[method]
-        package
       elsif package = Package.find(self, method)
-        @packages[method] = package
-      elsif schema = @schemas[method]
-        schema
+        @schema_objects[method] = package
+      elsif table = Table.find(self, method)
+        @schema_objects[method] = table
       elsif schema = find_other_schema(method)
-        @schemas[method] = schema
+        @schema_objects[method] = schema
       else
         raise ArgumentError, "No PL/SQL procedure found"
       end

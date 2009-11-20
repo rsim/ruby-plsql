@@ -65,12 +65,15 @@ module PLSQL
       @return_sql = ""
       @return_vars = []
       @return_vars_metadata = {}
-      if return_metadata
-        @call_sql << add_return
+
+      # construct procedure call if procedure name is available
+      # otherwise will get surrounding call_sql from @procedure (used for table statements)
+      if procedure_name
+        @call_sql << add_return if return_metadata
+        @call_sql << "#{schema_name}." if schema_name
+        @call_sql << "#{package_name}." if package_name
+        @call_sql << "#{procedure_name}("
       end
-      @call_sql << "#{schema_name}." if schema_name
-      @call_sql << "#{package_name}." if package_name
-      @call_sql << "#{procedure_name}("
 
       @bind_values = {}
       @bind_metadata = {}
@@ -100,7 +103,13 @@ module PLSQL
         end.join(', ')
       end
 
-      @call_sql << ");\n"      
+      # finish procedure call construction if procedure name is available
+      # otherwise will get surrounding call_sql from @procedure (used for table statements)
+      if procedure_name
+        @call_sql << ");\n"
+      else
+        @call_sql = @procedure.call_sql(@call_sql)
+      end
       add_out_vars
       @sql = "" << @declare_sql << @assignment_sql << @call_sql << @return_sql << "END;\n"
       # puts "DEBUG: sql = #{@sql.gsub "\n", "<br/>\n"}"
