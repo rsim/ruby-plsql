@@ -1,5 +1,7 @@
 module PLSQL
   class Schema
+    include SQLStatements
+
     @@schemas = {}
     
     class <<self
@@ -44,7 +46,7 @@ module PLSQL
     end
     
     def logoff
-      connection.logoff
+      @connection.logoff
       self.connection = nil
     end
 
@@ -53,22 +55,6 @@ module PLSQL
       @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
     end
 
-    def select_first(sql, *bindvars)
-      # cursor = connection.exec(sql, *bindvars)
-      # result = cursor.fetch
-      # cursor.close
-      # result
-      connection.select_first(sql, *bindvars)
-    end
-    
-    def commit
-      connection.commit
-    end
-
-    def rollback
-      connection.rollback
-    end
-    
     # Set to :local or :utc
     @@default_timezone = nil
     def default_timezone

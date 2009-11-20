@@ -188,13 +188,20 @@ describe "Connection" do
     
   end  
 
-  describe "SQL statements" do
+  describe "SQL SELECT statements" do
 
     it "should execute SQL statement and return first result" do
       @now = Time.local(2008,05,31,23,22,11)
       @conn.select_first("SELECT 'abc',123,123.456,
         TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
         FROM dual").should == ["abc",123,123.456,@now]
+    end
+
+    it "should execute SQL statement and return first result as hash" do
+      @now = Time.local(2008,05,31,23,22,11)
+      @conn.select_hash_first("SELECT 'abc' a, 123 b, 123.456 c,
+        TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}', 'YYYY-MM-DD HH24:MI:SS') d
+        FROM dual").should == {:a => "abc", :b => 123, :c => 123.456, :d => @now}
     end
 
     it "should execute SQL statement with bind parameters and return first result" do
@@ -231,7 +238,17 @@ describe "Connection" do
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
           FROM dual").should == [["abc",123,123.456,@now],["abc",123,123.456,@now]]
     end
-    
+
+    it "should execute SQL statement and return all results as hash" do
+      @now = Time.local(2008,05,31,23,22,11)
+      @conn.select_hash_all("SELECT 'abc' a, 123 b, 123.456 c,
+          TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d
+          FROM dual
+          UNION ALL SELECT 'def' a, 123 b, 123.456 c,
+          TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d
+          FROM dual").should == [{:a=>"abc",:b=>123,:c=>123.456,:d=>@now},{:a=>"def",:b=>123,:c=>123.456,:d=>@now}]
+    end
+
     it "should execute SQL statement with bind parameters and return all results" do
       @now = Time.local(2008,05,31,23,22,11)
       @conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",

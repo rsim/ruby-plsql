@@ -67,11 +67,35 @@ module PLSQL
       cursor.close rescue nil
     end
 
+    def select_hash_first(sql, *bindvars)
+      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor.fetch_hash
+    ensure
+      cursor.close rescue nil
+    end
+
     def select_all(sql, *bindvars, &block)
       cursor = cursor_from_query(self, sql, *bindvars)
       results = []
       row_count = 0
       while row = cursor.fetch
+        if block_given?
+          yield(row)
+          row_count += 1
+        else
+          results << row
+        end
+      end
+      block_given? ? row_count : results
+    ensure
+      cursor.close rescue nil
+    end
+
+    def select_hash_all(sql, *bindvars, &block)
+      cursor = cursor_from_query(self, sql, *bindvars)
+      results = []
+      row_count = 0
+      while row = cursor.fetch_hash
         if block_given?
           yield(row)
           row_count += 1

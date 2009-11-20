@@ -8,6 +8,7 @@ lib/plsql/package.rb
 lib/plsql/procedure.rb
 lib/plsql/procedure_call.rb
 lib/plsql/schema.rb
+lib/plsql/sql_statements.rb
 lib/plsql/version.rb
 lib/ruby-plsql.rb
 lib/ruby_plsql.rb
@@ -15,5 +16,6 @@ spec/plsql/connection_spec.rb
 spec/plsql/package_spec.rb
 spec/plsql/procedure_spec.rb
 spec/plsql/schema_spec.rb
+spec/plsql/sql_statements_spec.rb
 spec/spec.opts
 spec/spec_helper.rb
