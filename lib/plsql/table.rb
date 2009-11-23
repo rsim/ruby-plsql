@@ -123,6 +123,17 @@ module PLSQL
       call.exec
     end
 
+    def update(params)
+      raise ArgumentError, "Only Hash parameter can be passed to table update method" unless params.is_a?(Hash)
+      where = params.delete(:where)
+      
+      table_proc = TableProcedure.new(@schema, self, :update)
+      table_proc.add_set_arguments(params)
+      table_proc.add_where_arguments(where) if where
+      call = ProcedureCall.new(table_proc, table_proc.argument_values)
+      call.exec
+    end
+
     # wrapper class to simulate Procedure class for ProcedureClass#exec
     class TableProcedure
       attr_reader :arguments, :argument_list, :return, :out_list, :schema
@@ -135,11 +146,21 @@ module PLSQL
         @return = [nil]
         @out_list = [[]]
 
-        @argument_list = [[:p_record]]
-        @arguments = [{:p_record => {
-          :data_type => 'PL/SQL RECORD',
-          :fields => @table.columns
-        }}]
+        case @operation
+        when :insert
+          @argument_list = [[:p_record]]
+          @arguments = [{:p_record => {
+            :data_type => 'PL/SQL RECORD',
+            :fields => @table.columns
+          }}]
+        when :update
+          @argument_list = [[]]
+          @arguments = [{}]
+          @set_sqls = []
+          @set_values = []
+          @where_sqls = []
+          @where_values = []
+        end
       end
 
       def overloaded?
@@ -150,12 +171,44 @@ module PLSQL
         nil
       end
 
-      
+      def add_set_arguments(params)
+        params.each do |k,v|
+          raise ArgumentError, "Invalid column name #{k.inspect} specified as argument" unless (column_metadata = @table.columns[k])
+          @argument_list[0] << k
+          @arguments[0][k] = column_metadata
+          @set_sqls << "#{k}=:#{k}"
+          @set_values << v
+        end
+      end
+
+      def add_where_arguments(params)
+        case params
+        when Hash
+          params.each do |k,v|
+            raise ArgumentError, "Invalid column name #{k.inspect} specified as argument" unless (column_metadata = @table.columns[k])
+            @argument_list[0] << :"w_#{k}"
+            @arguments[0][:"w_#{k}"] = column_metadata
+            @where_sqls << "#{k}=:w_#{k}"
+            @where_values << v
+          end
+        when String
+          @where_sqls << params
+        end
+      end
+
+      def argument_values
+        @set_values + @where_values
+      end
 
       def call_sql(params_string)
         case @operation
         when :insert
           "INSERT INTO \"#{@table.schema_name}\".\"#{@table.table_name}\" VALUES #{params_string};\n"
+        when :update
+          update_sql = "UPDATE \"#{@table.schema_name}\".\"#{@table.table_name}\" SET #{@set_sqls.join(', ')}"
+          update_sql << " WHERE #{@where_sqls.join(' AND ')}" unless @where_sqls.empty?
+          update_sql << ";\n"
+          update_sql
         end
       end
 

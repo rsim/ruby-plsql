@@ -191,4 +191,33 @@ describe "Table" do
 
   end
 
+  describe "update" do
+    it "should update a record in table" do
+      employee_id = @employees.first[:employee_id]
+      plsql.test_employees.insert @employees.first
+      plsql.test_employees.update :first_name => 'Test', :where => {:employee_id => employee_id}
+      plsql.test_employees.first(:employee_id => employee_id)[:first_name].should == 'Test'
+    end
+
+    it "should update a record in table using String WHERE condition" do
+      employee_id = @employees.first[:employee_id]
+      plsql.test_employees.insert @employees
+      plsql.test_employees.update :first_name => 'Test', :where => "employee_id = #{employee_id}"
+      plsql.test_employees.first(:employee_id => employee_id)[:first_name].should == 'Test'
+      # all other records should not be changed
+      plsql.test_employees.all("WHERE employee_id > :1", employee_id) do |employee|
+        employee[:first_name].should_not == 'Test'
+      end
+    end
+
+    it "should update all records in table" do
+      plsql.test_employees.insert @employees
+      plsql.test_employees.update :first_name => 'Test'
+      plsql.test_employees.all do |employee|
+        employee[:first_name].should == 'Test'
+      end
+    end
+
+  end
+
 end
