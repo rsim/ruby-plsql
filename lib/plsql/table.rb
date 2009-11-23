@@ -37,21 +37,23 @@ module PLSQL
       @columns = {}
 
       @schema.connection.select_all("
-        SELECT column_name, column_id position,
-              data_type, data_length, data_precision, data_scale, char_used,
-              data_type_owner, data_type_mod
-        FROM all_tab_columns
-        WHERE owner = :owner
-        AND table_name = :table_name
-        ORDER BY column_id",
+        SELECT c.column_name, c.column_id position,
+              c.data_type, c.data_length, c.data_precision, c.data_scale, c.char_used,
+              c.data_type_owner, c.data_type_mod, t.typecode
+        FROM all_tab_columns c, all_types t
+        WHERE c.owner = :owner
+        AND c.table_name = :table_name
+        AND t.owner(+) = c.data_type_owner
+        AND t.type_name(+) = c.data_type
+        ORDER BY c.column_id",
         @schema_name, @table_name
       ) do |r|
         column_name, position,
               data_type, data_length, data_precision, data_scale, char_used,
-              data_type_owner, data_type_mod = r
+              data_type_owner, data_type_mod, typecode = r
         @columns[column_name.downcase.to_sym] = {
           :position => position && position.to_i,
-          :data_type => data_type_owner && 'OBJECT' || data_type,
+          :data_type => data_type_owner && (typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT' ) || data_type,
           :data_length => data_type_owner ? nil : data_length && data_length.to_i,
           :data_precision => data_precision && data_precision.to_i,
           :data_scale => data_scale && data_scale.to_i,
@@ -151,6 +153,12 @@ module PLSQL
         raise ArgumentError, "Only String or Hash can be provided as SQL condition argument"
       end
       @schema.execute(delete_sql, *bindvars)
+    end
+
+    private
+
+    def get_typecode(owner, type_name)
+      
     end
 
     # wrapper class to simulate Procedure class for ProcedureClass#exec

@@ -213,8 +213,8 @@ module PLSQL
       Java::oracle.jdbc.OracleTypes::TIMESTAMPLTZ => Time,
       java.sql.Types::BLOB => String,
       java.sql.Types::CLOB => String,
-      java.sql.Types::ARRAY => Array,
-      java.sql.Types::STRUCT => Hash,
+      java.sql.Types::ARRAY => Java::OracleSql::ARRAY,
+      java.sql.Types::STRUCT => Java::OracleSql::STRUCT,
       Java::oracle.jdbc.OracleTypes::CURSOR => java.sql.ResultSet
     }
 
@@ -470,7 +470,7 @@ module PLSQL
 
     def ora_number_to_ruby_number(num)
       # return BigDecimal instead of Float to avoid rounding errors
-      num == (num_to_i = num.to_i) ? num_to_i : BigDecimal.new(num.to_s)
+      num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end
     
   end

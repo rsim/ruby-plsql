@@ -10,6 +10,7 @@ lib/plsql/procedure_call.rb
 lib/plsql/schema.rb
 lib/plsql/sql_statements.rb
 lib/plsql/table.rb
+lib/plsql/sequence.rb
 lib/plsql/version.rb
 lib/ruby-plsql.rb
 lib/ruby_plsql.rb
@@ -19,5 +20,6 @@ spec/plsql/procedure_spec.rb
 spec/plsql/schema_spec.rb
 spec/plsql/sql_statements_spec.rb
 spec/plsql/table_spec.rb
+spec/plsql/sequence_spec.rb
 spec/spec.opts
 spec/spec_helper.rb

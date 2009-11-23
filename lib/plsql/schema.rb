@@ -108,6 +108,8 @@ module PLSQL
         @schema_objects[method] = package
       elsif table = Table.find(self, method)
         @schema_objects[method] = table
+      elsif sequence = Sequence.find(self, method)
+        @schema_objects[method] = sequence
       elsif schema = find_other_schema(method)
         @schema_objects[method] = schema
       else
