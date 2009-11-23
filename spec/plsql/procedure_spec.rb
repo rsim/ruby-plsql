@@ -251,8 +251,8 @@ describe "Parameter type mapping /" do
       plsql.test_copy("abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
-    it "should substitute all parementers with nil if none are specified" do
-      plsql.test_copy.should == { :p_to => nil, :p_to_double => nil }
+    it "should substitute named output parameters with nil if they are not specified" do
+      plsql.test_copy(:p_from => "abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
   end
@@ -375,10 +375,6 @@ describe "Parameter type mapping /" do
 
     it "should substitute output parameters with nil if they are not specified" do
       plsql.test_copy_function("abc").should == [3, { :p_to => "abc", :p_to_double => "abcabc" }]
-    end
-
-    it "should substitute all parementers with nil if none are specified" do
-      plsql.test_copy_function.should == [nil, { :p_to => nil, :p_to_double => nil }]
     end
 
   end

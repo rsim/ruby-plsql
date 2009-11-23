@@ -86,6 +86,13 @@ module PLSQL
             !(argument_list.size == 1 &&
               ['PL/SQL RECORD','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
               args[0].keys != [only_argument])
+        # Add missing output arguments with nil value
+        arguments.each do |arg, metadata|
+          if !args[0].has_key?(arg) && metadata[:in_out] == 'OUT'
+            args[0][arg] = nil
+          end
+        end
+        # Add passed parameters to procedure call with parameter names
         @call_sql << args[0].map do |arg, value|
           "#{arg} => " << add_argument(arg, value)
         end.join(', ')
@@ -94,8 +101,12 @@ module PLSQL
       else
         argument_count = argument_list.size
         raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
-        # Add missing arguments with nil value
-        args += [nil] * (argument_count - args.size) if args.size < argument_count
+        # Add missing output arguments with nil value
+        if args.size < argument_count &&
+                      (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
+          args += [nil] * (argument_count - args.size)
+        end
+        # Add passed parameters to procedure call in sequence
         @call_sql << (0...args.size).map do |i|
           arg = argument_list[i]
           value = args[i]
