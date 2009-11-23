@@ -250,4 +250,20 @@ describe "Table" do
 
   end
 
+  describe "delete" do
+    it "should delete record from table" do
+      employee_id = @employees.first[:employee_id]
+      plsql.test_employees.insert @employees
+      plsql.test_employees.delete :employee_id => employee_id
+      plsql.test_employees.first(:employee_id => employee_id).should be_nil
+      plsql.test_employees.all(:order_by => :employee_id).should == @employees[1, @employees.size-1]
+    end
+
+    it "should delete all records from table" do
+      plsql.test_employees.insert @employees
+      plsql.test_employees.delete
+      plsql.test_employees.all.should be_empty
+    end
+  end
+
 end

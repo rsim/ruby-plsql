@@ -78,17 +78,17 @@ module PLSQL
         select_sql << sql_params
       when Hash
         raise ArgumentError, "Cannot specify bind variables when passing WHERE conditions as Hash" unless bindvars.empty?
-        where_sql = []
+        where_sqls = []
         order_by_sql = nil
         sql_params.each do |k,v|
           if k == :order_by
             order_by_sql = "ORDER BY #{v} "
           else
-            where_sql << "#{k} = :#{k}"
+            where_sqls << "#{k} = :#{k}"
             bindvars << v
           end
         end
-        select_sql << "WHERE " << where_sql.join(' AND ') unless where_sql.blank?
+        select_sql << "WHERE " << where_sqls.join(' AND ') unless where_sqls.empty?
         select_sql << order_by_sql if order_by_sql
       else
         raise ArgumentError, "Only String or Hash can be provided as SQL condition argument"
@@ -132,6 +132,25 @@ module PLSQL
       table_proc.add_where_arguments(where) if where
       call = ProcedureCall.new(table_proc, table_proc.argument_values)
       call.exec
+    end
+
+    def delete(sql_params='', *bindvars)
+      delete_sql = "DELETE FROM \"#{@schema_name}\".\"#{@table_name}\" "
+      case sql_params
+      when String
+        delete_sql << sql_params
+      when Hash
+        raise ArgumentError, "Cannot specify bind variables when passing WHERE conditions as Hash" unless bindvars.empty?
+        where_sqls = []
+        sql_params.each do |k,v|
+          where_sqls << "#{k} = :#{k}"
+          bindvars << v
+        end
+        delete_sql << "WHERE " << where_sqls.join(' AND ') unless where_sqls.empty?
+      else
+        raise ArgumentError, "Only String or Hash can be provided as SQL condition argument"
+      end
+      @schema.execute(delete_sql, *bindvars)
     end
 
     # wrapper class to simulate Procedure class for ProcedureClass#exec
