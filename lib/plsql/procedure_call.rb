@@ -228,6 +228,8 @@ module PLSQL
           length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
         end
         "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
+      when 'TABLE', 'VARRAY', 'OBJECT'
+        metadata[:sql_type_name]
       else
         metadata[:data_type]
       end

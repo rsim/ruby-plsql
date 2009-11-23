@@ -47,6 +47,16 @@ describe "Table" do
         :hire_date => Time.local(2000,01,i)
       }
     end
+    @employees2 = (1..10).map do |i|
+      {
+        :employee_id => i,
+        :first_name => "First #{i}",
+        :last_name => "Last #{i}",
+        :hire_date => Time.local(2000,01,i),
+        :address => {:street => "Street #{i}", :city => "City #{i}", :country => "County #{i}"},
+        :phones => [{:type => "mobile", :phone_number => "Mobile#{i}"}, {:type => "fixed", :phone_number => "Fixed#{i}"}]
+      }
+    end
   end
 
   after(:all) do
@@ -155,6 +165,16 @@ describe "Table" do
       plsql.test_employees.all("ORDER BY employee_id").should == @employees
     end
 
+    it "should insert a record in table with object types" do
+      plsql.test_employees2.insert @employees2.first
+      plsql.test_employees2.all.should == [@employees2.first]
+    end
+
+    it "should insert array of records in table with object types" do
+      plsql.test_employees2.insert @employees2
+      plsql.test_employees2.all("ORDER BY employee_id").should == @employees2
+    end
+
   end
 
   describe "select" do
@@ -216,6 +236,16 @@ describe "Table" do
       plsql.test_employees.all do |employee|
         employee[:first_name].should == 'Test'
       end
+    end
+
+    it "should update a record in table with object type" do
+      employee = @employees2[0]
+      employee2 = @employees2[1]
+      plsql.test_employees2.insert employee
+      plsql.test_employees2.update :address => employee2[:address], :phones => employee2[:phones], :where => {:employee_id => employee[:employee_id]}
+      updated_employee = plsql.test_employees2.first(:employee_id => employee[:employee_id])
+      updated_employee[:address].should == employee2[:address]
+      updated_employee[:phones].should == employee2[:phones]
     end
 
   end
