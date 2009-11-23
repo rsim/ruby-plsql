@@ -1,6 +1,6 @@
 module PLSQL
 
-  module ProcedureClassMethods
+  module ProcedureClassMethods #:nodoc:
     def find(schema, procedure, package = nil, override_schema_name = nil)
       if package.nil?
         if schema.select_first("
@@ -38,7 +38,7 @@ module PLSQL
     end
   end
 
-  class Procedure
+  class Procedure #:nodoc:
     extend ProcedureClassMethods
 
     attr_reader :arguments, :argument_list, :out_list, :return

@@ -1,6 +1,6 @@
 module PLSQL
 
-  module PackageClassMethods
+  module PackageClassMethods #:nodoc:
     def find(schema, package)
       if schema.select_first("
             SELECT object_name FROM all_objects
@@ -27,7 +27,7 @@ module PLSQL
     end
   end
 
-  class Package
+  class Package #:nodoc:
     extend PackageClassMethods
 
     def initialize(schema, package, override_schema_name = nil)

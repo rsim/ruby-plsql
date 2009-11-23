@@ -9,7 +9,7 @@ rescue LoadError
 end
 
 module PLSQL
-  class OCIConnection < Connection
+  class OCIConnection < Connection #:nodoc:
     
     def logoff
       raw_connection.logoff
@@ -36,7 +36,7 @@ module PLSQL
       true
     end
 
-    class Cursor
+    class Cursor #:nodoc:
       include Connection::CursorCommon
 
       # stack of open cursors

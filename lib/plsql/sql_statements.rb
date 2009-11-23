@@ -1,13 +1,19 @@
 module PLSQL
   module SQLStatements
+    # Select first row as array or values (without column names)
     def select_first(sql, *bindvars)
       @connection.select_first(sql, *bindvars)
     end
 
+    # Select one value (use if only one row with one value is selected)
     def select_one(sql, *bindvars)
       (row = @connection.select_first(sql, *bindvars)) && row[0]
     end
 
+    # Select :first or :all values. Examples:
+    # 
+    #   plsql.select :first, "SELECT * FROM employees WHERE employee_id = :1", 1
+    #   plsql.select :all, "SELECT * FROM employees ORDER BY employee_id"
     def select(*args)
       case args[0]
       when nil
@@ -23,14 +29,29 @@ module PLSQL
       end
     end
 
+    # Execute SQL statement. Example:
+    #
+    #   plsql.execute "DROP TABLE employees"
     def execute(*args)
       @connection.exec(*args)
     end
 
+    # Execute COMMIT in current database session.
+    # Use beforehand
+    # 
+    #   plsql.connection.autocommit = false
+    # 
+    # to turn off automatic commits after each statement.
     def commit
       connection.commit
     end
 
+    # Execute ROLLBACK in current database session.
+    # Use beforehand
+    # 
+    #   plsql.connection.autocommit = false
+    # 
+    # to turn off automatic commits after each statement.
     def rollback
       connection.rollback
     end

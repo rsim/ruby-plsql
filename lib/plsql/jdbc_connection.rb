@@ -30,7 +30,7 @@ rescue LoadError, NameError
 end
 
 module PLSQL
-  class JDBCConnection < Connection
+  class JDBCConnection < Connection  #:nodoc:
     def logoff
       raw_connection.close
       true
@@ -62,7 +62,7 @@ module PLSQL
       cs.close rescue nil
     end
 
-    class CallableStatement
+    class CallableStatement #:nodoc:
 
       def initialize(conn, sql)
         @sql = sql
@@ -110,7 +110,7 @@ module PLSQL
       end
     end
 
-    class Cursor
+    class Cursor #:nodoc:
       include Connection::CursorCommon
 
       attr_reader :result_set

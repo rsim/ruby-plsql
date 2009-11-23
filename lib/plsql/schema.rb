@@ -5,7 +5,7 @@ module PLSQL
     @@schemas = {}
     
     class <<self
-      def find_or_new(connection_alias)
+      def find_or_new(connection_alias) #:nodoc:
         connection_alias ||= :default
         if @@schemas[connection_alias]
           @@schemas[connection_alias]
@@ -16,21 +16,32 @@ module PLSQL
 
     end
     
-    def initialize(raw_conn = nil, schema = nil, first = true)
+    def initialize(raw_conn = nil, schema = nil, first = true) #:nodoc:
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @first = first
     end
     
+    # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
     def connection
       @connection
     end
     
-    def raw_connection=(raw_conn)
+    def raw_connection=(raw_conn) #:nodoc:
       @connection = raw_conn ? Connection.create(raw_conn) : nil
       reset_instance_variables
     end
 
+    # Set connection to OCI8 or JDBC connection:
+    # 
+    #   plsql.connection = OCI8.new(database_user, database_password, DATABASE_NAME)
+    #
+    # or
+    #
+    #   plsql.connection = java.sql.DriverManager.getConnection(
+    #     "jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
+    #     database_user, database_password)
+    #
     def connection=(conn)
       if conn.is_a?(::PLSQL::Connection)
         @connection = conn
@@ -40,16 +51,22 @@ module PLSQL
       end
     end
 
+    # Set connection to current ActiveRecord connection (use in initializer file):
+    #
+    #   plsql.activerecord_class = ActiveRecord::Base
+    #
     def activerecord_class=(ar_class)
       @connection = ar_class ? Connection.create(nil, ar_class) : nil
       reset_instance_variables
     end
-    
+
+    # Disconnect from Oracle
     def logoff
       @connection.logoff
       self.connection = nil
     end
 
+    # Current Oracle schema name
     def schema_name
       return nil unless connection
       @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
@@ -57,6 +74,8 @@ module PLSQL
 
     # Set to :local or :utc
     @@default_timezone = nil
+
+    # Default timezone to which database values will be converted - :utc or :local
     def default_timezone
       @@default_timezone ||
         # Use ActiveRecord class default_timezone when ActiveRecord connection is used
@@ -64,7 +83,8 @@ module PLSQL
         # default to local timezone
         :local
     end
-    
+
+    # Set default timezone to which database values will be converted - :utc or :local
     def default_timezone=(value)
       if [:local, :utc].include?(value)
         @@default_timezone = value
@@ -75,7 +95,7 @@ module PLSQL
 
     # Same implementation as for ActiveRecord
     # DateTimes aren't aware of DST rules, so use a consistent non-DST offset when creating a DateTime with an offset in the local zone
-    def local_timezone_offset
+    def local_timezone_offset #:nodoc:
       ::Time.local(2007).utc_offset.to_r / 86400
     end
     
@@ -130,6 +150,15 @@ module PLSQL
 end
 
 module Kernel
+  # Returns current schema object. You can now chain either database object (packages, procedures, tables, sequences)
+  # in current schema or specify different schema name. Examples:
+  #
+  #   plsql.test_function('some parameter')
+  #   plsql.test_package.test_function('some parameter')
+  #   plsql.other_schema.test_package.test_function('some parameter')
+  #   plsql.table_name.all
+  #   plsql.other_schema.table_name.all
+  #
   def plsql(connection_alias = nil)
     PLSQL::Schema.find_or_new(connection_alias)
   end

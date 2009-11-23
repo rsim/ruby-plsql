@@ -1,6 +1,6 @@
 module PLSQL
 
-  module TableClassMethods
+  module TableClassMethods #:nodoc:
     def find(schema, table)
       if schema.select_first(
             "SELECT table_name FROM all_tables
@@ -28,9 +28,9 @@ module PLSQL
   class Table
     extend TableClassMethods
 
-    attr_reader :columns, :schema_name, :table_name
+    attr_reader :columns, :schema_name, :table_name #:nodoc:
 
-    def initialize(schema, table, override_schema_name = nil)
+    def initialize(schema, table, override_schema_name = nil) #:nodoc:
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @table_name = table.to_s.upcase
@@ -65,6 +65,8 @@ module PLSQL
       end
     end
 
+    # General select method with :first, :all or :count as first parameter.
+    # It is recommended to use #first, #all or #count method instead of this one.
     def select(first_or_all, sql_params='', *bindvars)
       case first_or_all
       when :first, :all
@@ -102,18 +104,45 @@ module PLSQL
       end
     end
 
+    # Select all table records using optional conditions. Examples:
+    #
+    #   plsql.employees.all
+    #   plsql.employees.all(:order_by => :employee_id)
+    #   plsql.employees.all("WHERE employee_id > :employee_id", 5)
+    # 
     def all(sql='', *bindvars)
       select(:all, sql, *bindvars)
     end
 
+    # Select first table record using optional conditions. Examples:
+    # 
+    #   plsql.employees.first
+    #   plsql.employees.first(:employee_id => 1)
+    #   plsql.employees.first("WHERE employee_id = 1")
+    #   plsql.employees.first("WHERE employee_id = :employee_id", 1)
+    # 
     def first(sql='', *bindvars)
       select(:first, sql, *bindvars)
     end
 
+    # Count table records using optional conditions. Examples:
+    # 
+    #   plsql.employees.count
+    #   plsql.employees.count("WHERE employee_id > :employee_id", 5)
+    # 
     def count(sql='', *bindvars)
       select(:count, sql, *bindvars)
     end
 
+    # Insert record or records in table. Examples:
+    # 
+    #   employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
+    #   plsql.employees.insert employee
+    #   # => INSERT INTO employees VALUES (1, 'First', 'Last', ...)
+    # 
+    #   employees = [employee1, employee2, ... ]  # array of many Hashes
+    #   plsql.employees.insert employees
+    #
     def insert(record)
       # if Array of records is passed then insert each individually
       if record.is_a?(Array)
@@ -125,6 +154,11 @@ module PLSQL
       call.exec
     end
 
+    # Update table records using optional conditions. Example:
+    # 
+    #   plsql.employees.update(:first_name => 'Second', :where => {:employee_id => 1})
+    #   # => UPDATE employees SET first_name = 'Second' WHERE employee_id = 1
+    #
     def update(params)
       raise ArgumentError, "Only Hash parameter can be passed to table update method" unless params.is_a?(Hash)
       where = params.delete(:where)
@@ -136,6 +170,11 @@ module PLSQL
       call.exec
     end
 
+    # Delete table records using optional conditions. Example:
+    # 
+    #   plsql.employees.delete(:employee_id => 1)
+    #   # => DELETE FROM employees WHERE employee_id = 1
+    # 
     def delete(sql_params='', *bindvars)
       delete_sql = "DELETE FROM \"#{@schema_name}\".\"#{@table_name}\" "
       case sql_params
@@ -162,7 +201,7 @@ module PLSQL
     end
 
     # wrapper class to simulate Procedure class for ProcedureClass#exec
-    class TableProcedure
+    class TableProcedure #:nodoc:
       attr_reader :arguments, :argument_list, :return, :out_list, :schema
 
       def initialize(schema, table, operation)

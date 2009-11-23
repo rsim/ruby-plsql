@@ -1,6 +1,6 @@
 module PLSQL
 
-  module SequenceClassMethods
+  module SequenceClassMethods #:nodoc:
     def find(schema, sequence)
       if schema.select_first(
             "SELECT sequence_name FROM all_sequences
@@ -28,16 +28,18 @@ module PLSQL
   class Sequence
     extend SequenceClassMethods
 
-    def initialize(schema, sequence, override_schema_name = nil)
+    def initialize(schema, sequence, override_schema_name = nil) #:nodoc:
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @sequence_name = sequence.to_s.upcase
     end
 
+    # Get NEXTVAL of sequence
     def nextval
       @schema.select_one "SELECT \"#{@schema_name}\".\"#{@sequence_name}\".NEXTVAL FROM dual"
     end
 
+    # Get CURRTVAL of sequence (can be called just after nextval)
     def currval
       @schema.select_one "SELECT \"#{@schema_name}\".\"#{@sequence_name}\".CURRVAL FROM dual"
     end
