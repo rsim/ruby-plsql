@@ -1,7 +1,9 @@
-== 0.4.0 (in development)
+== 0.4.0 2009-11-23
 
 * New features
-  * Support for PL/SQL RECORD, BOOLEAN, TABLE and OBJECT parameters
+  * Support for PL/SQL RECORD, BOOLEAN, TABLE, VARRAY, OBJECT and CURSOR parameters and return values
+  * Support for basic table and sequence operations
+* A lot of refactoring
 
 == 0.3.1 2009-06-05
 
