@@ -2,10 +2,14 @@ begin
   require "oci8"
 rescue LoadError
   # OCI8 driver is unavailable.
-  error_message = "ERROR: ruby-plsql could not load ruby-oci8 library. "+
-                  "Please install ruby-oci8 gem."
-  STDERR.puts error_message
-  raise LoadError
+  raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. Please install ruby-oci8 gem."
+end
+
+# check ruby-oci8 version
+required_oci8_version = [2, 0, 3]
+oci8_version_ints = OCI8::VERSION.scan(/\d+/).map{|s| s.to_i}
+if (oci8_version_ints <=> required_oci8_version) < 0
+  raise LoadError, "ERROR: ruby-oci8 version #{OCI8::VERSION} is too old. Please install ruby-oci8 version #{required_oci8_version.join('.')} or later."
 end
 
 module PLSQL
