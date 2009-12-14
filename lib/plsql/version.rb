@@ -1,3 +1,3 @@
 module PLSQL #:nodoc:
-  VERSION = '0.4.0'
+  VERSION = File.read(File.dirname(__FILE__)+'/../../VERSION').chomp
 end

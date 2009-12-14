@@ -2,7 +2,7 @@ require "time"
 require "date"
 require "bigdecimal"
 
-%w(connection sql_statements schema procedure procedure_call package table sequence).each do |file|
+%w(connection sql_statements schema procedure procedure_call package table sequence version).each do |file|
   require "plsql/#{file}"
 end
 
