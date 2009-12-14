@@ -36,7 +36,7 @@ ruby-plsql support both Ruby 1.8 MRI, Ruby 1.9.1 YARV and JRuby 1.3/1.4 runtime 
 
   # Nested objects or arrays are also supported
   p_employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31),
-    :address => {:street => 'Street', :city => 'City', :country => 'Country},
+    :address => {:street => 'Street', :city => 'City', :country => 'Country'},
     :phones => [{:type => 'mobile', :phone_number => '123456'}, {:type => 'fixed', :phone_number => '654321'}]}
   plsql.test_store_employee(p_employee)
 

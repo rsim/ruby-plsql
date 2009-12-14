@@ -3,7 +3,7 @@ gem "rspec"
 require "spec"
 
 gem "activerecord"
-require "activerecord"
+require "active_record"
 gem "activerecord-oracle_enhanced-adapter"
 
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
