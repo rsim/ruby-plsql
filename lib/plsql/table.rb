@@ -12,12 +12,18 @@ module PLSQL
       elsif (row = schema.select_first(
             "SELECT t.owner, t.table_name
             FROM all_synonyms s, all_tables t
-            WHERE s.owner IN (:owner, 'PUBLIC')
+            WHERE s.owner = :owner
               AND s.synonym_name = :synonym_name
               AND t.owner = s.table_owner
               AND t.table_name = s.table_name
-            ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
-            schema.schema_name, table.to_s.upcase))
+            UNION ALL
+            SELECT t.owner, t.table_name
+            FROM all_synonyms s, all_tables t
+            WHERE s.owner = 'PUBLIC'
+              AND s.synonym_name = :synonym_name
+              AND t.owner = s.table_owner
+              AND t.table_name = s.table_name",
+            schema.schema_name, table.to_s.upcase, table.to_s.upcase))
         new(schema, row[1], row[0])
       else
         nil
@@ -39,12 +45,13 @@ module PLSQL
       @schema.connection.select_all("
         SELECT c.column_name, c.column_id position,
               c.data_type, c.data_length, c.data_precision, c.data_scale, c.char_used,
-              c.data_type_owner, c.data_type_mod, t.typecode
-        FROM all_tab_columns c, all_types t
+              c.data_type_owner, c.data_type_mod,
+              (SELECT t.typecode FROM all_types t
+              WHERE t.owner = c.data_type_owner
+              AND t.type_name = c.data_type) typecode
+        FROM all_tab_columns c
         WHERE c.owner = :owner
         AND c.table_name = :table_name
-        AND t.owner(+) = c.data_type_owner
-        AND t.type_name(+) = c.data_type
         ORDER BY c.column_id",
         @schema_name, @table_name
       ) do |r|
