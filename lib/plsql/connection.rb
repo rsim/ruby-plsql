@@ -121,10 +121,6 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
-    def arrays_to_hash(keys, values) #:nodoc:
-      (0...keys.size).inject({}) { |hash, i| hash[keys[i]] = values[i]; hash }
-    end
-
     module CursorCommon
       # Fetch all rows from cursor, each row as array of values
       def fetch_all
@@ -146,7 +142,7 @@ module PLSQL
 
       # Fetch row from cursor as hash {:column => value, ...}
       def fetch_hash
-        (row = fetch) && @connection.arrays_to_hash(fields, row)
+        (row = fetch) && ArrayHelpers::to_hash(fields, row)
       end
     end
 

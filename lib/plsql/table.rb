@@ -157,7 +157,10 @@ module PLSQL
         return nil
       end
 
-      call = ProcedureCall.new(TableProcedure.new(@schema, self, :insert), [record])
+      table_proc = TableProcedure.new(@schema, self, :insert)
+      table_proc.add_insert_arguments(record)
+
+      call = ProcedureCall.new(table_proc, table_proc.argument_values)
       call.exec
     end
 
@@ -221,11 +224,10 @@ module PLSQL
 
         case @operation
         when :insert
-          @argument_list = [[:p_record]]
-          @arguments = [{:p_record => {
-            :data_type => 'PL/SQL RECORD',
-            :fields => @table.columns
-          }}]
+          @argument_list = [[]]
+          @arguments = [{}]
+          @insert_columns = []
+          @insert_values = []
         when :update
           @argument_list = [[]]
           @arguments = [{}]
@@ -242,6 +244,15 @@ module PLSQL
 
       def procedure
         nil
+      end
+
+      def add_insert_arguments(params)
+        params.each do |k,v|
+          raise ArgumentError, "Invalid column name #{k.inspect} specified as argument" unless (column_metadata = @table.columns[k])
+          @argument_list[0] << k
+          @arguments[0][k] = column_metadata
+          @insert_values << v
+        end
       end
 
       def add_set_arguments(params)
@@ -270,13 +281,18 @@ module PLSQL
       end
 
       def argument_values
-        @set_values + @where_values
+        case @operation
+        when :insert
+          @insert_values
+        when :update
+          @set_values + @where_values
+        end
       end
 
       def call_sql(params_string)
         case @operation
         when :insert
-          "INSERT INTO \"#{@table.schema_name}\".\"#{@table.table_name}\" VALUES #{params_string};\n"
+          "INSERT INTO \"#{@table.schema_name}\".\"#{@table.table_name}\"(#{@argument_list[0].map{|a| a.to_s}.join(', ')}) VALUES (#{params_string});\n"
         when :update
           update_sql = "UPDATE \"#{@table.schema_name}\".\"#{@table.table_name}\" SET #{@set_sqls.join(', ')}"
           update_sql << " WHERE #{@where_sqls.join(' AND ')}" unless @where_sqls.empty?

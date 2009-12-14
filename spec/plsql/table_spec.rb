@@ -9,7 +9,8 @@ describe "Table" do
         employee_id   NUMBER(15),
         first_name    VARCHAR2(50),
         last_name     VARCHAR2(50),
-        hire_date     DATE
+        hire_date     DATE,
+        status        VARCHAR2(1) DEFAULT 'N'
       )
     SQL
 
@@ -44,7 +45,8 @@ describe "Table" do
         :employee_id => i,
         :first_name => "First #{i}",
         :last_name => "Last #{i}",
-        :hire_date => Time.local(2000,01,i)
+        :hire_date => Time.local(2000,01,i),
+        :status => 'A'
       }
     end
     @employees2 = (1..10).map do |i|
@@ -131,7 +133,9 @@ describe "Table" do
         :last_name =>
           {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
         :hire_date => 
-          {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
+          {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
+        :status =>
+          {:position=>5, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
       }
     end
 
@@ -158,6 +162,16 @@ describe "Table" do
     it "should insert a record in table" do
       plsql.test_employees.insert @employees.first
       plsql.test_employees.all.should == [@employees.first]
+    end
+
+    it "should insert a record in table using partial list of columns" do
+      plsql.test_employees.insert @employees.first.except(:hire_date)
+      plsql.test_employees.all.should == [@employees.first.merge(:hire_date => nil)]
+    end
+
+    it "should insert default value from table definition if value not provided" do
+      plsql.test_employees.insert @employees.first.except(:status)
+      plsql.test_employees.all.should == [@employees.first.merge(:status => 'N')]
     end
 
     it "should insert array of records in table" do

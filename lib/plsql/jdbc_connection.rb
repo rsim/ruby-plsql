@@ -450,7 +450,7 @@ module PLSQL
         struct_metadata = descriptor.getMetaData
         field_names = (1..descriptor.getLength).map {|i| struct_metadata.getColumnName(i).downcase.to_sym}
         field_values = value.getAttributes.map{|e| ora_value_to_ruby_value(e)}
-        arrays_to_hash(field_names, field_values)
+        ArrayHelpers::to_hash(field_names, field_values)
       when Java::java.sql.ResultSet
         Cursor.new(self, value)
       else
