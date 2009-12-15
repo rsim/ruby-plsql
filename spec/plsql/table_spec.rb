@@ -49,6 +49,12 @@ describe "Table" do
         :status => 'A'
       }
     end
+    @employees_all_fields = [:employee_id, :first_name, :last_name, :hire_date, :status]
+    @employees_all_values = @employees.map{|e| @employees_all_fields.map{|f| e[f]}}
+    @employees_some_fields = [:employee_id, :first_name, :last_name]
+    @employees_some_values = @employees.map{|e| @employees_some_fields.map{|f| e[f]}}
+    @employee_default_values = {:hire_date => nil, :status => 'N'}
+
     @employees2 = (1..10).map do |i|
       {
         :employee_id => i,
@@ -187,6 +193,39 @@ describe "Table" do
     it "should insert array of records in table with object types" do
       plsql.test_employees2.insert @employees2
       plsql.test_employees2.all("ORDER BY employee_id").should == @employees2
+    end
+
+  end
+
+  describe "insert values" do
+    it "should insert a record with array of values" do
+      plsql.test_employees.insert_values @employees_all_values.first
+      plsql.test_employees.all.should == [@employees.first]
+    end
+
+    it "should insert a record with list of all fields and array of values" do
+      plsql.test_employees.insert_values @employees_all_fields, @employees_all_values.first
+      plsql.test_employees.all.should == [@employees.first]
+    end
+
+    it "should insert a record with list of some fields and array of values" do
+      plsql.test_employees.insert_values @employees_some_fields, @employees_some_values.first
+      plsql.test_employees.all.should == [@employees.first.merge(@employee_default_values)]
+    end
+
+    it "should insert many records with array of values" do
+      plsql.test_employees.insert_values *@employees_all_values
+      plsql.test_employees.all.should == @employees
+    end
+
+    it "should insert many records with list of all fields and array of values" do
+      plsql.test_employees.insert_values @employees_all_fields, *@employees_all_values
+      plsql.test_employees.all.should == @employees
+    end
+
+    it "should insert many records with list of some fields and array of values" do
+      plsql.test_employees.insert_values @employees_some_fields, *@employees_some_values
+      plsql.test_employees.all.should == @employees.map{|e| e.merge(@employee_default_values)}
     end
 
   end

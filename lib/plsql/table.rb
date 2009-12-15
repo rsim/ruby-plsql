@@ -72,6 +72,10 @@ module PLSQL
       end
     end
 
+    def column_names
+      @column_names ||= @columns.keys.sort_by{|k| columns[k][:position]}
+    end
+
     # General select method with :first, :all or :count as first parameter.
     # It is recommended to use #first, #all or #count method instead of this one.
     def select(first_or_all, sql_params='', *bindvars)
@@ -162,6 +166,37 @@ module PLSQL
 
       call = ProcedureCall.new(table_proc, table_proc.argument_values)
       call.exec
+    end
+
+    # Insert record or records in table using array of values. Examples:
+    # 
+    #   # with values for all columns
+    #   plsql.employees.insert [1, 'First', 'Last', Time.local(2000,01,31)]
+    #   # => INSERT INTO employees VALUES (1, 'First', 'Last', ...)
+    # 
+    #   # with values for specified columns
+    #   plsql.employees.insert [:employee_id, :first_name, :last_name], [1, 'First', 'Last']
+    #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
+    # 
+    #   # with values for many records
+    #   plsql.employees.insert [:employee_id, :first_name, :last_name], [1, 'First', 'Last'], [2, 'Second', 'Last']
+    #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
+    #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (2, 'Second', 'Last')
+    #
+    def insert_values(*args)
+      raise ArgumentError, "no arguments given" unless args.first
+      # if first argument is array of symbols then use it as list of fields
+      if args.first.all?{|a| a.instance_of?(Symbol)}
+        fields = args.shift
+      # otherwise use all columns as list of fields
+      else
+        fields = column_names
+      end
+      args.each do |record|
+        raise ArgumentError, "record should be Array of values" unless record.is_a?(Array)
+        raise ArgumentError, "wrong number of column values" unless record.size == fields.size
+        insert(ArrayHelpers::to_hash(fields, record))
+      end
     end
 
     # Update table records using optional conditions. Example:
