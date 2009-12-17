@@ -47,6 +47,13 @@ describe "Package" do
     plsql.test_package.test_procedure('xxx').should == 'XXX'
   end
 
+  describe "variables" do
+    it "should set and get package variable value" do
+      plsql.test_package.test_variable = 1
+      plsql.test_package.test_variable.should == 1
+    end
+  end
+
 end
 
 describe "Synonym to package" do

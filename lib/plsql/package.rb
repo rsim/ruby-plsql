@@ -34,22 +34,35 @@ module PLSQL
       @schema = schema
       @override_schema_name = override_schema_name
       @package = package.to_s.upcase
-      @procedures = {}
+      @package_objects = {}
     end
 
     private
     
     def method_missing(method, *args, &block)
-      if procedure = @procedures[method]
-        procedure.exec(*args, &block)
-      elsif procedure = Procedure.find(@schema, method, @package, @override_schema_name)
-        @procedures[method] = procedure
-        procedure.exec(*args, &block)
+      if assignment = (method.to_s[-1,1] == '=')
+        method = method.to_s.chop.to_sym
+      end
+      object = (@package_objects[method] ||=
+        Procedure.find(@schema, method, @package, @override_schema_name) ||
+        Variable.find(@schema, method, @package, @override_schema_name))
+      case object
+      when Procedure
+        raise ArgumentError, "Cannot assign value to package procedure" if assignment
+        object.exec(*args, &block)
+      when Variable
+        if assignment
+          raise ArgumentError, "Just one value can be assigned to package variable" unless args.size == 1 && block == nil
+          object.value = args[0]
+        else
+          raise ArgumentError, "Cannot pass arguments when getting package variable value" unless args.size == 0 && block == nil
+          object.value
+        end
       else
-        raise ArgumentError, "No PL/SQL procedure found"
+        raise ArgumentError, "No PL/SQL procedure or variable found"
       end
     end
-    
+
   end
 
 end

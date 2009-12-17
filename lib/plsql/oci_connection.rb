@@ -110,9 +110,9 @@ module PLSQL
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
-      when "VARCHAR2"
+      when "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
         [String, data_length || 32767]
-      when "CLOB"
+      when "CLOB", "NCLOB"
         [OCI8::CLOB, nil]
       when "BLOB"
         [OCI8::BLOB, nil]
@@ -120,7 +120,7 @@ module PLSQL
         [OraNumber, nil]
       when "DATE"
         [DateTime, nil]
-      when "TIMESTAMP"
+      when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
       when "TABLE", "VARRAY", "OBJECT"
         # create Ruby class for collection

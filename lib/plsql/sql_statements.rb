@@ -5,6 +5,11 @@ module PLSQL
       @connection.select_first(sql, *bindvars)
     end
 
+    # Select all rows as array or values (without column names)
+    def select_all(sql, *bindvars)
+      @connection.select_all(sql, *bindvars)
+    end
+
     # Select one value (use if only one row with one value is selected)
     def select_one(sql, *bindvars)
       (row = @connection.select_first(sql, *bindvars)) && row[0]
