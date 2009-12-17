@@ -1263,6 +1263,10 @@ describe "Synonyms /" do
       plsql.ora_login_user.should == 'HR'
     end
 
+    it "should not find public synonym if schema prefix is used" do
+      lambda { plsql.hr.ora_login_user }.should raise_error(ArgumentError)
+    end
+
     it "should find private synonym before public synonym" do
       # should reconnect to force clearing of procedure cache
       plsql.connection = get_connection

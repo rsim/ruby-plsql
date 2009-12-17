@@ -3,16 +3,16 @@ module PLSQL
   module ProcedureClassMethods #:nodoc:
     def find(schema, procedure, package = nil, override_schema_name = nil)
       if package.nil?
-        if schema.select_first("
-            SELECT object_name FROM all_objects
+        if schema.select_first(
+            "SELECT object_name FROM all_objects
             WHERE owner = :owner
               AND object_name = :object_name
               AND object_type IN ('PROCEDURE','FUNCTION')",
             schema.schema_name, procedure.to_s.upcase)
           new(schema, procedure)
         # search for synonym
-        elsif (row = schema.select_first("
-            SELECT o.owner, o.object_name
+        elsif (row = schema.select_first(
+            "SELECT o.owner, o.object_name
             FROM all_synonyms s, all_objects o
             WHERE s.owner IN (:owner, 'PUBLIC')
               AND s.synonym_name = :synonym_name
@@ -25,12 +25,12 @@ module PLSQL
         else
           nil
         end
-      elsif package && schema.select_first("
-            SELECT object_name FROM all_procedures
+      elsif package && schema.select_first(
+            "SELECT object_name FROM all_procedures
             WHERE owner = :owner
               AND object_name = :object_name
-              AND procedure_name = :procedure_name
-          ", override_schema_name || schema.schema_name, package, procedure.to_s.upcase)
+              AND procedure_name = :procedure_name",
+            override_schema_name || schema.schema_name, package, procedure.to_s.upcase)
         new(schema, procedure, package, override_schema_name)
       else
         nil
@@ -58,18 +58,18 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
 
-      # RSI: due to 10gR2 all_arguments performance issue SELECT split into two statements
+      # due to 10gR2 all_arguments performance issue SELECT split into two statements
       # added condition to ensure that if object is package then package specification not body is selected
-      object_id = @schema.connection.select_first("
-        SELECT o.object_id
+      object_id = @schema.connection.select_first(
+        "SELECT o.object_id
         FROM all_objects o
         WHERE o.owner = :owner
         AND o.object_name = :object_name
-        AND o.object_type <> 'PACKAGE BODY'
-        ", @schema_name, @package ? @package : @procedure
+        AND o.object_type <> 'PACKAGE BODY'",
+        @schema_name, @package ? @package : @procedure
       )[0] rescue nil
-      num_rows = @schema.connection.select_all("
-        SELECT overload, argument_name, position, data_level,
+      num_rows = @schema.connection.select_all(
+        "SELECT overload, argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
               type_owner, type_name, type_subname
         FROM all_arguments
@@ -77,8 +77,8 @@ module PLSQL
         AND owner = :owner
         AND object_name = :procedure_name
         AND NVL(package_name,'nil') = :package
-        ORDER BY overload, sequence
-        ", object_id, @schema_name, @procedure, @package ? @package : 'nil'
+        ORDER BY overload, sequence",
+        object_id, @schema_name, @procedure, @package ? @package : 'nil'
       ) do |r|
 
         overload, argument_name, position, data_level,

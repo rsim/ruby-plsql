@@ -113,31 +113,64 @@ module PLSQL
     
     def method_missing(method, *args, &block)
       raise ArgumentError, "No PL/SQL connection" unless connection
-      # look in cache at first
-      if schema_object = @schema_objects[method]
-        if schema_object.is_a?(Procedure)
-          schema_object.exec(*args, &block)
-        else
-          schema_object
-        end
-      # search in database
-      elsif procedure = Procedure.find(self, method)
-        @schema_objects[method] = procedure
-        procedure.exec(*args, &block)
-      elsif package = Package.find(self, method)
-        @schema_objects[method] = package
-      elsif table = Table.find(self, method)
-        @schema_objects[method] = table
-      elsif sequence = Sequence.find(self, method)
-        @schema_objects[method] = sequence
-      elsif schema = find_other_schema(method)
-        @schema_objects[method] = schema
+      # search in database if not in cache at first
+      object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) || find_public_synonym(method))
+
+      raise ArgumentError, "No database object found" unless object
+
+      if object.is_a?(Procedure)
+        object.exec(*args, &block)
       else
-        raise ArgumentError, "No PL/SQL procedure found"
+        object
+      end
+    end
+
+    def find_database_object(name, override_schema_name = nil)
+      # puts "DEBUG: find_database_object(#{name.inspect})<br/>"
+      object_schema_name = override_schema_name || schema_name
+      object_name = name.to_s.upcase
+      if row = select_first(
+          "SELECT object_type FROM all_objects
+          WHERE owner = :owner
+            AND object_name = :object_name",
+          object_schema_name, object_name)
+        case row[0]
+        when 'PROCEDURE', 'FUNCTION'
+          Procedure.new(self, name, nil, override_schema_name)
+        when 'PACKAGE'
+          Package.new(self, name, override_schema_name)
+        when 'TABLE'
+          Table.new(self, name, override_schema_name)
+        when 'SEQUENCE'
+          Sequence.new(self, name, override_schema_name)
+        when 'SYNONYM'
+          if syn = select_first(
+          "SELECT table_owner, table_name
+          FROM all_synonyms
+          WHERE owner = :owner
+            AND synonym_name = :synonym_name",
+                object_schema_name, object_name)
+            find_database_object(syn[1], syn[0])
+          end
+        end
+      end
+    end
+
+    def find_public_synonym(name)
+      # puts "DEBUG: find_public_synonym(#{name.inspect})<br/>"
+      return nil unless @first
+      if syn = select_first(
+        "SELECT table_owner, table_name
+        FROM all_synonyms
+        WHERE owner = 'PUBLIC'
+          AND synonym_name = :synonym_name",
+              name.to_s.upcase)
+        find_database_object(syn[1], syn[0])
       end
     end
 
     def find_other_schema(name)
+      # puts "DEBUG: find_other_schema(#{name.inspect})<br/>"
       return nil unless @first && connection
       if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
         Schema.new(connection, name, false)

@@ -3,13 +3,14 @@ require File.dirname(__FILE__) + '/../spec_helper'
 describe "Package" do
   before(:all) do
     plsql.connection = get_connection
-    plsql.connection.exec <<-EOS
+    plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE test_package IS
+        test_variable NUMBER;
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2;
       END;
-    EOS
-    plsql.connection.exec <<-EOS
+    SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE BODY test_package IS
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2
@@ -18,11 +19,12 @@ describe "Package" do
           RETURN UPPER(p_string);
         END test_procedure;
       END;
-    EOS
+    SQL
 
   end
   
   after(:all) do
+    plsql.execute "DROP PACKAGE test_package"
     plsql.logoff
   end
   

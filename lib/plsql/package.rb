@@ -2,16 +2,16 @@ module PLSQL
 
   module PackageClassMethods #:nodoc:
     def find(schema, package)
-      if schema.select_first("
-            SELECT object_name FROM all_objects
+      if schema.select_first(
+            "SELECT object_name FROM all_objects
             WHERE owner = :owner
               AND object_name = :package
               AND object_type = 'PACKAGE'",
             schema.schema_name, package.to_s.upcase)
         new(schema, package)
       # search for synonym
-      elsif (row = schema.select_first("
-            SELECT o.owner, o.object_name
+      elsif (row = schema.select_first(
+            "SELECT o.owner, o.object_name
             FROM all_synonyms s, all_objects o
             WHERE s.owner IN (:owner, 'PUBLIC')
               AND s.synonym_name = :synonym_name
