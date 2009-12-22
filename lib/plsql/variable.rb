@@ -10,8 +10,8 @@ module PLSQL
               AND type = 'PACKAGE'
               AND UPPER(text) LIKE :variable_name",
             override_schema_name || schema.schema_name, package, "%#{variable_upcase}%").each do |row|
-        if row[0] =~ /^\s*#{variable_upcase}\s+([A-Z0-9_.]+)\s*(:=.*)?;\s*$/i
-          return new(schema, variable, package, $1, override_schema_name)
+        if row[0] =~ /^\s*#{variable_upcase}\s+([A-Z0-9_. ]+(\([0-9,]+\))?)\s*(:=.*)?;\s*$/i
+          return new(schema, variable, package, $1.strip, override_schema_name)
         end
       end
       nil
@@ -74,6 +74,8 @@ module PLSQL
       when /^(CLOB|NCLOB|BLOB)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
       when /^(NUMBER)(\(.*\))?$/
+        {:data_type => $1, :in_out => 'IN/OUT'}
+      when /^(PLS_INTEGER|BINARY_INTEGER)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
       when /(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)/
         {:data_type => $1, :in_out => 'IN/OUT'}

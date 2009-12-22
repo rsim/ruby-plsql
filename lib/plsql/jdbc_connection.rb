@@ -194,7 +194,7 @@ module PLSQL
       Java::OracleSql::CLOB => Java::oracle.jdbc.OracleTypes::CLOB,
       Java::OracleSql::BLOB => Java::oracle.jdbc.OracleTypes::BLOB,
       Date => java.sql.Types::DATE,
-      Time => java.sql.Types::DATE,
+      Time => java.sql.Types::TIMESTAMP,
       DateTime => java.sql.Types::DATE,
       Java::OracleSql::ARRAY => Java::oracle.jdbc.OracleTypes::ARRAY,
       Array => Java::oracle.jdbc.OracleTypes::ARRAY,
@@ -207,6 +207,7 @@ module PLSQL
       java.sql.Types::CHAR => String,
       java.sql.Types::VARCHAR => String,
       java.sql.Types::NUMERIC => BigDecimal,
+      java.sql.Types::INTEGER => Fixnum,
       java.sql.Types::DATE => Time,
       java.sql.Types::TIMESTAMP => Time,
       Java::oracle.jdbc.OracleTypes::TIMESTAMPTZ => Time,
@@ -238,8 +239,10 @@ module PLSQL
         stmt.send("setClob#{key && "AtName"}", key || i, value)
       when :'Java::OracleSql::BLOB'
         stmt.send("setBlob#{key && "AtName"}", key || i, value)
-      when :Date, :Time, :DateTime, :'Java::OracleSql::DATE'
+      when :Date, :DateTime, :'Java::OracleSql::DATE'
         stmt.send("setDATE#{key && "AtName"}", key || i, value)
+      when :Time, :'Java::JavaSql::Timestamp'
+        stmt.send("setTimestamp#{key && "AtName"}", key || i, value)
       when :NilClass
         if ['TABLE', 'VARRAY', 'OBJECT'].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
@@ -280,8 +283,10 @@ module PLSQL
         stmt.getClob(i)
       when :'Java::OracleSql::BLOB'
         stmt.getBlob(i)
-      when :Date, :Time, :DateTime
+      when :Date, :DateTime
         stmt.getDATE(i)
+      when :Time
+        stmt.getTimestamp(i)
       when :'Java::OracleSql::ARRAY'
         stmt.getArray(i)
       when :'Java::OracleSql::STRUCT'
@@ -312,8 +317,10 @@ module PLSQL
         [Java::OracleSql::BLOB, nil]
       when "NUMBER"
         [BigDecimal, nil]
+      when "PLS_INTEGER", "BINARY_INTEGER"
+        [Fixnum, nil]
       when "DATE"
-        [Time, nil]
+        [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
       when "TABLE", "VARRAY"
@@ -341,7 +348,7 @@ module PLSQL
         else
           java_bigdecimal(value)
         end
-      when :Time, :Date, :DateTime
+      when :Date, :DateTime
         case value
         when DateTime
           java_date(Time.send(plsql.default_timezone, value.year, value.month, value.day, value.hour, value.min, value.sec))
@@ -350,6 +357,8 @@ module PLSQL
         else
           java_date(value)
         end
+      when :Time
+        java_timestamp(value)
       when :'Java::OracleSql::CLOB'
         if value
           clob = Java::OracleSql::CLOB.createTemporary(raw_connection, false, Java::OracleSql::CLOB::DURATION_SESSION)
@@ -431,6 +440,11 @@ module PLSQL
           t = value.timeValue
           Time.send(plsql.default_timezone, d.year + 1900, d.month + 1, d.date, t.hours, t.minutes, t.seconds)
         end
+      when Java::JavaSql::Timestamp
+        if value
+          Time.send(plsql.default_timezone, value.year + 1900, value.month + 1, value.date, value.hours, value.minutes, value.seconds,
+            value.nanos / 1000)
+        end
       when Java::OracleSql::CLOB
         if value.isEmptyLob
           nil
@@ -462,6 +476,10 @@ module PLSQL
     
     def java_date(value)
       value && Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S"))
+    end
+
+    def java_timestamp(value)
+      value && Java::java.sql.Timestamp.new(value.year-1900, value.month-1, value.day, value.hour, value.min, value.sec, value.usec * 1000)
     end
 
     def java_bigdecimal(value)

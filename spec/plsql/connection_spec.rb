@@ -123,7 +123,7 @@ describe "Connection" do
       end
       
       it "should translate PL/SQL DATE to Ruby DateTime" do
-        @conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil).should == [Time, nil]
+        @conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil).should == [DateTime, nil]
       end
       
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do

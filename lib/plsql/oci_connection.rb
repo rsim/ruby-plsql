@@ -116,7 +116,7 @@ module PLSQL
         [OCI8::CLOB, nil]
       when "BLOB"
         [OCI8::BLOB, nil]
-      when "NUMBER"
+      when "NUMBER", "PLS_INTEGER", "BINARY_INTEGER"
         [OraNumber, nil]
       when "DATE"
         [DateTime, nil]
