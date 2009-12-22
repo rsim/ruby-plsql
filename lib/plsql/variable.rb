@@ -10,7 +10,7 @@ module PLSQL
               AND type = 'PACKAGE'
               AND UPPER(text) LIKE :variable_name",
             override_schema_name || schema.schema_name, package, "%#{variable_upcase}%").each do |row|
-        if row[0] =~ /^\s*#{variable_upcase}\s+([A-Z0-9_. ]+(\([0-9,]+\))?)\s*(:=.*)?;\s*$/i
+        if row[0] =~ /^\s*#{variable_upcase}\s+([A-Z0-9_. %]+(\([0-9,]+\))?)\s*(:=.*)?;\s*$/i
           return new(schema, variable, package, $1.strip, override_schema_name)
         end
       end
@@ -71,14 +71,15 @@ module PLSQL
       case type_string
       when /^(VARCHAR2|CHAR|NVARCHAR2|NCHAR)(\((\d+)\))?$/
         {:data_type => $1, :data_length => $3.to_i, :in_out => 'IN/OUT'}
-      when /^(CLOB|NCLOB|BLOB)$/
+      when /^(CLOB|NCLOB|BLOB)$/,
+          /^(NUMBER)(\(.*\))?$/, /^(PLS_INTEGER|BINARY_INTEGER)$/,
+          /^(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
-      when /^(NUMBER)(\(.*\))?$/
-        {:data_type => $1, :in_out => 'IN/OUT'}
-      when /^(PLS_INTEGER|BINARY_INTEGER)$/
-        {:data_type => $1, :in_out => 'IN/OUT'}
-      when /(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)/
-        {:data_type => $1, :in_out => 'IN/OUT'}
+      when /^(\w+\.)?(\w+)\.(\w+)%TYPE$/
+        schema = $1 ? plsql.send($1.chop) : plsql
+        table = schema.send($2)
+        column = table.columns[$3.downcase.to_sym]
+        {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name]}
       else
         raise ArgumentError, "Package variable data type #{type_string} is not supported"
       end

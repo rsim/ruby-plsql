@@ -213,4 +213,52 @@ describe "Package variables /" do
 
   end
 
+  describe "table column type" do
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE TABLE test_employees (
+          employee_id NUMBER(15),
+          first_name  VARCHAR2(50),
+          last_name   VARCHAR2(50),
+          hire_date   DATE
+        )
+      SQL
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_package IS
+          employee_id test_employees.employee_id%TYPE;
+          first_name  test_employees.first_name%TYPE;
+          hire_date   test_employees.hire_date%TYPE;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_package IS
+        END;
+      SQL
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_package"
+      plsql.execute "DROP TABLE test_employees"
+    end
+
+    it "should set and get NUMBER variable" do
+      plsql.test_package.employee_id = 1
+      plsql.test_package.employee_id.should == 1
+    end
+
+    it "should set and get VARCHAR2 variable" do
+      plsql.test_package.first_name = 'First'
+      plsql.test_package.first_name.should == 'First'
+    end
+
+    it "should set and get DATE variable" do
+      today = Time.local(2009,12,22)
+      plsql.test_package.hire_date = today
+      plsql.test_package.hire_date.should == today
+    end
+
+  end
+
 end
