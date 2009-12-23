@@ -10,8 +10,8 @@ module PLSQL
               AND type = 'PACKAGE'
               AND UPPER(text) LIKE :variable_name",
             override_schema_name || schema.schema_name, package, "%#{variable_upcase}%").each do |row|
-        if row[0] =~ /^\s*#{variable_upcase}\s+([A-Z0-9_. %]+(\([0-9,]+\))?)\s*(:=.*)?;\s*$/i
-          return new(schema, variable, package, $1.strip, override_schema_name)
+        if row[0] =~ /^\s*#{variable_upcase}\s+(CONSTANT\s+)?([A-Z0-9_. %]+(\([0-9,]+\))?)\s*(NOT\s+NULL)?\s*((:=|DEFAULT).*)?;\s*(--.*)?$/i
+          return new(schema, variable, package, $2.strip, override_schema_name)
         end
       end
       nil
@@ -79,7 +79,7 @@ module PLSQL
         schema = $1 ? plsql.send($1.chop) : plsql
         table = schema.send($2)
         column = table.columns[$3.downcase.to_sym]
-        {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name]}
+        {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name], :in_out => 'IN/OUT'}
       else
         raise ArgumentError, "Package variable data type #{type_string} is not supported"
       end

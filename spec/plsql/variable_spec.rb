@@ -17,7 +17,10 @@ describe "Package variables /" do
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           varchar2_variable VARCHAR2(50);
+          varchar2_variable2 VARCHAR2(50); -- some comment
           varchar2_default varchar2(50) := 'default' ;
+          varchar2_default2 varchar2(50) DEFAULT 'default';
+          varchar2_default3 varchar2(50) NOT NULL := 'default';
           char_variable char(10) ;
           nvarchar2_variable NVARCHAR2(50);
           nchar_variable NCHAR(10);
@@ -39,8 +42,15 @@ describe "Package variables /" do
       plsql.test_package.varchar2_variable.should == 'abc'
     end
 
+    it "should set and get VARCHAR2 variable with comment" do
+      plsql.test_package.varchar2_variable2 = 'abc'
+      plsql.test_package.varchar2_variable2.should == 'abc'
+    end
+
     it "should get VARCHAR2 variable default value" do
       plsql.test_package.varchar2_default.should == 'default'
+      plsql.test_package.varchar2_default2.should == 'default'
+      plsql.test_package.varchar2_default3.should == 'default'
     end
 
     it "should set and get CHAR variable" do
@@ -257,6 +267,41 @@ describe "Package variables /" do
       today = Time.local(2009,12,22)
       plsql.test_package.hire_date = today
       plsql.test_package.hire_date.should == today
+    end
+
+  end
+
+  describe "constants" do
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_package IS
+          integer_constant CONSTANT NUMBER(1) := 1;
+          string_constant CONSTANT  VARCHAR2(10) := 'constant';
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_package IS
+        END;
+      SQL
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_package"
+    end
+
+    it "should get NUMBER constant" do
+      plsql.test_package.integer_constant.should == 1
+    end
+
+    it "should get VARCHAR2 constant" do
+      plsql.test_package.string_constant.should == 'constant'
+    end
+
+    it "should raise error when trying to set constant" do
+      lambda {
+        plsql.test_package.integer_constant = 2
+      }.should raise_error(/PLS-00363/)
     end
 
   end

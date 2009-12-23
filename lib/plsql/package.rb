@@ -48,18 +48,18 @@ module PLSQL
         Variable.find(@schema, method, @package, @override_schema_name))
       case object
       when Procedure
-        raise ArgumentError, "Cannot assign value to package procedure" if assignment
+        raise ArgumentError, "Cannot assign value to package procedure '#{method.to_s.upcase}'" if assignment
         object.exec(*args, &block)
       when Variable
         if assignment
-          raise ArgumentError, "Just one value can be assigned to package variable" unless args.size == 1 && block == nil
+          raise ArgumentError, "Just one value can be assigned to package variable '#{method.to_s.upcase}'" unless args.size == 1 && block == nil
           object.value = args[0]
         else
-          raise ArgumentError, "Cannot pass arguments when getting package variable value" unless args.size == 0 && block == nil
+          raise ArgumentError, "Cannot pass arguments when getting package variable '#{method.to_s.upcase}' value" unless args.size == 0 && block == nil
           object.value
         end
       else
-        raise ArgumentError, "No PL/SQL procedure or variable found"
+        raise ArgumentError, "No PL/SQL procedure or variable '#{method.to_s.upcase}' found"
       end
     end
 

@@ -112,11 +112,11 @@ module PLSQL
     end
     
     def method_missing(method, *args, &block)
-      raise ArgumentError, "No PL/SQL connection" unless connection
+      raise ArgumentError, "No database connection" unless connection
       # search in database if not in cache at first
       object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) || find_public_synonym(method))
 
-      raise ArgumentError, "No database object found" unless object
+      raise ArgumentError, "No database object '#{method.to_s.upcase}' found" unless object
 
       if object.is_a?(Procedure)
         object.exec(*args, &block)
