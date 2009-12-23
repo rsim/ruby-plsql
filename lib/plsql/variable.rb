@@ -77,9 +77,22 @@ module PLSQL
         {:data_type => $1, :in_out => 'IN/OUT'}
       when /^(\w+\.)?(\w+)\.(\w+)%TYPE$/
         schema = $1 ? plsql.send($1.chop) : plsql
-        table = schema.send($2)
+        table = schema.send($2.downcase.to_sym)
         column = table.columns[$3.downcase.to_sym]
         {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name], :in_out => 'IN/OUT'}
+      when /^(\w+\.)?(\w+)$/
+        schema = $1 ? plsql.send($1.chop) : plsql
+        begin
+          type = schema.send($2.downcase.to_sym)
+          raise ArgumentError unless type.is_a?(PLSQL::Type)
+          typecode = case type.typecode
+          when 'COLLECTION' then 'TABLE'
+          else 'OBJECT'
+          end
+          {:data_type => typecode, :data_length => nil, :sql_type_name => "#{type.schema_name}.#{type.type_name}", :in_out => 'IN/OUT'}
+        rescue ArgumentError
+          raise ArgumentError, "Package variable data type #{type_string} is not object type defined in schema"
+        end
       else
         raise ArgumentError, "Package variable data type #{type_string} is not supported"
       end

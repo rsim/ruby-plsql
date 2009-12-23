@@ -143,6 +143,8 @@ module PLSQL
           Table.new(self, name, override_schema_name)
         when 'SEQUENCE'
           Sequence.new(self, name, override_schema_name)
+        when 'TYPE'
+          Type.new(self, name, override_schema_name)
         when 'SYNONYM'
           if syn = select_first(
           "SELECT table_owner, table_name

@@ -306,4 +306,77 @@ describe "Package variables /" do
 
   end
 
+  describe "object type" do
+    before(:all) do
+      plsql.execute "DROP TYPE t_employee" rescue nil
+      plsql.execute "DROP TYPE t_phones" rescue nil
+      plsql.execute <<-SQL
+        CREATE OR REPLACE TYPE t_address AS OBJECT (
+          street    VARCHAR2(50),
+          city      VARCHAR2(50),
+          country   VARCHAR2(50)
+        )
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE TYPE t_phone AS OBJECT (
+          type            VARCHAR2(10),
+          phone_number    VARCHAR2(50)
+        )
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE TYPE t_phones AS TABLE OF T_PHONE
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE TYPE t_employee AS OBJECT (
+          employee_id   NUMBER(15),
+          first_name    VARCHAR2(50),
+          last_name     VARCHAR2(50),
+          hire_date     DATE,
+          address       t_address,
+          phones        t_phones
+        )
+      SQL
+      @phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+      @employee = {
+        :employee_id => 1,
+        :first_name => 'First',
+        :last_name => 'Last',
+        :hire_date => Time.local(2000,01,31),
+        :address => {:street => 'Main street 1', :city => 'Riga', :country => 'Latvia'},
+        :phones => @phones
+      }
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_package IS
+          g_employee    t_employee;
+          g_phones      t_phones;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_package IS
+        END;
+      SQL
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_package"
+      plsql.execute "DROP TYPE t_employee"
+      plsql.execute "DROP TYPE t_address"
+      plsql.execute "DROP TYPE t_phones"
+      plsql.execute "DROP TYPE t_phone"
+    end
+
+    it "should set and get object type variable" do
+      plsql.test_package.g_employee = @employee
+      plsql.test_package.g_employee.should == @employee
+    end
+
+    it "should set and get collection type variable" do
+      plsql.test_package.g_phones = @phones
+      plsql.test_package.g_phones.should == @phones
+    end
+
+  end
+
 end

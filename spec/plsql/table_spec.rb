@@ -130,6 +130,10 @@ describe "Table" do
 
   describe "columns" do
 
+    it "should get column names for table" do
+      plsql.test_employees.column_names.should == [:employee_id, :first_name, :last_name, :hire_date, :status]
+    end
+
     it "should get columns metadata for table" do
       plsql.test_employees.columns.should == {
         :employee_id =>
