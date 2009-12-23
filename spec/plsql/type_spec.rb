@@ -5,20 +5,20 @@ describe "Type" do
     plsql.connection = get_connection
     plsql.execute "DROP TYPE t_employee" rescue nil
     plsql.execute "DROP TYPE t_phones" rescue nil
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_address AS OBJECT (
         street    VARCHAR2(50),
         city      VARCHAR2(50),
         country   VARCHAR2(50)
       )
     SQL
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_phone AS OBJECT (
         type            VARCHAR2(10),
         phone_number    VARCHAR2(50)
       )
     SQL
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_phones AS VARRAY(10) OF T_PHONE
     SQL
     plsql.execute <<-SQL
@@ -64,11 +64,11 @@ describe "Type" do
   describe "synonym" do
 
     before(:all) do
-      plsql.connection.exec "CREATE SYNONYM t_employee_synonym FOR hr.t_employee"
+      plsql.execute "CREATE SYNONYM t_employee_synonym FOR hr.t_employee"
     end
 
     after(:all) do
-      plsql.connection.exec "DROP SYNONYM t_employee_synonym" rescue nil
+      plsql.execute "DROP SYNONYM t_employee_synonym" rescue nil
     end
 
     it "should find synonym to type" do

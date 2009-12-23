@@ -14,23 +14,23 @@ describe "Table" do
       )
     SQL
 
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_address AS OBJECT (
         street    VARCHAR2(50),
         city      VARCHAR2(50),
         country   VARCHAR2(50)
       )
     SQL
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_phone AS OBJECT (
         type            VARCHAR2(10),
         phone_number    VARCHAR2(50)
       )
     SQL
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_phones AS VARRAY(10) OF T_PHONE
     SQL
-    plsql.connection.exec <<-SQL
+    plsql.execute <<-SQL
       CREATE TABLE test_employees2 (
         employee_id   NUMBER(15),
         first_name    VARCHAR2(50),
@@ -99,11 +99,11 @@ describe "Table" do
   describe "synonym" do
 
     before(:all) do
-      plsql.connection.exec "CREATE SYNONYM test_employees_synonym FOR hr.test_employees"
+      plsql.execute "CREATE SYNONYM test_employees_synonym FOR hr.test_employees"
     end
 
     after(:all) do
-      plsql.connection.exec "DROP SYNONYM test_employees_synonym" rescue nil
+      plsql.execute "DROP SYNONYM test_employees_synonym" rescue nil
     end
 
     it "should find synonym to table" do

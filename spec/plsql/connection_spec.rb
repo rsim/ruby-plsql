@@ -281,14 +281,14 @@ describe "Connection" do
     before(:each) do
       @random = rand(1000)
       @now = Time.local(2008,05,31,23,22,11)
-      sql = <<-EOS
+      sql = <<-SQL
         CREATE OR REPLACE FUNCTION test_add_random (p_number NUMBER, p_varchar IN OUT VARCHAR2, p_date IN OUT DATE)
           RETURN NUMBER
         IS
         BEGIN
           RETURN p_number + #{@random};
         END test_add_random;
-      EOS
+      SQL
       @conn.exec(sql).should be_true
     end
 
@@ -297,11 +297,11 @@ describe "Connection" do
     end
 
     it "should parse PL/SQL procedure call and bind parameters and exec and get bind parameter value" do
-      sql = <<-EOS
+      sql = <<-SQL
         BEGIN
           :result := test_add_random (:p_number, :p_varchar, :p_date);
         END;
-      EOS
+      SQL
       cursor = @conn.parse(sql)
       cursor.bind_param(":result", nil, :data_type => 'NUMBER', :in_out => 'OUT')
       cursor.bind_param(":p_number", 100, :data_type => 'NUMBER', :in_out => 'IN')

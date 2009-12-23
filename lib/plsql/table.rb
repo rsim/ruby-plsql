@@ -239,12 +239,6 @@ module PLSQL
       @schema.execute(delete_sql, *bindvars)
     end
 
-    private
-
-    def get_typecode(owner, type_name)
-      
-    end
-
     # wrapper class to simulate Procedure class for ProcedureClass#exec
     class TableProcedure #:nodoc:
       attr_reader :arguments, :argument_list, :return, :out_list, :schema

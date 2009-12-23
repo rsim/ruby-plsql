@@ -60,13 +60,13 @@ describe "Synonym to package" do
   
   before(:all) do
     plsql.connection = get_connection
-    plsql.connection.exec <<-EOS
+    plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE hr.test_package IS
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2;
       END;
-    EOS
-    plsql.connection.exec <<-EOS
+    SQL
+    plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE BODY hr.test_package IS
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2
@@ -75,12 +75,12 @@ describe "Synonym to package" do
           RETURN UPPER(p_string);
         END test_procedure;
       END;
-    EOS
-    plsql.connection.exec "CREATE SYNONYM test_pkg_synonym FOR hr.test_package"
+    SQL
+    plsql.execute "CREATE SYNONYM test_pkg_synonym FOR hr.test_package"
   end
   
   after(:all) do
-    plsql.connection.exec "DROP SYNONYM test_pkg_synonym" rescue nil
+    plsql.execute "DROP SYNONYM test_pkg_synonym" rescue nil
     plsql.logoff
   end
   
