@@ -21,6 +21,8 @@ module PLSQL
   class Variable #:nodoc:
     extend VariableClassMethods
 
+    attr_reader :schema_name, :package_name, :variable_name #:nodoc:
+
     def initialize(schema, variable, package, variable_type, override_schema_name = nil)
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
@@ -31,41 +33,35 @@ module PLSQL
     end
 
     def value
-      cursor = @schema.connection.parse(get_value_sql)
-      cursor.bind_param(":return", nil, @metadata)
-      cursor.exec
-      cursor[':return']
-    ensure
-      cursor.close if defined?(cursor) && cursor
+      @variable_get_proc ||= VariableProcedure.new(@schema, self, :get, @metadata)
+      ProcedureCall.new(@variable_get_proc).exec
     end
 
     def value=(new_value)
-      cursor = @schema.connection.parse(set_value_sql)
-      cursor.bind_param(":value", new_value, @metadata)
-      cursor.exec
+      @variable_set_proc ||= VariableProcedure.new(@schema, self, :set, @metadata)
+      ProcedureCall.new(@variable_set_proc, [new_value]).exec
       new_value
-    ensure
-      cursor.close if defined?(cursor) && cursor
     end
 
     private
 
-    def get_value_sql
-      sql = "BEGIN\n"
-      sql << ":return := "
-      sql << "#{@schema_name}." if @schema_name
-      sql << "#{@package_name}." if @package_name
-      sql << "#{@variable_name};\n"
-      sql << "END;"
-    end
-
-    def set_value_sql
-      sql = "BEGIN\n"
-      sql << "#{@schema_name}." if @schema_name
-      sql << "#{@package_name}." if @package_name
-      sql << "#{@variable_name} := :value ;\n"
-      sql << "END;"
-    end
+    # def get_value_sql
+    #   sql = ""
+    #   sql << "BEGIN\n"
+    #   sql << ":return := "
+    #   sql << "#{@schema_name}." if @schema_name
+    #   sql << "#{@package_name}." if @package_name
+    #   sql << "#{@variable_name};\n"
+    #   sql << "END;"
+    # end
+    # 
+    # def set_value_sql
+    #   sql = "BEGIN\n"
+    #   sql << "#{@schema_name}." if @schema_name
+    #   sql << "#{@package_name}." if @package_name
+    #   sql << "#{@variable_name} := :value ;\n"
+    #   sql << "END;"
+    # end
 
     def metadata(type_string)
       case type_string
@@ -93,9 +89,70 @@ module PLSQL
         rescue ArgumentError
           raise ArgumentError, "Package variable data type #{type_string} is not object type defined in schema"
         end
+      when /^(\w+\.)?(\w+)%ROWTYPE$/
+        schema = $1 ? plsql.send($1.chop) : plsql
+        table = schema.send($2.downcase.to_sym)
+        record_metadata = {
+          :data_type => 'PL/SQL RECORD',
+          :in_out => 'IN/OUT',
+          :fields => {}
+        }
+        table.columns.each do |name, column|
+          record_metadata[:fields][name] =
+            {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name], 
+            :position => column[:position], :in_out => 'IN/OUT'}
+        end
+        record_metadata
       else
         raise ArgumentError, "Package variable data type #{type_string} is not supported"
       end
+    end
+
+    # wrapper class to simulate Procedure class for ProcedureClass#exec
+    class VariableProcedure #:nodoc:
+      attr_reader :arguments, :argument_list, :return, :out_list, :schema
+
+      def initialize(schema, variable, operation, metadata)
+        @schema = schema
+        @variable = variable
+        @operation = operation
+        @metadata = metadata
+
+        @out_list = [[]]
+
+        case @operation
+        when :get
+          @argument_list = [[]]
+          @arguments = [{}]
+          @return = [@metadata]
+        when :set
+          @argument_list = [[:value]]
+          @arguments = [{:value => @metadata}]
+          @return = [nil]
+        end
+
+      end
+
+      def overloaded?
+        false
+      end
+
+      def procedure
+        nil
+      end
+
+      def call_sql(params_string)
+        sql = (schema_name = @variable.schema_name) ? "#{schema_name}." : ""
+        sql << "#{@variable.package_name}.#{@variable.variable_name}"
+        case @operation
+        when :get
+          # params string contains assignment to return variable
+          "#{params_string} #{sql};\n"
+        when :set
+          "#{sql} := #{params_string};\n"
+        end
+      end
+
     end
 
   end

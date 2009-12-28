@@ -379,4 +379,45 @@ describe "Package variables /" do
 
   end
 
+  describe "table row type" do
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE TABLE test_employees (
+          employee_id NUMBER(15),
+          first_name  VARCHAR2(50),
+          last_name   VARCHAR2(50),
+          hire_date   DATE
+        )
+      SQL
+      @employee = {
+        :employee_id => 1,
+        :first_name => 'First',
+        :last_name => 'Last',
+        :hire_date => Time.local(2000,01,31)
+      }
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_package IS
+          g_employee test_employees%ROWTYPE;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_package IS
+        END;
+      SQL
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_package"
+      plsql.execute "DROP TABLE test_employees"
+    end
+
+    it "should set and get table ROWTYPE variable" do
+      plsql.test_package.g_employee = @employee
+      plsql.test_package.g_employee.should == @employee
+    end
+
+  end
+
 end

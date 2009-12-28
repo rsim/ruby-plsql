@@ -126,7 +126,6 @@ module PLSQL
     end
 
     def find_database_object(name, override_schema_name = nil)
-      # puts "DEBUG: find_database_object(#{name.inspect})<br/>"
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
@@ -159,7 +158,6 @@ module PLSQL
     end
 
     def find_public_synonym(name)
-      # puts "DEBUG: find_public_synonym(#{name.inspect})<br/>"
       return nil unless @first
       if syn = select_first(
         "SELECT table_owner, table_name
@@ -172,7 +170,6 @@ module PLSQL
     end
 
     def find_other_schema(name)
-      # puts "DEBUG: find_other_schema(#{name.inspect})<br/>"
       return nil unless @first && connection
       if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
         Schema.new(connection, name, false)

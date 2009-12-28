@@ -66,10 +66,10 @@ module PLSQL
       @return_vars = []
       @return_vars_metadata = {}
 
+      @call_sql << add_return if return_metadata
       # construct procedure call if procedure name is available
       # otherwise will get surrounding call_sql from @procedure (used for table statements)
       if procedure_name
-        @call_sql << add_return if return_metadata
         @call_sql << "#{schema_name}." if schema_name
         @call_sql << "#{package_name}." if package_name
         @call_sql << "#{procedure_name}("
@@ -123,7 +123,6 @@ module PLSQL
       end
       add_out_vars
       @sql = "" << @declare_sql << @assignment_sql << @call_sql << @return_sql << "END;\n"
-      # puts "DEBUG: sql = #{@sql.gsub "\n", "<br/>\n"}"
     end
 
     def add_argument(argument, value)
