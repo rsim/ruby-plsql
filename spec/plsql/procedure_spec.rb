@@ -92,11 +92,21 @@ describe "Parameter type mapping /" do
           END IF;
         END test_number_1;
       SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_integers
+          ( p_pls_int PLS_INTEGER, p_bin_int BINARY_INTEGER, x_pls_int OUT PLS_INTEGER, x_bin_int OUT BINARY_INTEGER )
+        IS
+        BEGIN
+          x_pls_int := p_pls_int;
+          x_bin_int := p_bin_int;
+        END;
+      SQL
     end
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_sum"
       plsql.execute "DROP FUNCTION test_number_1"
+      plsql.execute "DROP PROCEDURE test_integers"
     end
   
     it "should process integer parameters" do
@@ -127,6 +137,9 @@ describe "Parameter type mapping /" do
       plsql.test_number_1(false).should == 'N'
     end
 
+    it "should process binary integer parameters" do
+      plsql.test_integers(123, 456).should == {:x_pls_int => 123, :x_bin_int => 456}
+    end
   end
 
   describe "Function with date parameters" do
