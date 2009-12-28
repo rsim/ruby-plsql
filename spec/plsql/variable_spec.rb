@@ -420,4 +420,32 @@ describe "Package variables /" do
 
   end
 
+  describe "booleans" do
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_package IS
+          boolean_variable BOOLEAN;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_package IS
+        END;
+      SQL
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_package"
+    end
+
+    it "should set and get BOOLEAN variable" do
+      plsql.test_package.boolean_variable.should be_nil
+      plsql.test_package.boolean_variable = true
+      plsql.test_package.boolean_variable.should be_true
+      plsql.test_package.boolean_variable = false
+      plsql.test_package.boolean_variable.should be_false
+    end
+
+  end
+
 end

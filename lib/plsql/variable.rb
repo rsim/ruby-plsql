@@ -45,24 +45,6 @@ module PLSQL
 
     private
 
-    # def get_value_sql
-    #   sql = ""
-    #   sql << "BEGIN\n"
-    #   sql << ":return := "
-    #   sql << "#{@schema_name}." if @schema_name
-    #   sql << "#{@package_name}." if @package_name
-    #   sql << "#{@variable_name};\n"
-    #   sql << "END;"
-    # end
-    # 
-    # def set_value_sql
-    #   sql = "BEGIN\n"
-    #   sql << "#{@schema_name}." if @schema_name
-    #   sql << "#{@package_name}." if @package_name
-    #   sql << "#{@variable_name} := :value ;\n"
-    #   sql << "END;"
-    # end
-
     def metadata(type_string)
       case type_string
       when /^(VARCHAR2|CHAR|NVARCHAR2|NCHAR)(\((\d+)\))?$/
@@ -71,6 +53,8 @@ module PLSQL
           /^(NUMBER)(\(.*\))?$/, /^(PLS_INTEGER|BINARY_INTEGER)$/,
           /^(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
+      when /^BOOLEAN$/
+        {:data_type => 'PL/SQL BOOLEAN', :in_out => 'IN/OUT'}
       when /^(\w+\.)?(\w+)\.(\w+)%TYPE$/
         schema = $1 ? plsql.send($1.chop) : plsql
         table = schema.send($2.downcase.to_sym)
