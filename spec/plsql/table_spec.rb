@@ -256,6 +256,15 @@ describe "Table" do
       plsql.test_employees.first(:employee_id => @employees.first[:employee_id]).should == @employees.first
     end
 
+    it "should select record in table using :column => nil condition" do
+      employee = @employees.last
+      employee[:employee_id] = employee[:employee_id] + 1
+      employee[:hire_date] = nil
+      plsql.test_employees.insert employee
+      plsql.test_employees.first("WHERE hire_date IS NULL").should == employee
+      plsql.test_employees.first(:hire_date => nil).should == employee
+    end
+
     it "should count records in table" do
       plsql.test_employees.select(:count).should == @employees.size
       plsql.test_employees.count.should == @employees.size
