@@ -140,6 +140,8 @@ module PLSQL
           Package.new(self, name, override_schema_name)
         when 'TABLE'
           Table.new(self, name, override_schema_name)
+        when 'VIEW'
+          View.new(self, name, override_schema_name)
         when 'SEQUENCE'
           Sequence.new(self, name, override_schema_name)
         when 'TYPE'
