@@ -54,6 +54,10 @@ module PLSQL
       raw_connection.setAutoCommit(value)
     end
 
+    def prefetch_rows=(value)
+      raw_connection.setDefaultRowPrefetch(value)
+    end
+
     def exec(sql, *bindvars)
       cs = prepare_call(sql, *bindvars)
       cs.execute
@@ -127,8 +131,11 @@ module PLSQL
         end
       end
 
-      def self.new_from_query(conn, sql, *bindvars)
+      def self.new_from_query(conn, sql, bindvars=[], options={})
         stmt = conn.prepare_statement(sql, *bindvars)
+        if prefetch_rows = options[:prefetch_rows]
+          stmt.setRowPrefetch(prefetch_rows)
+        end
         cursor = Cursor.new(conn, stmt.executeQuery)
         cursor.statement = stmt
         cursor
@@ -164,8 +171,8 @@ module PLSQL
       CallableStatement.new(self, sql)
     end
 
-    def cursor_from_query(sql, *bindvars)
-      Cursor.new_from_query(sql, *bindvars)
+    def cursor_from_query(sql, bindvars=[], options={})
+      Cursor.new_from_query(self, sql, bindvars, options)
     end
 
     def prepare_statement(sql, *bindvars)

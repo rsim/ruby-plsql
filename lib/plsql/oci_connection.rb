@@ -37,6 +37,10 @@ module PLSQL
       raw_connection.autocommit = value
     end
 
+    def prefetch_rows=(value)
+      raw_connection.prefetch_rows = value
+    end
+
     def exec(sql, *bindvars)
       raw_connection.exec(sql, *bindvars)
       true
@@ -60,8 +64,17 @@ module PLSQL
         self.new(conn, raw_cursor)
       end
 
-      def self.new_from_query(conn, sql, *bindvars)
-        Cursor.new(conn, conn.raw_connection.exec(sql, *bindvars))
+      def self.new_from_query(conn, sql, bindvars=[], options={})
+        cursor = new_from_parse(conn, sql)
+        if prefetch_rows = options[:prefetch_rows]
+          cursor.prefetch_rows = prefetch_rows
+        end
+        cursor.exec(*bindvars)
+        cursor
+      end
+
+      def prefetch_rows=(value)
+        @raw_cursor.prefetch_rows = value
       end
 
       def bind_param(arg, value, metadata)
@@ -105,8 +118,8 @@ module PLSQL
       Cursor.new_from_parse(self, sql)
     end
 
-    def cursor_from_query(sql, *bindvars)
-      Cursor.new_from_query(sql, *bindvars)
+    def cursor_from_query(sql, bindvars=[], options={})
+      Cursor.new_from_query(self, sql, bindvars, options)
     end
 
     def plsql_to_ruby_data_type(metadata)

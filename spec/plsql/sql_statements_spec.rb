@@ -41,6 +41,7 @@ describe "SQL statements /" do
           :hire_date => Time.local(2000,01,i)
         }
       end
+      plsql.connection.prefetch_rows = 100
     end
 
     before(:each) do
@@ -52,11 +53,18 @@ describe "SQL statements /" do
     after(:all) do
       plsql.execute "DROP PROCEDURE test_insert_employee"
       plsql.execute "DROP TABLE test_employees"
+      plsql.connection.prefetch_rows = 1
     end
 
     it "should select first result" do
       plsql.select(:first, "SELECT * FROM test_employees WHERE employee_id = :employee_id",
         @employees.first[:employee_id]).should == @employees.first
+    end
+
+    it "should prefetch only one row when selecting first result" do
+      lambda {
+        plsql.select(:first, "SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual")
+      }.should_not raise_error
     end
 
     it "should select one value" do
@@ -65,6 +73,12 @@ describe "SQL statements /" do
 
     it "should return nil when selecting non-existing one value" do
       plsql.select_one("SELECT employee_id FROM test_employees WHERE 1=2").should be_nil
+    end
+
+    it "should prefetch only one row when selecting one value" do
+      lambda {
+        plsql.select_one("SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual")
+      }.should_not raise_error
     end
 
     it "should select all results" do

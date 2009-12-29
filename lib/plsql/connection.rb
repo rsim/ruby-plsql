@@ -65,22 +65,28 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
+    # Set number of rows to be prefetched. This can reduce the number of network round trips when fetching many rows.
+    # The default value is one. (If ActiveRecord oracle_enhanced connection is used then default is 100)
+    def prefetch_rows=(value)
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
     def select_first(sql, *bindvars) #:nodoc:
-      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor = cursor_from_query(sql, bindvars, :prefetch_rows => 1)
       cursor.fetch
     ensure
       cursor.close rescue nil
     end
 
     def select_hash_first(sql, *bindvars) #:nodoc:
-      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor = cursor_from_query(sql, bindvars, :prefetch_rows => 1)
       cursor.fetch_hash
     ensure
       cursor.close rescue nil
     end
 
     def select_all(sql, *bindvars, &block) #:nodoc:
-      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor = cursor_from_query(sql, bindvars)
       results = []
       row_count = 0
       while row = cursor.fetch
@@ -97,7 +103,7 @@ module PLSQL
     end
 
     def select_hash_all(sql, *bindvars, &block) #:nodoc:
-      cursor = cursor_from_query(self, sql, *bindvars)
+      cursor = cursor_from_query(sql, bindvars)
       results = []
       row_count = 0
       while row = cursor.fetch_hash

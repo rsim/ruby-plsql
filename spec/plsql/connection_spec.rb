@@ -349,4 +349,31 @@ describe "Connection" do
 
   end
 
+  describe "prefetch rows" do
+    after(:each) do
+      @conn.prefetch_rows = 1 # set back to default
+    end
+
+    it "should set prefetch rows for connection" do
+      sql = "SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual"
+      @conn.prefetch_rows = 2
+      lambda {
+        @conn.cursor_from_query(sql)
+      }.should raise_error(/divisor is equal to zero/)
+      @conn.prefetch_rows = 1
+      lambda {
+        @conn.cursor_from_query(sql)
+      }.should_not raise_error
+    end
+
+    it "should fetch just one row when using select_first" do
+      sql = "SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual"
+      @conn.prefetch_rows = 2
+      lambda {
+        @conn.select_first(sql)
+      }.should_not raise_error
+    end
+
+  end
+
 end
