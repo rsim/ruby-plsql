@@ -39,7 +39,7 @@ module PLSQL
       @schema.select_one "SELECT \"#{@schema_name}\".\"#{@sequence_name}\".NEXTVAL FROM dual"
     end
 
-    # Get CURRTVAL of sequence (can be called just after nextval)
+    # Get CURRVAL of sequence (can be called just after nextval)
     def currval
       @schema.select_one "SELECT \"#{@schema_name}\".\"#{@sequence_name}\".CURRVAL FROM dual"
     end

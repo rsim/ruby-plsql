@@ -42,17 +42,17 @@ module PLSQL
       @table_name = table.to_s.upcase
       @columns = {}
 
-      @schema.connection.select_all("
-        SELECT c.column_name, c.column_id position,
+      @schema.select_all(
+        "SELECT c.column_name, c.column_id position,
               c.data_type, c.data_length, c.data_precision, c.data_scale, c.char_used,
               c.data_type_owner, c.data_type_mod,
-              (SELECT t.typecode FROM all_types t
-              WHERE t.owner = c.data_type_owner
-              AND t.type_name = c.data_type) typecode
+              CASE WHEN c.data_type_owner IS NULL THEN NULL
+              ELSE (SELECT t.typecode FROM all_types t
+                WHERE t.owner = c.data_type_owner
+                AND t.type_name = c.data_type) END typecode
         FROM all_tab_columns c
         WHERE c.owner = :owner
-        AND c.table_name = :table_name
-        ORDER BY c.column_id",
+        AND c.table_name = :table_name",
         @schema_name, @table_name
       ) do |r|
         column_name, position,
@@ -72,6 +72,7 @@ module PLSQL
       end
     end
 
+    # list of table column names
     def column_names
       @column_names ||= @columns.keys.sort_by{|k| columns[k][:position]}
     end

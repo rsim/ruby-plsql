@@ -34,7 +34,7 @@ module PLSQL
   class View < Table
     extend ViewClassMethods
 
-    alias :view_name :table_name
+    alias :view_name :table_name #:nodoc:
 
   end
 

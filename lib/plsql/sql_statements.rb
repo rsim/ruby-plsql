@@ -6,8 +6,8 @@ module PLSQL
     end
 
     # Select all rows as array or values (without column names)
-    def select_all(sql, *bindvars)
-      @connection.select_all(sql, *bindvars)
+    def select_all(sql, *bindvars, &block)
+      @connection.select_all(sql, *bindvars, &block)
     end
 
     # Select one value (use if only one row with one value is selected)

@@ -42,13 +42,13 @@ module PLSQL
       @type_name = type.to_s.upcase
       @attributes = {}
 
-      @typecode = @schema.connection.select_first(
+      @typecode = @schema.select_first(
         "SELECT typecode FROM all_types
         WHERE owner = :owner
         AND type_name = :type_name",
         @schema_name, @type_name)[0]
 
-      @schema.connection.select_all(
+      @schema.select_all(
         "SELECT attr_name, attr_no,
               attr_type_name, length, precision, scale,
               attr_type_owner, attr_type_mod,
@@ -77,6 +77,7 @@ module PLSQL
       end
     end
 
+    # list of object type attribute names
     def attribute_names
       @attribute_names ||= @attributes.keys.sort_by{|k| @attributes[k][:position]}
     end

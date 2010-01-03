@@ -173,14 +173,14 @@ module PLSQL
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
-          "SELECT object_type FROM all_objects
+          "SELECT object_type, object_id FROM all_objects
           WHERE owner = :owner
             AND object_name = :object_name",
           object_schema_name, object_name)
         case row[0]
         when 'PROCEDURE', 'FUNCTION'
-          Procedure.new(self, name, nil, override_schema_name)
-        when 'PACKAGE'
+          Procedure.new(self, name, nil, override_schema_name, row[1])
+        when 'PACKAGE', 'PACKAGE BODY'
           Package.new(self, name, override_schema_name)
         when 'TABLE'
           Table.new(self, name, override_schema_name)
