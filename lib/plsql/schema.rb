@@ -3,7 +3,7 @@ module PLSQL
     include SQLStatements
 
     @@schemas = {}
-    
+
     class <<self
       def find_or_new(connection_alias) #:nodoc:
         connection_alias ||= :default
@@ -15,18 +15,18 @@ module PLSQL
       end
 
     end
-    
-    def initialize(raw_conn = nil, schema = nil, first = true) #:nodoc:
+
+    def initialize(raw_conn = nil, schema = nil, original_schema = nil) #:nodoc:
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
-      @first = first
+      @original_schema = original_schema
     end
-    
+
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
     def connection
       @connection
     end
-    
+
     def raw_connection=(raw_conn) #:nodoc:
       @connection = raw_conn ? Connection.create(raw_conn) : nil
       reset_instance_variables
@@ -49,7 +49,6 @@ module PLSQL
       else
         self.raw_connection = conn
       end
-      enable_dbms_output if @dbms_output_stream
       conn
     end
 
@@ -60,7 +59,6 @@ module PLSQL
     def activerecord_class=(ar_class)
       @connection = ar_class ? Connection.create(nil, ar_class) : nil
       reset_instance_variables
-      enable_dbms_output if @dbms_output_stream
       ar_class
     end
 
@@ -76,22 +74,23 @@ module PLSQL
       @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
     end
 
-    # Set to :local or :utc
-    @@default_timezone = nil
-
     # Default timezone to which database values will be converted - :utc or :local
     def default_timezone
-      @@default_timezone ||
-        # Use ActiveRecord class default_timezone when ActiveRecord connection is used
-        (@connection && (ar_class = @connection.activerecord_class) && ar_class.default_timezone) ||
-        # default to local timezone
-        :local
+      if @original_schema
+        @original_schema.default_timezone
+      else
+        @default_timezone ||
+          # Use ActiveRecord class default_timezone when ActiveRecord connection is used
+          (@connection && (ar_class = @connection.activerecord_class) && ar_class.default_timezone) ||
+          # default to local timezone
+          :local
+      end
     end
 
     # Set default timezone to which database values will be converted - :utc or :local
     def default_timezone=(value)
       if [:local, :utc].include?(value)
-        @@default_timezone = value
+        @default_timezone = value
       else
         raise ArgumentError, "default timezone should be :local or :utc"
       end
@@ -103,11 +102,13 @@ module PLSQL
       ::Time.local(2007).utc_offset.to_r / 86400
     end
 
-    @@dbms_output_buffer_size = nil #:nodoc:
-
     # DBMS_OUTPUT buffer size (default is 20_000)
     def dbms_output_buffer_size
-      @@dbms_output_buffer_size || 20_000
+      if @original_schema
+        @original_schema.dbms_output_buffer_size
+      else
+        @dbms_output_buffer_size || 20_000
+      end
     end
 
     # Seet DBMS_OUTPUT buffer size (default is 20_000). Example:
@@ -115,7 +116,7 @@ module PLSQL
     #   plsql.dbms_output_buffer_size = 100_000
     # 
     def dbms_output_buffer_size=(value)
-      @@dbms_output_buffer_size = value
+      @dbms_output_buffer_size = value
     end
 
     # Maximum line numbers for DBMS_OUTPUT in one PL/SQL call (from DBMSOUTPUT_LINESARRAY type)
@@ -133,7 +134,13 @@ module PLSQL
     end
 
     # IO stream where to log DBMS_OUTPUT from PL/SQL procedures.
-    attr_reader :dbms_output_stream
+    def dbms_output_stream
+      if @original_schema
+        @original_schema.dbms_output_stream
+      else
+        @dbms_output_stream
+      end
+    end
 
     private
 
@@ -144,9 +151,9 @@ module PLSQL
         @schema_objects = nil
       end
       @schema_name = nil
-      @@default_timezone = nil
+      @default_timezone = nil
     end
-    
+
     def method_missing(method, *args, &block)
       raise ArgumentError, "No database connection" unless connection
       # search in database if not in cache at first
@@ -197,21 +204,21 @@ module PLSQL
     end
 
     def find_other_schema(name)
-      return nil unless @first
+      return nil if @original_schema
       if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
-        Schema.new(connection, name, false)
+        Schema.new(connection, name, self)
       else
         nil
       end
     end
 
     def find_standard_procedure(name)
-      return nil unless @first
+      return nil if @original_schema
       Procedure.find(self, name, 'STANDARD', 'SYS')
     end
 
     def find_public_synonym(name)
-      return nil unless @first
+      return nil if @original_schema
       if syn = select_first(
         "SELECT table_owner, table_name
         FROM all_synonyms

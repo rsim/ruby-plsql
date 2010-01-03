@@ -193,6 +193,11 @@ describe "DBMS_OUTPUT logging" do
       @buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
     end
 
+    it "should log output when calling procedure with schema prefix" do
+      plsql.hr.test_dbms_output("test_dbms_output")
+      @buffer.string.should == "DBMS_OUTPUT: test_dbms_output\n"
+    end
+
   end
 
   describe "with Activerecord connection" do
