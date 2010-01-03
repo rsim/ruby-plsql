@@ -1294,3 +1294,19 @@ describe "Synonyms /" do
   end
 
 end
+
+describe "SYS.STANDARD procedures /" do
+
+  before(:all) do
+    plsql.connection = get_connection
+  end
+
+  after(:all) do
+    plsql.logoff
+  end
+
+  it "should execute function from SYS.STANDARD package" do
+    plsql.upper('abc').should == 'ABC'
+  end
+
+end

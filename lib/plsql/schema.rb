@@ -150,7 +150,8 @@ module PLSQL
     def method_missing(method, *args, &block)
       raise ArgumentError, "No database connection" unless connection
       # search in database if not in cache at first
-      object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) || find_public_synonym(method))
+      object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) ||
+         find_standard_procedure(method) || find_public_synonym(method))
 
       raise ArgumentError, "No database object '#{method.to_s.upcase}' found" unless object
 
@@ -195,6 +196,20 @@ module PLSQL
       end
     end
 
+    def find_other_schema(name)
+      return nil unless @first
+      if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
+        Schema.new(connection, name, false)
+      else
+        nil
+      end
+    end
+
+    def find_standard_procedure(name)
+      return nil unless @first
+      Procedure.find(self, name, 'STANDARD', 'SYS')
+    end
+
     def find_public_synonym(name)
       return nil unless @first
       if syn = select_first(
@@ -207,15 +222,6 @@ module PLSQL
       end
     end
 
-    def find_other_schema(name)
-      return nil unless @first && connection
-      if select_first("SELECT username FROM all_users WHERE username = :username", name.to_s.upcase)
-        Schema.new(connection, name, false)
-      else
-        nil
-      end
-    end
-    
   end
 end
 
