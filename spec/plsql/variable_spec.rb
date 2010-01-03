@@ -74,8 +74,9 @@ describe "Package variables /" do
     before(:all) do
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
-          integer_variable NUMBER(10);
-          integer_default NUMBER(10) := 1;
+          integer_variable INTEGER;
+          integer10_variable NUMBER(10);
+          integer10_default NUMBER(10) := 1;
           number_variable NUMBER;
           number_with_scale NUMBER(15,2);
           pls_int_variable PLS_INTEGER;
@@ -93,14 +94,20 @@ describe "Package variables /" do
       plsql.execute "DROP PACKAGE test_package"
     end
 
-    it "should set and get integer variable" do
+    it "should set and get INTEGER variable" do
       plsql.test_package.integer_variable = 1
       plsql.test_package.integer_variable.should be_a Fixnum
       plsql.test_package.integer_variable.should == 1
     end
 
+    it "should set and get integer variable with precision" do
+      plsql.test_package.integer10_variable = 1
+      plsql.test_package.integer10_variable.should be_a Fixnum
+      plsql.test_package.integer10_variable.should == 1
+    end
+
     it "should get integer variable default value" do
-      plsql.test_package.integer_default.should == 1
+      plsql.test_package.integer10_default.should == 1
     end
 
     it "should set and get PLS_INTEGER variable" do

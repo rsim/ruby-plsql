@@ -53,6 +53,8 @@ module PLSQL
           /^(NUMBER)(\(.*\))?$/, /^(PLS_INTEGER|BINARY_INTEGER)$/,
           /^(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
+      when /^INTEGER$/
+        {:data_type => 'NUMBER', :in_out => 'IN/OUT'}
       when /^BOOLEAN$/
         {:data_type => 'PL/SQL BOOLEAN', :in_out => 'IN/OUT'}
       when /^(\w+\.)?(\w+)\.(\w+)%TYPE$/
