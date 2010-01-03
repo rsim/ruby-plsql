@@ -49,6 +49,8 @@ module PLSQL
       else
         self.raw_connection = conn
       end
+      enable_dbms_output if @dbms_output_stream
+      conn
     end
 
     # Set connection to current ActiveRecord connection (use in initializer file):
@@ -58,6 +60,8 @@ module PLSQL
     def activerecord_class=(ar_class)
       @connection = ar_class ? Connection.create(nil, ar_class) : nil
       reset_instance_variables
+      enable_dbms_output if @dbms_output_stream
+      ar_class
     end
 
     # Disconnect from Oracle
@@ -98,7 +102,39 @@ module PLSQL
     def local_timezone_offset #:nodoc:
       ::Time.local(2007).utc_offset.to_r / 86400
     end
-    
+
+    @@dbms_output_buffer_size = nil #:nodoc:
+
+    # DBMS_OUTPUT buffer size (default is 20_000)
+    def dbms_output_buffer_size
+      @@dbms_output_buffer_size || 20_000
+    end
+
+    # Seet DBMS_OUTPUT buffer size (default is 20_000). Example:
+    # 
+    #   plsql.dbms_output_buffer_size = 100_000
+    # 
+    def dbms_output_buffer_size=(value)
+      @@dbms_output_buffer_size = value
+    end
+
+    # Maximum line numbers for DBMS_OUTPUT in one PL/SQL call (from DBMSOUTPUT_LINESARRAY type)
+    DBMS_OUTPUT_MAX_LINES = 2147483647
+
+    # Specify IO stream where to log DBMS_OUTPUT from PL/SQL procedures. Example:
+    # 
+    #   plsql.dbms_output_stream = STDOUT
+    # 
+    def dbms_output_stream=(stream)
+      @dbms_output_stream = stream
+      if @dbms_output_stream.nil? && @connection
+        sys.dbms_output.disable
+      end
+    end
+
+    # IO stream where to log DBMS_OUTPUT from PL/SQL procedures.
+    attr_reader :dbms_output_stream
+
     private
 
     def reset_instance_variables

@@ -3,12 +3,14 @@ module PLSQL
 
     def initialize(procedure, args = [])
       @procedure = procedure
+      @schema = @procedure.schema
+      @dbms_output_stream = @schema.dbms_output_stream
       @overload = get_overload_from_arguments_list(args)
       construct_sql(args)
     end
 
     def exec
-      @cursor = @procedure.schema.connection.parse(@sql)
+      @cursor = @schema.connection.parse(@sql)
 
       @bind_values.each do |arg, value|
         @cursor.bind_param(":#{arg}", value, @bind_metadata[arg])
@@ -19,6 +21,8 @@ module PLSQL
       end
 
       @cursor.exec
+
+      dbms_output_log
 
       if block_given?
         yield get_return_value
@@ -122,7 +126,33 @@ module PLSQL
         @call_sql = @procedure.call_sql(@call_sql)
       end
       add_out_vars
-      @sql = "" << @declare_sql << @assignment_sql << @call_sql << @return_sql << "END;\n"
+
+      dbms_output_enable_sql, dbms_output_get_sql = dbms_output_sql
+
+      @sql = "" << @declare_sql << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
+    end
+
+    def dbms_output_sql
+      if @dbms_output_stream
+        dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
+        @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
+        dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
+        @bind_values[:dbms_output_lines] = nil
+        @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil, 
+          :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
+        [dbms_output_enable_sql, dbms_output_get_sql]
+      else
+        ["", ""]
+      end
+    end
+
+    def dbms_output_log
+      if @dbms_output_stream
+        @cursor[':dbms_output_lines'].each do |line|
+          @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+        end
+        @dbms_output_stream.flush
+      end
     end
 
     def add_argument(argument, value)
