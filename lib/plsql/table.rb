@@ -174,15 +174,15 @@ module PLSQL
     # Insert record or records in table using array of values. Examples:
     # 
     #   # with values for all columns
-    #   plsql.employees.insert [1, 'First', 'Last', Time.local(2000,01,31)]
+    #   plsql.employees.insert_values [1, 'First', 'Last', Time.local(2000,01,31)]
     #   # => INSERT INTO employees VALUES (1, 'First', 'Last', ...)
     # 
     #   # with values for specified columns
-    #   plsql.employees.insert [:employee_id, :first_name, :last_name], [1, 'First', 'Last']
+    #   plsql.employees.insert_values [:employee_id, :first_name, :last_name], [1, 'First', 'Last']
     #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
     # 
     #   # with values for many records
-    #   plsql.employees.insert [:employee_id, :first_name, :last_name], [1, 'First', 'Last'], [2, 'Second', 'Last']
+    #   plsql.employees.insert_values [:employee_id, :first_name, :last_name], [1, 'First', 'Last'], [2, 'Second', 'Last']
     #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
     #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (2, 'Second', 'Last')
     #
