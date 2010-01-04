@@ -1,3 +1,22 @@
+== 0.4.1 2010-01-04
+
+* New features
+  * Call procedures from SYS.STANDARD without schema and package prefix
+  * DBMS_OUTPUT logging to specified IO stream (e.g. plsql.dbms_output_stream = STDOUT)
+  * Support table operations also on views
+  * Specify plsql.connection.prefetch_rows= to reduce network round trips when selecting large number of rows
+  * Support for PLS_INTEGER and BINARY_INTEGER parameters and return values
+  * Access to package variables (basic types, object types, %TYPE and %ROWTYPE)
+  * Table insert_values method
+  * Insert partial list of table column values (and use default values for missing columns)
+* Improvements
+  * Improved performance of table and synonyms metadata select
+  * Check required ruby-oci8 version
+* Bug fixes
+  * limit object types when selecting from all_objects to avoid getting irrelevant records with the same name
+  * select where condition :column => nil is transformed to "column IS NULL"
+  * TIMESTAMP fractional seconds patch for ruby-oci8 2.0.3
+
 == 0.4.0 2009-11-23
 
 * New features
