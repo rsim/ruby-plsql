@@ -23,9 +23,7 @@ module PLSQL
     end
 
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
-    def connection
-      @connection
-    end
+    attr_reader :connection
 
     def raw_connection=(raw_conn) #:nodoc:
       @connection = raw_conn ? Connection.create(raw_conn) : nil
@@ -158,7 +156,7 @@ module PLSQL
       raise ArgumentError, "No database connection" unless connection
       # search in database if not in cache at first
       object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) ||
-         find_standard_procedure(method) || find_public_synonym(method))
+         find_public_synonym(method)) || find_standard_procedure(method)
 
       raise ArgumentError, "No database object '#{method.to_s.upcase}' found" unless object
 
@@ -191,14 +189,8 @@ module PLSQL
         when 'TYPE'
           Type.new(self, name, override_schema_name)
         when 'SYNONYM'
-          if syn = select_first(
-          "SELECT table_owner, table_name
-          FROM all_synonyms
-          WHERE owner = :owner
-            AND synonym_name = :synonym_name",
-                object_schema_name, object_name)
-            find_database_object(syn[1], syn[0])
-          end
+          target_schema_name, target_object_name = @connection.describe_synonym(object_schema_name, object_name)
+          find_database_object(target_object_name, target_schema_name)
         end
       end
     end
@@ -219,14 +211,8 @@ module PLSQL
 
     def find_public_synonym(name)
       return nil if @original_schema
-      if syn = select_first(
-        "SELECT table_owner, table_name
-        FROM all_synonyms
-        WHERE owner = 'PUBLIC'
-          AND synonym_name = :synonym_name",
-              name.to_s.upcase)
-        find_database_object(syn[1], syn[0])
-      end
+      target_schema_name, target_object_name = @connection.describe_synonym('PUBLIC', name)
+      find_database_object(target_object_name, target_schema_name) if target_schema_name
     end
 
   end

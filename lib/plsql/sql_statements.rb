@@ -48,7 +48,7 @@ module PLSQL
     # 
     # to turn off automatic commits after each statement.
     def commit
-      connection.commit
+      @connection.commit
     end
 
     # Execute ROLLBACK in current database session.
@@ -58,7 +58,7 @@ module PLSQL
     # 
     # to turn off automatic commits after each statement.
     def rollback
-      connection.rollback
+      @connection.rollback
     end
 
   end

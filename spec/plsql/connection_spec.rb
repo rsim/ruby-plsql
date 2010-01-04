@@ -6,42 +6,46 @@ describe "Connection" do
 
   before(:all) do
     @raw_conn = get_connection
+    @conn = PLSQL::Connection.create( @raw_conn )
   end
 
   after(:all) do
-    unless defined?(JRUBY_VERSION)
+    unless defined?(JRuby)
       @raw_conn.logoff rescue nil
     else
       @raw_conn.close rescue nil
     end
   end
 
-  before(:each) do
-    @conn = PLSQL::Connection.create( @raw_conn )
+  describe "create and destroy" do
+    before(:each) do
+      @conn = PLSQL::Connection.create( @raw_conn )
+    end
+
+    it "should create connection" do
+      @conn.raw_connection.should == @raw_conn
+    end
+
+    unless defined?(JRuby)
+      it "should be oci connection" do
+        @conn.should be_oci
+        @conn.raw_driver.should == :oci
+      end
+    else
+      it "should be jdbc connection" do
+        @conn.should be_jdbc
+        @conn.raw_driver.should == :jdbc
+      end
+    end
+
+    it "should logoff connection" do
+      @conn.logoff.should be_true
+    end
+
   end
 
-  it "should create connection" do
-    @conn.raw_connection.should == @raw_conn
-  end
-
-  unless defined?(JRUBY_VERSION)
-    it "should be oci connection" do
-      @conn.should be_oci
-      @conn.raw_driver.should == :oci
-    end
-  else
-    it "should be jdbc connection" do
-      @conn.should be_jdbc
-      @conn.raw_driver.should == :jdbc
-    end
-  end
-  
-  it "should logoff connection" do
-    @conn.logoff.should be_true
-  end
-  
   # Ruby 1.8 and 1.9
-  if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
+  unless defined?(JRuby)
     describe "OCI data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100).should == [String, 100]
@@ -110,8 +114,9 @@ describe "Connection" do
       
     end
 
-  elsif RUBY_ENGINE == 'jruby'
-    
+  # JRuby
+  else
+
     describe "JDBC data type conversions" do
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         @conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100).should == [String, 100]
@@ -138,12 +143,7 @@ describe "Connection" do
         big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
         big_decimal.should == java.math.BigDecimal.new("12345678901234567890")
       end
-      
-      # it "should translate Ruby OraDate value to DateTime when DateTime type specified" do
-      #   now = OraDate.now
-      #   @conn.ruby_value_to_ora_value(now, DateTime).should eql(now.to_datetime)
-      # end
-      
+
       it "should translate Ruby String value to Java::OracleSql::CLOB when Java::OracleSql::CLOB type specified" do
         large_text = "x" * 100_000
         ora_value = @conn.ruby_value_to_ora_value(large_text, Java::OracleSql::CLOB)
@@ -166,11 +166,6 @@ describe "Connection" do
       it "should translate Oracle BigDecimal float value to BigDecimal" do
         @conn.ora_value_to_ruby_value(BigDecimal("100.11")).should eql(BigDecimal("100.11"))
       end
-      
-      # it "should translate Oracle OraDate value to Time" do
-      #   now = OraDate.now
-      #   @conn.ora_value_to_ruby_value(now).should eql(now.to_time)
-      # end
 
       it "should translate Oracle CLOB value to String" do
         large_text = "āčē" * 100_000
@@ -185,8 +180,8 @@ describe "Connection" do
       end
 
     end
-    
-  end  
+
+  end
 
   describe "SQL SELECT statements" do
 
@@ -218,7 +213,7 @@ describe "Connection" do
         FROM dual").should == [nil,123,123.456,@now]
     end
 
-    if defined?(JRUBY_VERSION)
+    if defined?(JRuby)
 
       it "should execute SQL statement with NULL values as bind parameters and return first result" do
         @today = Date.parse("2008-05-31")
@@ -278,7 +273,7 @@ describe "Connection" do
   end
   
   describe "PL/SQL procedures" do
-    before(:each) do
+    before(:all) do
       @random = rand(1000)
       @now = Time.local(2008,05,31,23,22,11)
       sql = <<-SQL
@@ -292,7 +287,7 @@ describe "Connection" do
       @conn.exec(sql).should be_true
     end
 
-    after(:each) do
+    after(:all) do
       @conn.exec "DROP FUNCTION test_add_random"
     end
 
@@ -317,17 +312,21 @@ describe "Connection" do
   end
   
   describe "commit and rollback" do
-    before(:each) do
-      sql = "CREATE TABLE test_commit (dummy VARCHAR2(100))"
-      @conn.exec(sql).should be_true
+    before(:all) do
+      @conn.exec("CREATE TABLE test_commit (dummy VARCHAR2(100))").should be_true
       @conn.autocommit = false
       @conn.should_not be_autocommit
     end
-    after(:each) do
-      sql = "DROP TABLE test_commit"
-      @conn.exec(sql).should be_true      
+
+    after(:all) do
+      @conn.exec "DROP TABLE test_commit"
     end
-    
+
+    after(:each) do
+      @conn.exec "DELETE FROM test_commit"
+      @conn.commit
+    end
+
     it "should do commit" do
       @conn.exec("INSERT INTO test_commit VALUES ('test')")
       @conn.commit
@@ -372,6 +371,35 @@ describe "Connection" do
       lambda {
         @conn.select_first(sql)
       }.should_not raise_error
+    end
+
+  end
+
+  describe "describe synonym" do
+    before(:all) do
+      @conn.exec "CREATE SYNONYM hr.synonym_for_dual FOR sys.dual"
+    end
+
+    after(:all) do
+      @conn.exec "DROP SYNONYM hr.synonym_for_dual"
+    end
+
+    it "should describe local synonym" do
+      @conn.describe_synonym('HR','SYNONYM_FOR_DUAL').should == ['SYS', 'DUAL']
+      @conn.describe_synonym('hr','synonym_for_dual').should == ['SYS', 'DUAL']
+      @conn.describe_synonym(:hr,:synonym_for_dual).should == ['SYS', 'DUAL']
+    end
+
+    it "should return nil on non-existing synonym" do
+      @conn.describe_synonym('HR','SYNONYM_FOR_XXX').should be_nil
+      @conn.describe_synonym('hr','synonym_for_xxx').should be_nil
+      @conn.describe_synonym(:hr,:synonym_for_xxx).should be_nil
+    end
+
+    it "should describe public synonym" do
+      @conn.describe_synonym('PUBLIC','DUAL').should == ['SYS', 'DUAL']
+      @conn.describe_synonym('PUBLIC','dual').should == ['SYS', 'DUAL']
+      @conn.describe_synonym('PUBLIC',:dual).should == ['SYS', 'DUAL']
     end
 
   end
