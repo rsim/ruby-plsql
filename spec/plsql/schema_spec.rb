@@ -166,6 +166,10 @@ describe "DBMS_OUTPUT logging" do
       plsql.dbms_output_stream = @buffer
     end
 
+    before(:each) do
+      plsql.dbms_output_buffer_size = nil
+    end
+
     it "should log output to specified stream" do
       plsql.test_dbms_output("test_dbms_output")
       @buffer.string.should == "DBMS_OUTPUT: test_dbms_output\n"
@@ -189,6 +193,13 @@ describe "DBMS_OUTPUT logging" do
     it "should log 100_000 character output with specified buffer size" do
       times = 10_000
       plsql.dbms_output_buffer_size = 10 * times
+      plsql.test_dbms_output_large("1234567890", times)
+      @buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
+    end
+
+    it "should log output when database version is less than 10.2" do
+      plsql.connection.stub!(:database_version).and_return([9, 2])
+      times = 2_000
       plsql.test_dbms_output_large("1234567890", times)
       @buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
     end

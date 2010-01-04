@@ -160,6 +160,11 @@ module PLSQL
         schema_name.to_s.upcase, synonym_name.to_s.upcase)
     end
 
+    # Returns array with major and minor version of database (e.g. [10, 2])
+    def database_version
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
+
   end
 
 end

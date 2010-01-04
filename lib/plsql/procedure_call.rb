@@ -135,11 +135,17 @@ module PLSQL
     def dbms_output_sql
       if @dbms_output_stream
         dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
-        @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
-        dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
-        @bind_values[:dbms_output_lines] = nil
-        @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil, 
-          :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
+        # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
+        if (@schema.connection.database_version <=> [10, 2]) >= 0
+          @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
+          dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
+          @bind_values[:dbms_output_lines] = nil
+          @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil,
+            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
+        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        else
+          dbms_output_get_sql = ""
+        end
         [dbms_output_enable_sql, dbms_output_get_sql]
       else
         ["", ""]
@@ -148,8 +154,22 @@ module PLSQL
 
     def dbms_output_log
       if @dbms_output_stream
-        @cursor[':dbms_output_lines'].each do |line|
-          @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+        # if database version is at least 10.2 then :dbms_output_lines output bind variable has dbms_output lines
+        if @bind_metadata[:dbms_output_lines]
+          @cursor[':dbms_output_lines'].each do |line|
+            @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+          end
+        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        else
+          cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")
+          while true do
+            cursor.bind_param(':line', nil, :data_type => 'VARCHAR2', :in_out => 'OUT')
+            cursor.bind_param(':status', nil, :data_type => 'NUMBER', :in_out => 'OUT')
+            cursor.exec
+            break unless cursor[':status'] == 0
+            @dbms_output_stream.puts "DBMS_OUTPUT: #{cursor[':line']}"
+          end
+          cursor.close
         end
         @dbms_output_stream.flush
       end

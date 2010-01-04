@@ -271,6 +271,10 @@ module PLSQL
       nil
     end
 
+    def database_version
+      @database_version ||= (version = raw_connection.oracle_server_version) && [version.major, version.minor]
+    end
+
     private
     
     def raw_oci_connection

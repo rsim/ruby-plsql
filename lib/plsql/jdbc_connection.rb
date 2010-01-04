@@ -479,6 +479,10 @@ module PLSQL
       end
     end
 
+    def database_version
+      @database_version ||= (md = raw_connection.getMetaData) && [md.getDatabaseMajorVersion, md.getDatabaseMinorVersion]
+    end
+
     private
     
     def java_date(value)

@@ -404,4 +404,11 @@ describe "Connection" do
 
   end
 
+  describe "database version" do
+    it "should get database version" do
+      # using Oracle version 10.2.0.4 for unit tests
+      @conn.database_version.should == [10, 2]
+    end
+  end
+
 end
