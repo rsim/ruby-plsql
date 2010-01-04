@@ -172,8 +172,8 @@ module PLSQL
       object_name = name.to_s.upcase
       if row = select_first(
           "SELECT object_type, object_id FROM all_objects
-          WHERE owner = :owner
-            AND object_name = :object_name",
+          WHERE owner = :owner AND object_name = :object_name
+          AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
           object_schema_name, object_name)
         case row[0]
         when 'PROCEDURE', 'FUNCTION'
