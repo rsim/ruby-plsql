@@ -5,12 +5,32 @@ describe "Type" do
     plsql.connection = get_connection
     plsql.execute "DROP TYPE t_employee" rescue nil
     plsql.execute "DROP TYPE t_phones" rescue nil
+    plsql.execute "DROP TYPE t_phone" rescue nil
     plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_address AS OBJECT (
         street    VARCHAR2(50),
         city      VARCHAR2(50),
-        country   VARCHAR2(50)
-      )
+        country   VARCHAR2(50),
+        CONSTRUCTOR FUNCTION t_address(p_full_address VARCHAR2)
+          RETURN SELF AS RESULT
+        );
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE TYPE BODY t_address AS
+        CONSTRUCTOR FUNCTION t_address(p_full_address VARCHAR2)
+          RETURN SELF AS RESULT
+        AS
+          l_comma1_pos INTEGER;
+          l_comma2_pos INTEGER;
+        BEGIN
+          l_comma1_pos := INSTR(p_full_address, ',', 1, 1);
+          l_comma2_pos := INSTR(p_full_address, ',', 1, 2);
+          SELF.street := TRIM(SUBSTR(p_full_address, 1, l_comma1_pos - 1));
+          SELF.city := TRIM(SUBSTR(p_full_address, l_comma1_pos+1, l_comma2_pos - l_comma1_pos - 1));
+          SELF.country := TRIM(SUBSTR(p_full_address, l_comma2_pos+1));
+          RETURN;
+        END;
+      END;
     SQL
     plsql.execute <<-SQL
       CREATE OR REPLACE TYPE t_phone AS OBJECT (
@@ -126,6 +146,37 @@ describe "Type" do
         :phones => 
           {:position=>6, :data_type=>"TABLE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>"HR", :type_name=>"T_PHONES", :sql_type_name=>"HR.T_PHONES"}
       }
+    end
+
+  end
+
+  describe "object instance" do
+
+    it "should get new object instance using named parameters" do
+      phone_attributes = {:type => 'mobile', :phone_number => '123456'}
+      plsql.t_phone(phone_attributes).should == phone_attributes
+    end
+
+    it "should get new object instance using sequential parameters" do
+      phone_attributes = {:type => 'mobile', :phone_number => '123456'}
+      plsql.t_phone(phone_attributes[:type], phone_attributes[:phone_number]).should == phone_attributes
+    end
+
+    it "should get new object instance using custom constructor" do
+      address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      full_address = "#{address_attributes[:street]}, #{address_attributes[:city]}, #{address_attributes[:country]}"
+      plsql.t_address(full_address).should == address_attributes
+      plsql.t_address(:p_full_address => full_address).should == address_attributes
+    end
+
+    it "should get new object instance using default constructor when custom constructor exists" do
+      address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      plsql.t_address(address_attributes).should == address_attributes
+      plsql.t_address(address_attributes[:street], address_attributes[:city], address_attributes[:country]).should == address_attributes
+    end
+
+    it "should get new empty collection of objects instance" do
+      plsql.t_phones.new.should == []
     end
 
   end

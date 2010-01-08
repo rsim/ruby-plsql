@@ -42,17 +42,12 @@ module PLSQL
     end
   end
 
-  class Procedure #:nodoc:
-    extend ProcedureClassMethods
-
+  module ProcedureCommon
     attr_reader :arguments, :argument_list, :out_list, :return
     attr_reader :schema, :schema_name, :package, :procedure
 
-    def initialize(schema, procedure, package, override_schema_name, object_id)
-      @schema = schema
-      @schema_name = override_schema_name || schema.schema_name
-      @procedure = procedure.to_s.upcase
-      @package = package
+    # get procedure argument metadata from data dictionary
+    def get_argument_metadata
       @arguments = {}
       @argument_list = {}
       @out_list = {}
@@ -70,9 +65,9 @@ module PLSQL
         WHERE object_id = :object_id
         AND owner = :owner
         AND object_name = :procedure_name
-        AND NVL(package_name,'nil') = :package
+        AND NVL(argument_name, 'NA') != 'SELF'
         ORDER BY overload, sequence",
-        object_id, @schema_name, @procedure, @package ? @package : 'nil'
+        @object_id, @schema_name, @procedure
       ) do |r|
 
         overload, argument_name, position, data_level,
@@ -129,7 +124,11 @@ module PLSQL
       end
       # if procedure is without arguments then create default empty argument list for default overload
       @arguments[0] = {} if @arguments.keys.empty?
-      
+
+      construct_argument_list_for_overloads
+    end
+
+    def construct_argument_list_for_overloads
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
         @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
@@ -144,6 +143,24 @@ module PLSQL
 
     def overloaded?
       @overloaded
+    end
+  end
+
+  class Procedure #:nodoc:
+    extend ProcedureClassMethods
+    include ProcedureCommon
+
+    attr_reader :arguments, :argument_list, :out_list, :return
+    attr_reader :schema, :schema_name, :package, :procedure
+
+    def initialize(schema, procedure, package, override_schema_name, object_id)
+      @schema = schema
+      @schema_name = override_schema_name || schema.schema_name
+      @procedure = procedure.to_s.upcase
+      @package = package
+      @object_id = object_id
+
+      get_argument_metadata
     end
 
     def exec(*args, &block)

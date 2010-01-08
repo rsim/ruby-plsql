@@ -162,6 +162,8 @@ module PLSQL
 
       if object.is_a?(Procedure)
         object.exec(*args, &block)
+      elsif object.is_a?(Type) && !args.empty?
+        object.new(*args, &block)
       else
         object
       end
