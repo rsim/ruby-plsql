@@ -80,6 +80,11 @@ module PLSQL
       end
     end
 
+    # is type collection?
+    def collection?
+      @is_collection ||= @typecode == 'COLLECTION'
+    end
+
     # list of object type attribute names
     def attribute_names
       @attribute_names ||= @attributes.keys.sort_by{|k| @attributes[k][:position]}
@@ -88,6 +93,10 @@ module PLSQL
     # create new PL/SQL object instance
     def new(*args, &block)
       procedure = find_procedure(:new)
+      # in case of collections pass array of elements as one argument for constructor
+      if collection? && !(args.size == 1 && args[0].is_a?(Array))
+        args = [args]
+      end
       call = ProcedureCall.new(procedure, args)
       call.exec(&block)
     end
@@ -121,7 +130,7 @@ module PLSQL
 
         # if default constructor
         if @default_constructor = (procedure == :new)
-          @procedure = @type_name
+          @procedure = @type.collection? ? nil : @type_name
           set_default_constructor_arguments
         # if defined type procedure
         else
@@ -135,29 +144,48 @@ module PLSQL
         @package = @procedure == @type_name ? nil : @type_name
       end
 
+      # will be called for collection constructor
+      def call_sql(params_string)
+        "#{params_string};\n"
+      end
+
+      private
+
       def set_default_constructor_arguments
-        attributes = @type.attributes
         @arguments ||= {}
         @argument_list ||= {}
         @out_list ||= {}
         @return ||= {}
         # either this will be the only overload or it will be additional
         overload = @arguments.keys.size
-        @arguments[overload] = attributes
+        # if type is collection then expect array of objects as argument
+        if @type.collection?
+          @arguments[overload] = {
+            :value => {
+              :position => 1,
+              :data_type => 'TABLE',
+              :in_out => 'IN',
+              :type_owner => @schema_name,
+              :type_name => @type_name,
+              :sql_type_name => "#{@schema_name}.#{@type_name}"
+            }
+          }
+        # otherwise if type is object type then expect object attributes as argument list
+        else
+          @arguments[overload] = @type.attributes
+        end
+        attributes = @arguments[overload]
         @argument_list[overload] = attributes.keys.sort {|k1, k2| attributes[k1][:position] <=> attributes[k2][:position]}
-        @out_list[overload] = []
         # returns object or collection
         @return[overload] = {
           :position => 0,
-          :data_type => @type.typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT',
+          :data_type => @type.collection? ? 'TABLE' : 'OBJECT',
           :in_out => 'OUT',
-          :data_length => nil,
-          :data_precision => nil,
-          :data_scale => nil,
           :type_owner => @schema_name,
           :type_name => @type_name,
           :sql_type_name => "#{@schema_name}.#{@type_name}"
         }
+        @out_list[overload] = []
         @overloaded = overload > 0
       end
 

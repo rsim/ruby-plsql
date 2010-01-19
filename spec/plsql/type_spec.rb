@@ -151,32 +151,40 @@ describe "Type" do
   end
 
   describe "object instance" do
+    before(:all) do
+      @phone_attributes = {:type => 'mobile', :phone_number => '123456'}
+      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
+    end
 
     it "should get new object instance using named parameters" do
-      phone_attributes = {:type => 'mobile', :phone_number => '123456'}
-      plsql.t_phone(phone_attributes).should == phone_attributes
+      plsql.t_phone(@phone_attributes).should == @phone_attributes
     end
 
     it "should get new object instance using sequential parameters" do
-      phone_attributes = {:type => 'mobile', :phone_number => '123456'}
-      plsql.t_phone(phone_attributes[:type], phone_attributes[:phone_number]).should == phone_attributes
+      plsql.t_phone(@phone_attributes[:type], @phone_attributes[:phone_number]).should == @phone_attributes
     end
 
     it "should get new object instance using custom constructor" do
-      address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
-      full_address = "#{address_attributes[:street]}, #{address_attributes[:city]}, #{address_attributes[:country]}"
-      plsql.t_address(full_address).should == address_attributes
-      plsql.t_address(:p_full_address => full_address).should == address_attributes
+      plsql.t_address(@full_address).should == @address_attributes
+      plsql.t_address(:p_full_address => @full_address).should == @address_attributes
     end
 
     it "should get new object instance using default constructor when custom constructor exists" do
-      address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
-      plsql.t_address(address_attributes).should == address_attributes
-      plsql.t_address(address_attributes[:street], address_attributes[:city], address_attributes[:country]).should == address_attributes
+      plsql.t_address(@address_attributes).should == @address_attributes
+      plsql.t_address(@address_attributes[:street], @address_attributes[:city], @address_attributes[:country]).should == @address_attributes
     end
 
     it "should get new empty collection of objects instance" do
       plsql.t_phones.new.should == []
+      plsql.t_phones([]).should == []
+    end
+
+    it "should get new collection of objects instances" do
+      phone = plsql.t_phone(@phone_attributes)
+      plsql.t_phones([phone, phone]).should == [phone, phone]
+      plsql.t_phones(phone, phone).should == [phone, phone]
+      plsql.t_phones(@phone_attributes, @phone_attributes).should == [phone, phone]
     end
 
   end

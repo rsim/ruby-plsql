@@ -63,7 +63,7 @@ module PLSQL
         column = table.columns[$3.downcase.to_sym]
         {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name], :in_out => 'IN/OUT'}
       when /^(\w+\.)?(\w+)$/
-        schema = $1 ? plsql.send($1.chop) : plsql
+        schema = $1 ? @schema.send($1.chop) : @schema
         begin
           type = schema.send($2.downcase.to_sym)
           raise ArgumentError unless type.is_a?(PLSQL::Type)
