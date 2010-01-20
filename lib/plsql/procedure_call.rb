@@ -1,15 +1,18 @@
 module PLSQL
   class ProcedureCall #:nodoc:
 
-    def initialize(procedure, args = [])
+    def initialize(procedure, args = [], options = {})
       @procedure = procedure
       @schema = @procedure.schema
       @dbms_output_stream = @schema.dbms_output_stream
+      @skip_self = options[:skip_self]
+      @self = options[:self]
       @overload = get_overload_from_arguments_list(args)
       construct_sql(args)
     end
 
     def exec
+      # puts "DEBUG: sql = #{@sql.gsub("\n","<br/>\n")}"
       @cursor = @schema.connection.parse(@sql)
 
       @bind_values.each do |arg, value|
@@ -63,8 +66,8 @@ module PLSQL
     end
 
     def construct_sql(args)
-      @declare_sql = "DECLARE\n"
-      @assignment_sql = "BEGIN\n"
+      @declare_sql = ""
+      @assignment_sql = ""
       @call_sql = ""
       @return_sql = ""
       @return_vars = []
@@ -96,6 +99,8 @@ module PLSQL
             args[0][arg] = nil
           end
         end
+        # Add SELF argument if provided
+        args[0][:self] = @self if @self
         # Add passed parameters to procedure call with parameter names
         @call_sql << args[0].map do |arg, value|
           "#{arg} => " << add_argument(arg, value)
@@ -103,6 +108,8 @@ module PLSQL
 
       # Sequential arguments
       else
+        # add SELF as first argument if provided
+        args.unshift(@self) if @self
         argument_count = argument_list.size
         raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
         # Add missing output arguments with nil value
@@ -129,7 +136,8 @@ module PLSQL
 
       dbms_output_enable_sql, dbms_output_get_sql = dbms_output_sql
 
-      @sql = "" << @declare_sql << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
+      @sql = @declare_sql.empty? ? "" : "DECLARE\n" << @declare_sql
+      @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
     end
 
     def dbms_output_sql
@@ -354,11 +362,13 @@ module PLSQL
     end
 
     def overload_argument_list
-      @overload_argument_list ||= @procedure.argument_list
+      @overload_argument_list ||=
+        @skip_self ? @procedure.argument_list_without_self : @procedure.argument_list
     end
 
     def overload_arguments
-      @overload_arguments ||= @procedure.arguments
+      @overload_arguments ||=
+        @skip_self ? @procedure.arguments_without_self : @procedure.arguments
     end
 
     def argument_list
@@ -374,7 +384,8 @@ module PLSQL
     end
 
     def out_list
-      @out_list ||= @procedure.out_list[@overload]
+      @out_list ||=
+        @skip_self ? @procedure.out_list_without_self[@overload] : @procedure.out_list[@overload]
     end
 
     def schema_name

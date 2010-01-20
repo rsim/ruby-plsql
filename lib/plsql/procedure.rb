@@ -65,7 +65,6 @@ module PLSQL
         WHERE object_id = :object_id
         AND owner = :owner
         AND object_name = :procedure_name
-        AND NVL(argument_name, 'NA') != 'SELF'
         ORDER BY overload, sequence",
         @object_id, @schema_name, @procedure
       ) do |r|

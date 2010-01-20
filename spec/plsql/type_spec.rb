@@ -12,8 +12,11 @@ describe "Type" do
         city      VARCHAR2(50),
         country   VARCHAR2(50),
         CONSTRUCTOR FUNCTION t_address(p_full_address VARCHAR2)
-          RETURN SELF AS RESULT
-        );
+          RETURN SELF AS RESULT,
+        MEMBER FUNCTION display_address(p_separator VARCHAR2 DEFAULT ',') RETURN VARCHAR2,
+        MEMBER PROCEDURE set_country(p_country VARCHAR2),
+        STATIC FUNCTION create_address(p_full_address VARCHAR2) RETURN t_address
+      );
     SQL
     plsql.execute <<-SQL
       CREATE OR REPLACE TYPE BODY t_address AS
@@ -29,6 +32,22 @@ describe "Type" do
           SELF.city := TRIM(SUBSTR(p_full_address, l_comma1_pos+1, l_comma2_pos - l_comma1_pos - 1));
           SELF.country := TRIM(SUBSTR(p_full_address, l_comma2_pos+1));
           RETURN;
+        END;
+        MEMBER FUNCTION display_address(p_separator VARCHAR2) RETURN VARCHAR2 IS
+          l_separator VARCHAR2(10) := p_separator;
+        BEGIN
+          IF SUBSTR(l_separator,-1) != ' ' THEN
+            l_separator := l_separator || ' ';
+          END IF;
+          RETURN SELF.street || l_separator || SELF.city || l_separator || SELF.country;
+        END;
+        MEMBER PROCEDURE set_country(p_country VARCHAR2) IS
+        BEGIN
+          SELF.country := p_country;
+        END;
+        STATIC FUNCTION create_address(p_full_address VARCHAR2) RETURN t_address IS
+        BEGIN
+          RETURN t_address(p_full_address);
         END;
       END;
     SQL
@@ -161,6 +180,10 @@ describe "Type" do
       plsql.t_phone(@phone_attributes).should == @phone_attributes
     end
 
+    it "should be an ObjectInstance" do
+      plsql.t_phone(@phone_attributes).should be_a(PLSQL::ObjectInstance)
+    end
+
     it "should get new object instance using sequential parameters" do
       plsql.t_phone(@phone_attributes[:type], @phone_attributes[:phone_number]).should == @phone_attributes
     end
@@ -185,6 +208,67 @@ describe "Type" do
       plsql.t_phones([phone, phone]).should == [phone, phone]
       plsql.t_phones(phone, phone).should == [phone, phone]
       plsql.t_phones(@phone_attributes, @phone_attributes).should == [phone, phone]
+    end
+
+  end
+
+  describe "member procedures" do
+    before(:all) do
+      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
+    end
+
+    it "should call object instance member function without parameters" do
+      plsql.t_address(@address_attributes).display_address.should == @full_address
+    end
+
+    it "should call object instance member function with parameters" do
+      plsql.t_address(@address_attributes).display_address(',').should == @full_address
+    end
+
+    it "should call object instance member function with named parameters" do
+      plsql.t_address(@address_attributes).display_address(:p_separator => ',').should == @full_address
+    end
+
+    it "should call object instance member function with explicit first SELF parameter" do
+      plsql.t_address.display_address(@address_attributes, ',').should == @full_address
+    end
+
+    it "should call object instance member function with explicit named SELF parameter" do
+      plsql.t_address.display_address(:self => @address_attributes, :p_separator => ',').should == @full_address
+    end
+
+    it "should call object instance member procedure" do
+      other_country = "Other"
+      plsql.t_address(@address_attributes).set_country(other_country).should == @address_attributes.merge(:country => other_country)
+    end
+
+    it "should raise error if invalid member procedure is called" do
+      lambda do
+        plsql.t_address(@address_attributes).invalid_procedure
+      end.should raise_error(ArgumentError)
+    end
+
+  end
+
+  describe "static procedures" do
+    before(:all) do
+      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
+    end
+
+    it "should call object type static function" do
+      plsql.t_address.create_address(@full_address).should == @address_attributes
+    end
+
+    it "should call object type static function with named parameters" do
+      plsql.t_address.create_address(:p_full_address => @full_address).should == @address_attributes
+    end
+
+    it "should raise error if invalid static procedure is called" do
+      lambda do
+        plsql.t_address.invalid_procedure
+      end.should raise_error(ArgumentError)
     end
 
   end

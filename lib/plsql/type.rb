@@ -41,6 +41,7 @@ module PLSQL
       @schema_name = override_schema_name || schema.schema_name
       @type_name = type.to_s.upcase
       @attributes = {}
+      @type_procedures = {}
 
       @typecode, @type_object_id = @schema.select_first(
         "SELECT t.typecode, o.object_id FROM all_types t, all_objects o
@@ -97,23 +98,39 @@ module PLSQL
       if collection? && !(args.size == 1 && args[0].is_a?(Array))
         args = [args]
       end
-      call = ProcedureCall.new(procedure, args)
-      call.exec(&block)
+      result = procedure.exec_with_options(args, {:skip_self => true}, &block)
+      # TODO: collection constructor should return Array of ObhjectInstance objects
+      if collection?
+        result
+      else
+        # TODO: what to do if block is passed to constructor?
+        ObjectInstance.create(self, result)
+      end
+    end
+
+    def method_missing(method, *args, &block) #:nodoc:
+      if procedure = find_procedure(method)
+        procedure.exec_with_options(args, {}, &block)
+      else
+        raise ArgumentError, "No PL/SQL procedure '#{method.to_s.upcase}' found for type '#{@type_name}'"
+      end
     end
 
     def find_procedure(new_or_procedure)
-      procedure = new_or_procedure == :new ? @type_name : new_or_procedure
-      # find defined procedure for type
-      if @schema.select_first(
-            "SELECT procedure_name FROM all_procedures
-            WHERE owner = :owner
-              AND object_name = :object_name
-              AND procedure_name = :procedure_name",
-            @schema_name, @type_name, procedure.to_s.upcase)
-        TypeProcedure.new(@schema, self, procedure)
-      # call default constructor
-      elsif new_or_procedure == :new
-        TypeProcedure.new(@schema, self, :new)
+      @type_procedures[new_or_procedure] ||= begin
+        procedure_name = new_or_procedure == :new ? @type_name : new_or_procedure
+        # find defined procedure for type
+        if @schema.select_first(
+              "SELECT procedure_name FROM all_procedures
+              WHERE owner = :owner
+                AND object_name = :object_name
+                AND procedure_name = :procedure_name",
+              @schema_name, @type_name, procedure_name.to_s.upcase)
+          TypeProcedure.new(@schema, self, procedure_name)
+        # call default constructor
+        elsif new_or_procedure == :new
+          TypeProcedure.new(@schema, self, :new)
+        end
       end
     end
 
@@ -147,6 +164,48 @@ module PLSQL
       # will be called for collection constructor
       def call_sql(params_string)
         "#{params_string};\n"
+      end
+
+      attr_reader :arguments, :argument_list, :out_list
+      def arguments_without_self
+        @arguments_without_self ||= begin
+          hash = {}
+          @arguments.each do |ov, args|
+            hash[ov] = args.reject{|key, value| key == :self}
+          end
+          hash
+        end
+      end
+
+      def argument_list_without_self
+        @argument_list_without_self ||= begin
+          hash = {}
+          @argument_list.each do |ov, arg_list|
+            hash[ov] = arg_list.select{|arg| arg != :self}
+          end
+          hash
+        end
+      end
+
+      def out_list_without_self
+        @out_list_without_self ||= begin
+          hash = {}
+          @out_list.each do |ov, out_list|
+            hash[ov] = out_list.select{|arg| arg != :self}
+          end
+          hash
+        end
+      end
+
+      def exec_with_options(args, options={}, &block)
+        call = ProcedureCall.new(self, args, options)
+        result = call.exec(&block)
+        # if procedure was called then modified object is returned in SELF output parameter
+        if result.is_a?(Hash) && result[:self]
+          result[:self]
+        else
+          result
+        end
       end
 
       private
@@ -191,6 +250,24 @@ module PLSQL
 
     end
 
+  end
+
+  class ObjectInstance < Hash #:nodoc:
+    attr_accessor :plsql_type
+
+    def self.create(type, attributes)
+      object = self.new.merge!(attributes)
+      object.plsql_type = type
+      object
+    end
+
+    def method_missing(method, *args, &block)
+      if procedure = @plsql_type.find_procedure(method)
+        procedure.exec_with_options(args, :self => self, &block)
+      else
+        raise ArgumentError, "No PL/SQL procedure '#{method.to_s.upcase}' found for type '#{@plsql_type.type_name}' object"
+      end
+    end
 
   end
 
