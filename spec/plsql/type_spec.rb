@@ -15,6 +15,7 @@ describe "Type" do
           RETURN SELF AS RESULT,
         MEMBER FUNCTION display_address(p_separator VARCHAR2 DEFAULT ',') RETURN VARCHAR2,
         MEMBER PROCEDURE set_country(p_country VARCHAR2),
+        MEMBER PROCEDURE set_country2(p_country VARCHAR2, x_display_address OUT VARCHAR2),
         STATIC FUNCTION create_address(p_full_address VARCHAR2) RETURN t_address
       );
     SQL
@@ -44,6 +45,11 @@ describe "Type" do
         MEMBER PROCEDURE set_country(p_country VARCHAR2) IS
         BEGIN
           SELF.country := p_country;
+        END;
+        MEMBER PROCEDURE set_country2(p_country VARCHAR2, x_display_address OUT VARCHAR2) IS
+        BEGIN
+          SELF.country := p_country;
+          x_display_address := SELF.display_address();
         END;
         STATIC FUNCTION create_address(p_full_address VARCHAR2) RETURN t_address IS
         BEGIN
@@ -241,6 +247,13 @@ describe "Type" do
     it "should call object instance member procedure" do
       other_country = "Other"
       plsql.t_address(@address_attributes).set_country(other_country).should == @address_attributes.merge(:country => other_country)
+    end
+
+    it "should call object instance member procedure with output parameters" do
+      other_country = "Other"
+      plsql.t_address(@address_attributes).set_country2(other_country).should == 
+        [@address_attributes.merge(:country => other_country),
+        {:x_display_address => "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{other_country}"}]
     end
 
     it "should raise error if invalid member procedure is called" do

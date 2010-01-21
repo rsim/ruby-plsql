@@ -202,7 +202,8 @@ module PLSQL
         result = call.exec(&block)
         # if procedure was called then modified object is returned in SELF output parameter
         if result.is_a?(Hash) && result[:self]
-          result[:self]
+          object = result.delete(:self)
+          result.empty? ? object : [object, result]
         else
           result
         end
