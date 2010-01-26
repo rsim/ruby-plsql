@@ -356,6 +356,7 @@ describe "Package variables /" do
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           g_employee    t_employee;
+          g_employee2   hr.t_employee;
           g_phones      t_phones;
         END;
       SQL
@@ -377,6 +378,11 @@ describe "Package variables /" do
     it "should set and get object type variable" do
       plsql.test_package.g_employee = @employee
       plsql.test_package.g_employee.should == @employee
+    end
+
+    it "should set and get object type variable when schema prefix is used with type" do
+      plsql.hr.test_package.g_employee2 = @employee
+      plsql.hr.test_package.g_employee2.should == @employee
     end
 
     it "should set and get collection type variable" do

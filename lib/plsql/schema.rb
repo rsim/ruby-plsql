@@ -25,6 +25,10 @@ module PLSQL
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
     attr_reader :connection
 
+    def root_schema #:nodoc:
+      @original_schema || self
+    end
+
     def raw_connection=(raw_conn) #:nodoc:
       @connection = raw_conn ? Connection.create(raw_conn) : nil
       reset_instance_variables
