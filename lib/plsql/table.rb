@@ -58,6 +58,9 @@ module PLSQL
         column_name, position,
               data_type, data_length, data_precision, data_scale, char_used,
               data_type_owner, data_type_mod, typecode = r
+        # remove scale (n) from data_type (returned for TIMESTAMPs and INTERVALs)
+        data_type.sub!(/\(\d+\)/,'')
+        # store column metadata
         @columns[column_name.downcase.to_sym] = {
           :position => position && position.to_i,
           :data_type => data_type_owner && (typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT' ) || data_type,

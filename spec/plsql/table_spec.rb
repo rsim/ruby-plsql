@@ -10,6 +10,7 @@ describe "Table" do
         first_name    VARCHAR2(50),
         last_name     VARCHAR2(50),
         hire_date     DATE,
+        created_at    TIMESTAMP,
         status        VARCHAR2(1) DEFAULT 'N'
       )
     SQL
@@ -46,14 +47,15 @@ describe "Table" do
         :first_name => "First #{i}",
         :last_name => "Last #{i}",
         :hire_date => Time.local(2000,01,i),
+        :created_at => Time.local(2000,01,i,9,15,30,i),
         :status => 'A'
       }
     end
-    @employees_all_fields = [:employee_id, :first_name, :last_name, :hire_date, :status]
+    @employees_all_fields = [:employee_id, :first_name, :last_name, :hire_date, :created_at, :status]
     @employees_all_values = @employees.map{|e| @employees_all_fields.map{|f| e[f]}}
     @employees_some_fields = [:employee_id, :first_name, :last_name]
     @employees_some_values = @employees.map{|e| @employees_some_fields.map{|f| e[f]}}
-    @employee_default_values = {:hire_date => nil, :status => 'N'}
+    @employee_default_values = {:hire_date => nil, :created_at => nil, :status => 'N'}
 
     @employees2 = (1..10).map do |i|
       {
@@ -131,7 +133,7 @@ describe "Table" do
   describe "columns" do
 
     it "should get column names for table" do
-      plsql.test_employees.column_names.should == [:employee_id, :first_name, :last_name, :hire_date, :status]
+      plsql.test_employees.column_names.should == @employees_all_fields
     end
 
     it "should get columns metadata for table" do
@@ -142,10 +144,12 @@ describe "Table" do
           {:position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
         :last_name =>
           {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :hire_date => 
+        :hire_date =>
           {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
+        :created_at =>
+          {:position=>5, :data_type=>"TIMESTAMP", :data_length=>11, :data_precision=>nil, :data_scale=>6, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
         :status =>
-          {:position=>5, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
+          {:position=>6, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
       }
     end
 
