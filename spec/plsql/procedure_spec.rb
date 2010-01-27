@@ -560,6 +560,28 @@ describe "Parameter type mapping /" do
         END test_full_name;
       SQL
       plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_record IS
+          TYPE t_employee IS RECORD(
+            employee_id   NUMBER(15),
+            first_name    VARCHAR2(50),
+            last_name     VARCHAR2(50),
+            hire_date     DATE
+          );
+          FUNCTION test_full_name (p_employee t_employee)
+            RETURN VARCHAR2;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_record IS
+          FUNCTION test_full_name (p_employee t_employee)
+            RETURN VARCHAR2
+          IS
+          BEGIN
+            RETURN p_employee.first_name || ' ' || p_employee.last_name;
+          END;
+        END;
+      SQL
+      plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_employee_record (p_employee test_employees%ROWTYPE)
           RETURN test_employees%ROWTYPE
         IS
@@ -595,6 +617,7 @@ describe "Parameter type mapping /" do
 
     after(:all) do
       plsql.execute "DROP FUNCTION test_full_name"
+      plsql.execute "DROP PACKAGE test_record"
       plsql.execute "DROP FUNCTION test_employee_record"
       plsql.execute "DROP FUNCTION test_employee_record2"
       plsql.execute "DROP TABLE test_employees"
@@ -628,6 +651,10 @@ describe "Parameter type mapping /" do
 
     it "should return record return value and output record parameter value" do
       plsql.test_employee_record2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
+    end
+
+    it "should execute package function with parameter with record type defined in package" do
+      plsql.test_record.test_full_name(@p_employee).should == 'First Last'
     end
 
   end

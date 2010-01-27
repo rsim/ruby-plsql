@@ -79,7 +79,8 @@ module PLSQL
         @arguments[overload] ||= {}
         @return[overload] ||= nil
 
-        raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if type_subname
+        raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if type_subname &&
+          data_type != 'PL/SQL RECORD'
 
         argument_metadata = {
           :position => position && position.to_i,
@@ -92,7 +93,7 @@ module PLSQL
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,
-          :sql_type_name => "#{type_owner}.#{type_name}"
+          :sql_type_name => "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
         }
         if composite_type?(data_type)
           case data_type

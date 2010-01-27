@@ -209,15 +209,19 @@ module PLSQL
     end
 
     def record_declaration_sql(argument, argument_metadata)
-      fields_metadata = argument_metadata[:fields]
-      sql = "TYPE t_#{argument} IS RECORD (\n"
-      fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
-      sql << fields_sorted_by_position.map do |field|
-        metadata = fields_metadata[field]
-        "#{field} #{type_to_sql(metadata)}"
-      end.join(",\n")
-      sql << ");\n"
-      sql << "l_#{argument} t_#{argument};\n"
+      if argument_metadata[:type_subname]
+        "l_#{argument} #{argument_metadata[:sql_type_name]};\n"
+      else
+        fields_metadata = argument_metadata[:fields]
+        sql = "TYPE t_#{argument} IS RECORD (\n"
+        fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
+        sql << fields_sorted_by_position.map do |field|
+          metadata = fields_metadata[field]
+          "#{field} #{type_to_sql(metadata)}"
+        end.join(",\n")
+        sql << ");\n"
+        sql << "l_#{argument} t_#{argument};\n"
+      end
     end
 
     def record_assignment_sql_values_metadata(argument, argument_metadata, record_value)
