@@ -34,6 +34,7 @@ module PLSQL
         get_return_value
       end
     ensure
+      @procedure.clear_tmp_tables if @procedure.respond_to?(:clear_tmp_tables)
       @cursor.close if @cursor
     end
 
@@ -183,8 +184,8 @@ module PLSQL
       end
     end
 
-    def add_argument(argument, value)
-      argument_metadata = arguments[argument]
+    def add_argument(argument, value, argument_metadata=nil)
+      argument_metadata ||= arguments[argument]
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
       case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
@@ -202,10 +203,33 @@ module PLSQL
         @bind_metadata[argument] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
         "l_#{argument}"
       else
-        @bind_values[argument] = value
-        @bind_metadata[argument] = argument_metadata
-        ":#{argument}"
+        # TABLE or PL/SQL TABLE type defined inside package
+        if argument_metadata[:tmp_table_name]
+          table_declaration_assignment_sql(argument, argument_metadata)
+          insert_values_into_tmp_table(argument_metadata, value)
+          "l_#{argument}"
+        else
+          @bind_values[argument] = value
+          @bind_metadata[argument] = argument_metadata
+          ":#{argument}"
+        end
       end
+    end
+
+    def table_declaration_assignment_sql(argument, argument_metadata)
+      @declare_sql << "l_#{argument} #{argument_metadata[:sql_type_name]} := #{argument_metadata[:sql_type_name]}();\n"
+      @declare_sql << "CURSOR c_#{argument} IS SELECT * FROM #{argument_metadata[:tmp_table_name]};\n"
+      @assignment_sql << "FOR r_#{argument} IN c_#{argument} LOOP\n"
+      @assignment_sql << "l_#{argument}.EXTEND;\n"
+      @assignment_sql << "l_#{argument}(l_#{argument}.COUNT) := r_#{argument}.element;\n"
+      @assignment_sql << "END LOOP;\n"
+    end
+
+    def insert_values_into_tmp_table(argument_metadata, values)
+      return unless values
+      raise ArgumentError, "Array value should be passed for #{argument.inspect} argument" unless values.is_a? Array
+      tmp_table = @schema.root_schema.send(argument_metadata[:tmp_table_name])
+      tmp_table.insert_values [:element], *(values.map{|v| [v]})
     end
 
     def record_declaration_sql(argument, argument_metadata)
@@ -260,10 +284,26 @@ module PLSQL
                         ":return := x_return;\n"
         "l_return := "
       else
-        @return_vars << :return
-        @return_vars_metadata[:return] = return_metadata
-        ':return := '
+        if return_metadata[:tmp_table_name]
+          add_table_return(return_metadata)
+        else
+          @return_vars << :return
+          @return_vars_metadata[:return] = return_metadata
+          ':return := '
+        end
       end
+    end
+
+    def add_table_return(return_metadata)
+      declare_i__
+      @declare_sql << "l_return #{return_metadata[:sql_type_name]};\n"
+      @return_vars << :return
+      @return_vars_metadata[:return] = return_metadata.merge(:data_type => "REF CURSOR")
+      @return_sql << "FOR i__ IN l_return.FIRST..l_return.LAST LOOP\n"
+      @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]}(element) VALUES (l_return(i__));\n"
+      @return_sql << "END LOOP;\n"
+      @return_sql << "OPEN :return FOR SELECT * FROM #{return_metadata[:tmp_table_name]};\n"
+      "l_return := "
     end
 
     def add_out_vars
@@ -285,26 +325,35 @@ module PLSQL
           @return_sql << "IF l_#{argument} IS NULL THEN\nx_#{argument} := NULL;\n" <<
                         "ELSIF l_#{argument} THEN\nx_#{argument} := 1;\nELSE\nx_#{argument} := 0;\nEND IF;\n" <<
                         ":#{bind_variable} := x_#{argument};\n"
+        else
+          if argument_metadata[:tmp_table_name]
+            add_out_table(argument, argument_metadata)
+          end
         end
       end
     end
 
-    def type_to_sql(metadata)
-      case metadata[:data_type]
-      when 'NUMBER'
-        precision, scale = metadata[:data_precision], metadata[:data_scale]
-        "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
-      when 'VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR'
-        length = metadata[:data_length]
-        if length && (char_used = metadata[:char_used])
-          length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
-        end
-        "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
-      when 'TABLE', 'VARRAY', 'OBJECT'
-        metadata[:sql_type_name]
-      else
-        metadata[:data_type]
+    def add_out_table(argument, argument_metadata)
+      declare_i__
+      bind_variable = :"o_#{argument}"
+      @return_vars << bind_variable
+      @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "REF CURSOR")
+      @return_sql << "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
+      @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]}(element) VALUES (l_#{argument}(i__));\n"
+      @return_sql << "END LOOP;\n"
+      @return_sql << "OPEN :#{bind_variable} FOR SELECT * FROM #{argument_metadata[:tmp_table_name]};\n"
+    end
+
+    # declare once temp variable i__ that is used as itertor
+    def declare_i__
+      unless @declared_i__
+        @declare_sql << "i__ PLS_INTEGER;\n"
+        @declared_i__ = true
       end
+    end
+
+    def type_to_sql(metadata)
+      ProcedureCommon.type_to_sql(metadata)
     end
 
     def get_return_value
@@ -343,7 +392,11 @@ module PLSQL
         numeric_value = @cursor[':return']
         numeric_value.nil? ? nil : numeric_value == 1
       else
-        @cursor[':return']
+        if return_metadata[:tmp_table_name]
+          @cursor[':return'].fetch_all.map{|row| row[0]}
+        else
+          @cursor[':return']
+        end
       end
     end
 
@@ -361,7 +414,11 @@ module PLSQL
         numeric_value = @cursor[":o_#{argument}"]
         numeric_value.nil? ? nil : numeric_value == 1
       else
-        @cursor[":#{argument}"]
+        if argument_metadata[:tmp_table_name]
+          @cursor[":o_#{argument}"].fetch_all.map{|row| row[0]}
+        else
+          @cursor[":#{argument}"]
+        end
       end
     end
 

@@ -404,11 +404,46 @@ describe "Connection" do
 
   end
 
-  describe "database version" do
+  describe "session information" do
     it "should get database version" do
       # using Oracle version 10.2.0.4 for unit tests
       @conn.database_version.should == [10, 2]
     end
+
+    it "should get session ID" do
+      @conn.session_id.should == @conn.select_first("SELECT USERENV('SESSIONID') FROM dual")[0].to_i
+    end
+  end
+
+  describe "drop ruby temporary tables" do
+    after(:all) do
+      @conn.drop_all_ruby_temporary_tables
+    end
+
+    it "should drop all ruby temporary tables" do
+      tmp_table = "ruby_111_222_333"
+      @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should_not raise_error
+      @conn.drop_all_ruby_temporary_tables
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should raise_error(/table or view does not exist/)
+    end
+
+    it "should drop current session ruby temporary tables" do
+      tmp_table = "ruby_#{@conn.session_id}_222_333"
+      @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should_not raise_error
+      @conn.drop_session_ruby_temporary_tables
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should raise_error(/table or view does not exist/)
+    end
+
+    it "should not drop other session ruby temporary tables" do
+      tmp_table = "ruby_#{@conn.session_id+1}_222_333"
+      @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should_not raise_error
+      @conn.drop_session_ruby_temporary_tables
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should_not raise_error
+    end
+
   end
 
 end

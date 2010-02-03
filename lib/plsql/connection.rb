@@ -165,6 +165,31 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
+    # Returns session ID
+    def session_id
+      @session_id ||= select_first("SELECT TO_NUMBER(USERENV('SESSIONID')) FROM dual")[0]
+    end
+
+    RUBY_TEMP_TABLE_PREFIX = 'ruby_'
+
+    # Drop all ruby temporary tables that are used for calling packages with table parameter types defined in packages
+    def drop_all_ruby_temporary_tables
+      select_all("SELECT table_name FROM user_tables WHERE temporary='Y' AND table_name LIKE :table_name",
+                  RUBY_TEMP_TABLE_PREFIX.upcase+'%').each do |row|
+        exec "TRUNCATE TABLE #{row[0]}"
+        exec "DROP TABLE #{row[0]}"
+      end
+    end
+
+    # Drop ruby temporary tables created in current session that are used for calling packages with table parameter types defined in packages
+    def drop_session_ruby_temporary_tables
+      select_all("SELECT table_name FROM user_tables WHERE temporary='Y' AND table_name LIKE :table_name",
+                  RUBY_TEMP_TABLE_PREFIX.upcase+"#{session_id}_%").each do |row|
+        exec "TRUNCATE TABLE #{row[0]}"
+        exec "DROP TABLE #{row[0]}"
+      end
+    end
+
   end
 
 end

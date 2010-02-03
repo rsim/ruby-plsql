@@ -879,12 +879,24 @@ describe "Parameter type mapping /" do
         END;
       SQL
 
-      # Wrong type definition inside package
+      # Type definition inside package
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_collections IS
           TYPE t_numbers IS TABLE OF NUMBER(15);
           FUNCTION test_sum (p_numbers IN t_numbers)
             RETURN NUMBER;
+          FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
+            RETURN t_numbers;
+          TYPE t_employee IS RECORD(
+            employee_id   NUMBER(15),
+            first_name    VARCHAR2(50),
+            last_name     VARCHAR2(50),
+            hire_date     DATE
+          );
+          TYPE t_employees IS TABLE OF t_employee;
+            --INDEX BY BINARY_INTEGER;
+          FUNCTION test_employees (p_employees t_employees)
+            RETURN t_employees;
         END;
       SQL
       plsql.execute <<-SQL
@@ -905,8 +917,29 @@ describe "Parameter type mapping /" do
               RETURN NULL;
             END IF;
           END;
+          FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
+          RETURN t_numbers
+          IS
+          BEGIN
+            x_numbers := p_numbers;
+            RETURN p_numbers;
+          END;
+          FUNCTION test_employees (p_employees t_employees)
+            RETURN t_employees
+          IS
+          BEGIN
+            RETURN p_employees;
+          END;
         END;
       SQL
+      @employees = (1..10).map do |i|
+        {
+          :employee_id => i,
+          :first_name => "First #{i}",
+          :last_name => "Last #{i}",
+          :hire_date => Time.local(2000,01,i),
+        }
+      end
 
       # Array of objects
       plsql.execute <<-SQL
@@ -939,6 +972,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP TYPE t_strings"
       plsql.execute "DROP TYPE t_phones"
       plsql.execute "DROP TYPE t_phone"
+      plsql.connection.drop_session_ruby_temporary_tables
     end
 
     it "should find existing function" do
@@ -958,10 +992,23 @@ describe "Parameter type mapping /" do
       plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
     end
 
-    it "should raise error if parameter type is defined inside package" do
-      lambda do
-        plsql.test_collections.test_sum([1,2,3,4])
-      end.should raise_error(ArgumentError)
+    it "should execute function with table of numbers type (defined inside package) parameter" do
+      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+    end
+
+    it "should clear temporary tables after executing function with table of numbers type (defined inside package) parameter" do
+      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+      # after first call temporary tables should be cleared
+      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+    end
+
+    it "should return table of numbers type (defined inside package)" do
+      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+    end
+
+    it "should execute function with table of records type (defined inside package) parameter" do
+      pending
+      plsql.test_collections.test_employees(@employees).should == @employees
     end
 
     it "should execute function with object array and return object array output parameter" do

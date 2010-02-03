@@ -46,6 +46,38 @@ module PLSQL
     attr_reader :arguments, :argument_list, :out_list, :return
     attr_reader :schema, :schema_name, :package, :procedure
 
+    # return type string from metadata that can be used in DECLARE block or table definition
+    def self.type_to_sql(metadata)
+      case metadata[:data_type]
+      when 'NUMBER'
+        precision, scale = metadata[:data_precision], metadata[:data_scale]
+        "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
+      when 'VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR'
+        length = metadata[:data_length]
+        if length && (char_used = metadata[:char_used])
+          length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
+        end
+        "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
+      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT'
+        metadata[:sql_type_name]
+      else
+        metadata[:data_type]
+      end
+    end
+
+    def clear_tmp_tables
+      if @tmp_table_names && !@tmp_table_names.empty?
+        @clear_tmp_tables_sql ||= begin
+          sql = "BEGIN\n"
+          @tmp_table_names.each do |table_name, argument_metadata|
+            sql << "DELETE FROM #{table_name};\n"
+          end
+          sql << "END;\n"
+        end
+        @schema.execute @clear_tmp_tables_sql
+      end
+    end
+
     # get procedure argument metadata from data dictionary
     def get_argument_metadata
       @arguments = {}
@@ -57,8 +89,11 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
 
+      # store tmp tables for table parameters with types defined inside packages
+      @tmp_table_names = []
+
       @schema.select_all(
-        "SELECT overload, argument_name, position, data_level,
+        "SELECT subprogram_id, overload, argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
               type_owner, type_name, type_subname
         FROM all_arguments
@@ -69,7 +104,7 @@ module PLSQL
         @object_id, @schema_name, @procedure
       ) do |r|
 
-        overload, argument_name, position, data_level,
+        subprogram_id, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
             type_owner, type_name, type_subname = r
 
@@ -79,8 +114,15 @@ module PLSQL
         @arguments[overload] ||= {}
         @return[overload] ||= nil
 
-        raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if type_subname &&
-          data_type != 'PL/SQL RECORD'
+        tmp_table_name = nil
+        # type defined inside package
+        if type_subname
+          if collection_type?(data_type)
+            tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{overload}_#{position}"
+          elsif data_type != 'PL/SQL RECORD'
+            raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package"
+          end
+        end
 
         argument_metadata = {
           :position => position && position.to_i,
@@ -93,8 +135,12 @@ module PLSQL
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,
-          :sql_type_name => "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
+          :sql_type_name => type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
         }
+        if tmp_table_name
+          @tmp_table_names << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]
+        end
+
         if composite_type?(data_type)
           case data_type
           when 'PL/SQL RECORD'
@@ -103,29 +149,32 @@ module PLSQL
           previous_level_argument_metadata[data_level] = argument_metadata
         end
 
+        # if function has return value
+        if argument_name.nil? && data_level == 0 && in_out == 'OUT'
+          @return[overload] = argument_metadata
         # if parameter
-        if argument_name
+        else
           # top level parameter
           if data_level == 0
-            @arguments[overload][argument_name.downcase.to_sym] = argument_metadata
+            # sometime there are empty IN arguments in all_arguments view for procedures without arguments (e.g. for DBMS_OUTPUT.DISABLE)
+            @arguments[overload][argument_name.downcase.to_sym] = argument_metadata if argument_name
           # or lower level part of composite type
           else
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'PL/SQL RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-            when 'TABLE', 'VARRAY'
+            when 'PL/SQL TABLE', 'TABLE', 'VARRAY'
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
-        # if function has return value
-        elsif argument_name.nil? && data_level == 0 && in_out == 'OUT'
-          @return[overload] = argument_metadata
         end
       end
       # if procedure is without arguments then create default empty argument list for default overload
       @arguments[0] = {} if @arguments.keys.empty?
 
       construct_argument_list_for_overloads
+
+      create_tmp_tables
     end
 
     def construct_argument_list_for_overloads
@@ -136,9 +185,34 @@ module PLSQL
       end
     end
 
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'TABLE', 'VARRAY'].freeze
+    def create_tmp_tables
+      @tmp_table_names.each do |table_name, argument_metadata|
+        sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
+          element_metadata = argument_metadata[:element]
+          case element_metadata[:data_type]
+          when 'PL/SQL RECORD'
+            fields_metadata = element_metadata[:fields]
+            fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
+            sql << fields_sorted_by_position.map do |field|
+              metadata = fields_metadata[field]
+              "#{field} #{ProcedureCommon.type_to_sql(metadata)}"
+            end.join(",\n")
+          else
+            sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}\n"
+          end
+        sql << ") ON COMMIT PRESERVE ROWS\n"
+        @schema.execute sql
+      end
+    end
+
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
     def composite_type?(data_type)
       PLSQL_COMPOSITE_TYPES.include? data_type
+    end
+
+    PLSQL_COLLECTION_TYPES = ['PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
+    def collection_type?(data_type)
+      PLSQL_COLLECTION_TYPES.include? data_type
     end
 
     def overloaded?
