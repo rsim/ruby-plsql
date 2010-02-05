@@ -132,7 +132,7 @@ module PLSQL
       else
         @call_sql = @procedure.call_sql(@call_sql)
       end
-      add_out_vars
+      add_out_variables
 
       dbms_output_enable_sql, dbms_output_get_sql = dbms_output_sql
 
@@ -188,7 +188,7 @@ module PLSQL
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
       case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
-        @declare_sql << record_declaration_sql(argument, argument_metadata)
+        add_record_declaration(argument, argument_metadata)
         record_assignment_sql, record_bind_values, record_bind_metadata =
           record_assignment_sql_values_metadata(argument, argument_metadata, value)
         @assignment_sql << record_assignment_sql
@@ -204,7 +204,7 @@ module PLSQL
       else
         # TABLE or PL/SQL TABLE type defined inside package
         if argument_metadata[:tmp_table_name]
-          table_declaration_assignment_sql(argument, argument_metadata)
+          add_table_declaration_and_assignment(argument, argument_metadata)
           insert_values_into_tmp_table(argument_metadata, value)
           "l_#{argument}"
         else
@@ -215,7 +215,7 @@ module PLSQL
       end
     end
 
-    def table_declaration_assignment_sql(argument, argument_metadata)
+    def add_table_declaration_and_assignment(argument, argument_metadata)
       @declare_sql << "l_#{argument} #{argument_metadata[:sql_type_name]} := #{argument_metadata[:sql_type_name]}();\n"
       @assignment_sql << "FOR r_#{argument} IN c_#{argument} LOOP\n"
       @assignment_sql << "l_#{argument}.EXTEND;\n"
@@ -252,8 +252,8 @@ module PLSQL
       @schema.connection.autocommit = true if old_autocommit
     end
 
-    def record_declaration_sql(argument, argument_metadata)
-      if argument_metadata[:type_subname]
+    def add_record_declaration(argument, argument_metadata)
+      @declare_sql << if argument_metadata[:type_subname]
         "l_#{argument} #{argument_metadata[:sql_type_name]};\n"
       else
         fields_metadata = argument_metadata[:fields]
@@ -288,89 +288,64 @@ module PLSQL
     end
 
     def add_return
-      case return_metadata[:data_type]
+      add_return_variable(:return, return_metadata, true)
+    end
+
+    def add_out_variables
+      out_list.each do |argument|
+        add_return_variable(argument, arguments[argument])
+      end
+    end
+
+    def add_return_variable(argument, argument_metadata, is_return_value=false)
+      case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
-        @declare_sql << record_declaration_sql('return', return_metadata)
-        return_metadata[:fields].each do |field, metadata|
-          bind_variable = :"return_f#{metadata[:position]}"
+        add_record_declaration(argument, argument_metadata) if is_return_value
+        argument_metadata[:fields].each do |field, metadata|
+          # should use different output bind variable as JDBC does not support
+          # if output bind variable appears in several places
+          bind_variable = :"#{argument}_o#{metadata[:position]}"
           @return_vars << bind_variable
           @return_vars_metadata[bind_variable] = metadata
-          @return_sql << ":#{bind_variable} := l_return.#{field};\n"
+          @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
         end
-        "l_return := "
+        "l_#{argument} := " if is_return_value
       when 'PL/SQL BOOLEAN'
-        @declare_sql << "l_return BOOLEAN;\n"
-        @declare_sql << "x_return NUMBER(1);\n"
-        @return_vars << :return
-        @return_vars_metadata[:return] = return_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
-        @return_sql << "IF l_return IS NULL THEN\nx_return := NULL;\nELSIF l_return THEN\nx_return := 1;\nELSE\nx_return := 0;\nEND IF;\n" <<
-                        ":return := x_return;\n"
-        "l_return := "
+        @declare_sql << "l_#{argument} BOOLEAN;\n" if is_return_value
+        @declare_sql << "o_#{argument} NUMBER(1);\n"
+        # should use different output bind variable as JDBC does not support
+        # if output bind variable appears in several places
+        bind_variable = :"o_#{argument}"
+        @return_vars << bind_variable
+        @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        @return_sql << "IF l_#{argument} IS NULL THEN\no_#{argument} := NULL;\n" <<
+                      "ELSIF l_#{argument} THEN\no_#{argument} := 1;\nELSE\no_#{argument} := 0;\nEND IF;\n" <<
+                      ":#{bind_variable} := o_#{argument};\n"
+        "l_#{argument} := " if is_return_value
       else
-        if return_metadata[:tmp_table_name]
-          add_table_return(return_metadata)
-        else
-          @return_vars << :return
-          @return_vars_metadata[:return] = return_metadata
-          ':return := '
+        if argument_metadata[:tmp_table_name]
+          add_return_table(argument, argument_metadata, is_return_value)
+        elsif is_return_value
+          @return_vars << argument
+          @return_vars_metadata[argument] = argument_metadata
+          ":#{argument} := "
         end
       end
     end
 
-    def add_table_return(return_metadata)
-      declare_i__
-      @declare_sql << "l_return #{return_metadata[:sql_type_name]};\n"
-      @return_vars << :return
-      @return_vars_metadata[:return] = return_metadata.merge(:data_type => "REF CURSOR")
-      @return_sql << "FOR i__ IN l_return.FIRST..l_return.LAST LOOP\n"
-      case return_metadata[:element][:data_type]
-      when 'PL/SQL RECORD'
-        field_names = record_fields_sorted_by_position(return_metadata[:element][:fields])
-        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
-        @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
-        return_fields_string = field_names.join(', ')
-      else
-        @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]}(element, i__) VALUES (l_return(i__), i__);\n"
-        return_fields_string = '*'
-      end
-      @return_sql << "END LOOP;\n"
-      @return_sql << "OPEN :return FOR SELECT #{return_fields_string} FROM #{return_metadata[:tmp_table_name]} ORDER BY i__;\n"
-      @return_sql << "DELETE FROM #{return_metadata[:tmp_table_name]};\n"
-      "l_return := "
-    end
-
-    def add_out_vars
-      out_list.each do |argument|
-        argument_metadata = arguments[argument]
-        case argument_metadata[:data_type]
-        when 'PL/SQL RECORD'
-          argument_metadata[:fields].each do |field, metadata|
-            bind_variable = :"#{argument}_o#{metadata[:position]}"
-            @return_vars << bind_variable
-            @return_vars_metadata[bind_variable] = metadata
-            @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
-          end
-        when 'PL/SQL BOOLEAN'
-          @declare_sql << "x_#{argument} NUMBER(1);\n"
-          bind_variable = :"o_#{argument}"
-          @return_vars << bind_variable
-          @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
-          @return_sql << "IF l_#{argument} IS NULL THEN\nx_#{argument} := NULL;\n" <<
-                        "ELSIF l_#{argument} THEN\nx_#{argument} := 1;\nELSE\nx_#{argument} := 0;\nEND IF;\n" <<
-                        ":#{bind_variable} := x_#{argument};\n"
-        else
-          if argument_metadata[:tmp_table_name]
-            add_out_table(argument, argument_metadata)
-          end
-        end
+    # declare once temp variable i__ that is used as itertor
+    def declare_i__
+      unless @declared_i__
+        @declare_sql << "i__ PLS_INTEGER;\n"
+        @declared_i__ = true
       end
     end
 
-    def add_out_table(argument, argument_metadata)
+    def add_return_table(argument, argument_metadata, is_return_value=false)
       declare_i__
-      bind_variable = :"o_#{argument}"
-      @return_vars << bind_variable
-      @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "REF CURSOR")
+      @declare_sql << "l_return #{return_metadata[:sql_type_name]};\n" if is_return_value
+      @return_vars << argument
+      @return_vars_metadata[argument] = argument_metadata.merge(:data_type => "REF CURSOR")
       @return_sql << "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
@@ -383,16 +358,9 @@ module PLSQL
         return_fields_string = '*'
       end
       @return_sql << "END LOOP;\n"
-      @return_sql << "OPEN :#{bind_variable} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
+      @return_sql << "OPEN :#{argument} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
       @return_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
-    end
-
-    # declare once temp variable i__ that is used as itertor
-    def declare_i__
-      unless @declared_i__
-        @declare_sql << "i__ PLS_INTEGER;\n"
-        @declared_i__ = true
-      end
+      "l_#{argument} := " if is_return_value
     end
 
     def type_to_sql(metadata)
@@ -404,58 +372,39 @@ module PLSQL
       if return_metadata && out_list.size > 0
         result = [function_return_value, {}]
         out_list.each do |k|
-          result[1][k] = out_var_value(k)
+          result[1][k] = out_variable_value(k)
         end
+        result
       # if function without output parameters
       elsif return_metadata
-        result = function_return_value
+        function_return_value
       # if procedure with output parameters
       elsif out_list.size > 0
         result = {}
         out_list.each do |k|
-          result[k] = out_var_value(k)
+          result[k] = out_variable_value(k)
         end
+        result
       # if procedure without output parameters
       else
-        result = nil
+        nil
       end
-      result
     end
 
     def function_return_value
-      case return_metadata[:data_type]
-      when 'PL/SQL RECORD'
-        return_value = {}
-        return_metadata[:fields].each do |field, metadata|
-          bind_variable = :"return_f#{metadata[:position]}"
-          return_value[field] = @cursor[":#{bind_variable}"]
-        end
-        return_value
-      when 'PL/SQL BOOLEAN'
-        numeric_value = @cursor[':return']
-        numeric_value.nil? ? nil : numeric_value == 1
-      else
-        if return_metadata[:tmp_table_name]
-          case return_metadata[:element][:data_type]
-          when 'PL/SQL RECORD'
-            @cursor[':return'].fetch_hash_all
-          else
-            @cursor[':return'].fetch_all.map{|row| row[0]}
-          end
-        else
-          @cursor[':return']
-        end
-      end
+      return_variable_value(:return, return_metadata)
     end
 
-    def out_var_value(argument)
-      argument_metadata = arguments[argument]
+    def out_variable_value(argument)
+      return_variable_value(argument, arguments[argument])
+    end
+
+    def return_variable_value(argument, argument_metadata)
       case argument_metadata[:data_type]
       when 'PL/SQL RECORD'
         return_value = {}
         argument_metadata[:fields].each do |field, metadata|
-          bind_variable = :"#{argument}_o#{metadata[:position]}"
-          return_value[field] = @cursor[":#{bind_variable}"]
+          return_value[field] = @cursor[":#{argument}_o#{metadata[:position]}"]
         end
         return_value
       when 'PL/SQL BOOLEAN'
@@ -465,9 +414,9 @@ module PLSQL
         if argument_metadata[:tmp_table_name]
           case argument_metadata[:element][:data_type]
           when 'PL/SQL RECORD'
-            @cursor[":o_#{argument}"].fetch_hash_all
+            @cursor[":#{argument}"].fetch_hash_all
           else
-            @cursor[":o_#{argument}"].fetch_all.map{|row| row[0]}
+            @cursor[":#{argument}"].fetch_all.map{|row| row[0]}
           end
         else
           @cursor[":#{argument}"]

@@ -590,7 +590,7 @@ describe "Parameter type mapping /" do
         END test_employee_record;
       SQL
       plsql.execute <<-SQL
-        CREATE OR REPLACE FUNCTION test_employee_record2 (p_employee test_employees%ROWTYPE, x_employee OUT test_employees%ROWTYPE)
+        CREATE OR REPLACE FUNCTION test_employee_record2 (p_employee test_employees%ROWTYPE, x_employee IN OUT test_employees%ROWTYPE)
           RETURN test_employees%ROWTYPE
         IS
         BEGIN
@@ -650,7 +650,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should return record return value and output record parameter value" do
-      plsql.test_employee_record2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
+      plsql.test_employee_record2(@p_employee, @p_employee2).should == [@p_employee, {:x_employee => @p_employee}]
     end
 
     it "should execute package function with parameter with record type defined in package" do
