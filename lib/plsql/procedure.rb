@@ -65,19 +65,6 @@ module PLSQL
       end
     end
 
-    def clear_tmp_tables
-      if @tmp_table_names && !@tmp_table_names.empty?
-        @clear_tmp_tables_sql ||= begin
-          sql = "BEGIN\n"
-          @tmp_table_names.each do |table_name, argument_metadata|
-            sql << "DELETE FROM #{table_name};\n"
-          end
-          sql << "END;\n"
-        end
-        @schema.execute @clear_tmp_tables_sql
-      end
-    end
-
     # get procedure argument metadata from data dictionary
     def get_argument_metadata
       @arguments = {}
@@ -198,8 +185,9 @@ module PLSQL
               "#{field} #{ProcedureCommon.type_to_sql(metadata)}"
             end.join(",\n")
           else
-            sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}\n"
+            sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}"
           end
+          sql << ",\ni__ NUMBER(38)\n"
         sql << ") ON COMMIT PRESERVE ROWS\n"
         @schema.execute sql
       end

@@ -34,7 +34,6 @@ module PLSQL
         get_return_value
       end
     ensure
-      @procedure.clear_tmp_tables if @procedure.respond_to?(:clear_tmp_tables)
       @cursor.close if @cursor
     end
 
@@ -218,18 +217,39 @@ module PLSQL
 
     def table_declaration_assignment_sql(argument, argument_metadata)
       @declare_sql << "l_#{argument} #{argument_metadata[:sql_type_name]} := #{argument_metadata[:sql_type_name]}();\n"
-      @declare_sql << "CURSOR c_#{argument} IS SELECT * FROM #{argument_metadata[:tmp_table_name]};\n"
       @assignment_sql << "FOR r_#{argument} IN c_#{argument} LOOP\n"
       @assignment_sql << "l_#{argument}.EXTEND;\n"
-      @assignment_sql << "l_#{argument}(l_#{argument}.COUNT) := r_#{argument}.element;\n"
+      case argument_metadata[:element][:data_type]
+      when 'PL/SQL RECORD'
+        fields_string = record_fields_sorted_by_position(argument_metadata[:element][:fields]).join(', ')
+        @declare_sql << "CURSOR c_#{argument} IS SELECT #{fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
+        @assignment_sql << "l_#{argument}(l_#{argument}.COUNT) := r_#{argument};\n"
+      else
+        @declare_sql << "CURSOR c_#{argument} IS SELECT * FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
+        @assignment_sql << "l_#{argument}(r_#{argument}.i__) := r_#{argument}.element;\n"
+      end
       @assignment_sql << "END LOOP;\n"
+      @assignment_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
     end
 
     def insert_values_into_tmp_table(argument_metadata, values)
-      return unless values
+      return unless values && !values.empty?
       raise ArgumentError, "Array value should be passed for #{argument.inspect} argument" unless values.is_a? Array
       tmp_table = @schema.root_schema.send(argument_metadata[:tmp_table_name])
-      tmp_table.insert_values [:element], *(values.map{|v| [v]})
+      # insert values without autocommit
+      old_autocommit = @schema.connection.autocommit?
+      @schema.connection.autocommit = false if old_autocommit
+      case argument_metadata[:element][:data_type]
+      when 'PL/SQL RECORD'
+        values_with_index = []
+        values.each_with_index{|v,i| values_with_index << v.merge(:i__ => i+1)}
+        tmp_table.insert values_with_index
+      else
+        values_with_index = []
+        values.each_with_index{|v,i| values_with_index << [v, i+1]}
+        tmp_table.insert_values [:element, :i__], *values_with_index
+      end
+      @schema.connection.autocommit = true if old_autocommit
     end
 
     def record_declaration_sql(argument, argument_metadata)
@@ -238,14 +258,17 @@ module PLSQL
       else
         fields_metadata = argument_metadata[:fields]
         sql = "TYPE t_#{argument} IS RECORD (\n"
-        fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
-        sql << fields_sorted_by_position.map do |field|
+        sql << record_fields_sorted_by_position(fields_metadata).map do |field|
           metadata = fields_metadata[field]
           "#{field} #{type_to_sql(metadata)}"
         end.join(",\n")
         sql << ");\n"
         sql << "l_#{argument} t_#{argument};\n"
       end
+    end
+
+    def record_fields_sorted_by_position(fields_metadata)
+      fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
     end
 
     def record_assignment_sql_values_metadata(argument, argument_metadata, record_value)
@@ -300,9 +323,19 @@ module PLSQL
       @return_vars << :return
       @return_vars_metadata[:return] = return_metadata.merge(:data_type => "REF CURSOR")
       @return_sql << "FOR i__ IN l_return.FIRST..l_return.LAST LOOP\n"
-      @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]}(element) VALUES (l_return(i__));\n"
+      case return_metadata[:element][:data_type]
+      when 'PL/SQL RECORD'
+        field_names = record_fields_sorted_by_position(return_metadata[:element][:fields])
+        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
+        @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
+        return_fields_string = field_names.join(', ')
+      else
+        @return_sql << "INSERT INTO #{return_metadata[:tmp_table_name]}(element, i__) VALUES (l_return(i__), i__);\n"
+        return_fields_string = '*'
+      end
       @return_sql << "END LOOP;\n"
-      @return_sql << "OPEN :return FOR SELECT * FROM #{return_metadata[:tmp_table_name]};\n"
+      @return_sql << "OPEN :return FOR SELECT #{return_fields_string} FROM #{return_metadata[:tmp_table_name]} ORDER BY i__;\n"
+      @return_sql << "DELETE FROM #{return_metadata[:tmp_table_name]};\n"
       "l_return := "
     end
 
@@ -339,9 +372,19 @@ module PLSQL
       @return_vars << bind_variable
       @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "REF CURSOR")
       @return_sql << "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
-      @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]}(element) VALUES (l_#{argument}(i__));\n"
+      case argument_metadata[:element][:data_type]
+      when 'PL/SQL RECORD'
+        field_names = record_fields_sorted_by_position(argument_metadata[:element][:fields])
+        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
+        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
+        return_fields_string = field_names.join(', ')
+      else
+        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]}(element, i__) VALUES (l_#{argument}(i__), i__);\n"
+        return_fields_string = '*'
+      end
       @return_sql << "END LOOP;\n"
-      @return_sql << "OPEN :#{bind_variable} FOR SELECT * FROM #{argument_metadata[:tmp_table_name]};\n"
+      @return_sql << "OPEN :#{bind_variable} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
+      @return_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
     end
 
     # declare once temp variable i__ that is used as itertor
@@ -393,7 +436,12 @@ module PLSQL
         numeric_value.nil? ? nil : numeric_value == 1
       else
         if return_metadata[:tmp_table_name]
-          @cursor[':return'].fetch_all.map{|row| row[0]}
+          case return_metadata[:element][:data_type]
+          when 'PL/SQL RECORD'
+            @cursor[':return'].fetch_hash_all
+          else
+            @cursor[':return'].fetch_all.map{|row| row[0]}
+          end
         else
           @cursor[':return']
         end
@@ -415,7 +463,12 @@ module PLSQL
         numeric_value.nil? ? nil : numeric_value == 1
       else
         if argument_metadata[:tmp_table_name]
-          @cursor[":o_#{argument}"].fetch_all.map{|row| row[0]}
+          case argument_metadata[:element][:data_type]
+          when 'PL/SQL RECORD'
+            @cursor[":o_#{argument}"].fetch_hash_all
+          else
+            @cursor[":o_#{argument}"].fetch_all.map{|row| row[0]}
+          end
         else
           @cursor[":#{argument}"]
         end

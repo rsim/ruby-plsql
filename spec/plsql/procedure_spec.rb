@@ -895,7 +895,7 @@ describe "Parameter type mapping /" do
           );
           TYPE t_employees IS TABLE OF t_employee;
             --INDEX BY BINARY_INTEGER;
-          FUNCTION test_employees (p_employees t_employees)
+          FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
         END;
       SQL
@@ -924,7 +924,7 @@ describe "Parameter type mapping /" do
             x_numbers := p_numbers;
             RETURN p_numbers;
           END;
-          FUNCTION test_employees (p_employees t_employees)
+          FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees
           IS
           BEGIN
@@ -996,19 +996,29 @@ describe "Parameter type mapping /" do
       plsql.test_collections.test_sum([1,2,3,4]).should == 10
     end
 
-    it "should clear temporary tables after executing function with table of numbers type (defined inside package) parameter" do
-      plsql.test_collections.test_sum([1,2,3,4]).should == 10
-      # after first call temporary tables should be cleared
-      plsql.test_collections.test_sum([1,2,3,4]).should == 10
-    end
-
     it "should return table of numbers type (defined inside package)" do
+      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
       plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
     end
 
+    it "should clear temporary tables after executing function with table of numbers type (defined inside package) parameter" do
+      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+      # after first call temporary tables should be cleared
+      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+    end
+
+    it "should clear temporary tables when autocommit with table of numbers type (defined inside package) parameter" do
+      old_autocommit = plsql.connection.autocommit?
+      plsql.connection.autocommit = true
+      numbers_array = (1..400).to_a
+      plsql.test_collections.test_numbers(numbers_array).should == [numbers_array, {:x_numbers => numbers_array}]
+      # after first call temporary tables should be cleared
+      plsql.test_collections.test_numbers(numbers_array).should == [numbers_array, {:x_numbers => numbers_array}]
+      plsql.connection.autocommit = old_autocommit
+    end
+
     it "should execute function with table of records type (defined inside package) parameter" do
-      pending
-      plsql.test_collections.test_employees(@employees).should == @employees
+      plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
     end
 
     it "should execute function with object array and return object array output parameter" do
