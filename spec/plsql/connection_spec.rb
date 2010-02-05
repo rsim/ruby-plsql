@@ -446,4 +446,26 @@ describe "Connection" do
 
   end
 
+  describe "logoff" do
+    after(:each) do
+      # restore connection after each test
+      reconnect_connection
+    end
+
+    def reconnect_connection
+      @raw_conn = get_connection
+      @conn = PLSQL::Connection.create( @raw_conn )
+    end
+
+    it "should drop current session ruby temporary tables" do
+      tmp_table = "ruby_#{@conn.session_id}_222_333"
+      @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should_not raise_error
+      @conn.logoff
+      reconnect_connection
+      lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should raise_error(/table or view does not exist/)
+    end
+
+  end
+
 end

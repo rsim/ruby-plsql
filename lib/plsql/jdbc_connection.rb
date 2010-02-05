@@ -32,6 +32,7 @@ end
 module PLSQL
   class JDBCConnection < Connection  #:nodoc:
     def logoff
+      super
       raw_connection.close
       true
     rescue

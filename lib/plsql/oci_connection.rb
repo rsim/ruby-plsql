@@ -18,6 +18,7 @@ module PLSQL
   class OCIConnection < Connection #:nodoc:
     
     def logoff
+      super
       raw_connection.logoff
     end
 

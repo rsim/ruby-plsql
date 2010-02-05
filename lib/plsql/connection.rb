@@ -44,7 +44,8 @@ module PLSQL
     end
     
     def logoff #:nodoc:
-      raise NoMethodError, "Not implemented for this raw driver"
+      # Common cleanup activities before logoff, should be called from particular driver method
+      drop_session_ruby_temporary_tables
     end
 
     def commit #:nodoc:
