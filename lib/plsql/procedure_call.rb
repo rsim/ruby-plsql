@@ -86,12 +86,13 @@ module PLSQL
       @bind_metadata = {}
 
       # Named arguments
-      if args.size == 1 && args[0].is_a?(Hash) &&
-            # do not use named arguments if procedure has just one PL/SQL record or object type argument -
+      # there should be just one Hash argument with symbol keys
+      if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
+            # do not use named arguments if procedure has just one PL/SQL record PL/SQL table or object type argument -
             # in that case passed Hash should be used as value for this PL/SQL record argument
             # (which will be processed in sequential arguments bracnh)
             !(argument_list.size == 1 &&
-              ['PL/SQL RECORD','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
+              ['PL/SQL RECORD','PL/SQL TABLE','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
               args[0].keys != [only_argument])
         # Add missing output arguments with nil value
         arguments.each do |arg, metadata|
@@ -140,49 +141,6 @@ module PLSQL
       @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
     end
 
-    def dbms_output_sql
-      if @dbms_output_stream
-        dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
-        # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
-        if (@schema.connection.database_version <=> [10, 2]) >= 0
-          @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
-          dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
-          @bind_values[:dbms_output_lines] = nil
-          @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil,
-            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
-        else
-          dbms_output_get_sql = ""
-        end
-        [dbms_output_enable_sql, dbms_output_get_sql]
-      else
-        ["", ""]
-      end
-    end
-
-    def dbms_output_log
-      if @dbms_output_stream
-        # if database version is at least 10.2 then :dbms_output_lines output bind variable has dbms_output lines
-        if @bind_metadata[:dbms_output_lines]
-          @cursor[':dbms_output_lines'].each do |line|
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
-          end
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
-        else
-          cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")
-          while true do
-            cursor.bind_param(':line', nil, :data_type => 'VARCHAR2', :in_out => 'OUT')
-            cursor.bind_param(':status', nil, :data_type => 'NUMBER', :in_out => 'OUT')
-            cursor.exec
-            break unless cursor[':status'] == 0
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{cursor[':line']}"
-          end
-          cursor.close
-        end
-        @dbms_output_stream.flush
-      end
-    end
-
     def add_argument(argument, value, argument_metadata=nil)
       argument_metadata ||= arguments[argument]
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
@@ -205,7 +163,7 @@ module PLSQL
         # TABLE or PL/SQL TABLE type defined inside package
         if argument_metadata[:tmp_table_name]
           add_table_declaration_and_assignment(argument, argument_metadata)
-          insert_values_into_tmp_table(argument_metadata, value)
+          insert_values_into_tmp_table(argument, argument_metadata, value)
           "l_#{argument}"
         else
           @bind_values[argument] = value
@@ -216,14 +174,22 @@ module PLSQL
     end
 
     def add_table_declaration_and_assignment(argument, argument_metadata)
-      @declare_sql << "l_#{argument} #{argument_metadata[:sql_type_name]} := #{argument_metadata[:sql_type_name]}();\n"
+      is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
+      @declare_sql << "l_#{argument} #{argument_metadata[:sql_type_name]}#{is_index_by_table ? nil : " := #{argument_metadata[:sql_type_name]}()"};\n"
       @assignment_sql << "FOR r_#{argument} IN c_#{argument} LOOP\n"
-      @assignment_sql << "l_#{argument}.EXTEND;\n"
+      @assignment_sql << "l_#{argument}.EXTEND;\n" unless is_index_by_table
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
-        fields_string = record_fields_sorted_by_position(argument_metadata[:element][:fields]).join(', ')
+        fields = record_fields_sorted_by_position(argument_metadata[:element][:fields])
+        fields_string = is_index_by_table ? "*" : fields.join(', ')
         @declare_sql << "CURSOR c_#{argument} IS SELECT #{fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
-        @assignment_sql << "l_#{argument}(l_#{argument}.COUNT) := r_#{argument};\n"
+        if is_index_by_table
+          fields.each do |field|
+            @assignment_sql << "l_#{argument}(r_#{argument}.i__).#{field} := r_#{argument}.#{field};\n"
+          end
+        else
+          @assignment_sql << "l_#{argument}(l_#{argument}.COUNT) := r_#{argument};\n"
+        end
       else
         @declare_sql << "CURSOR c_#{argument} IS SELECT * FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
         @assignment_sql << "l_#{argument}(r_#{argument}.i__) := r_#{argument}.element;\n"
@@ -232,9 +198,14 @@ module PLSQL
       @assignment_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
     end
 
-    def insert_values_into_tmp_table(argument_metadata, values)
+    def insert_values_into_tmp_table(argument, argument_metadata, values)
       return unless values && !values.empty?
-      raise ArgumentError, "Array value should be passed for #{argument.inspect} argument" unless values.is_a? Array
+      is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
+      if is_index_by_table
+        raise ArgumentError, "Hash value should be passed for #{argument.inspect} argument" unless values.is_a?(Hash)
+      else
+        raise ArgumentError, "Array value should be passed for #{argument.inspect} argument" unless values.is_a?(Array)
+      end
       tmp_table = @schema.root_schema.send(argument_metadata[:tmp_table_name])
       # insert values without autocommit
       old_autocommit = @schema.connection.autocommit?
@@ -242,11 +213,19 @@ module PLSQL
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
         values_with_index = []
-        values.each_with_index{|v,i| values_with_index << v.merge(:i__ => i+1)}
+        if is_index_by_table
+          values.each{|i,v| values_with_index << v.merge(:i__ => i)}
+        else
+          values.each_with_index{|v,i| values_with_index << v.merge(:i__ => i+1)}
+        end
         tmp_table.insert values_with_index
       else
         values_with_index = []
-        values.each_with_index{|v,i| values_with_index << [v, i+1]}
+        if is_index_by_table
+          values.each{|i,v| values_with_index << [v, i]}
+        else
+          values.each_with_index{|v,i| values_with_index << [v, i+1]}
+        end
         tmp_table.insert_values [:element, :i__], *values_with_index
       end
       @schema.connection.autocommit = true if old_autocommit
@@ -333,34 +312,40 @@ module PLSQL
       end
     end
 
+    def add_return_table(argument, argument_metadata, is_return_value=false)
+      is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
+      declare_i__
+      @declare_sql << "l_return #{return_metadata[:sql_type_name]};\n" if is_return_value
+      @return_vars << argument
+      @return_vars_metadata[argument] = argument_metadata.merge(:data_type => "REF CURSOR")
+      @return_sql << if is_index_by_table
+        "i__ := l_#{argument}.FIRST;\nLOOP\nEXIT WHEN i__ IS NULL;\n"
+      else
+        "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
+      end
+      case argument_metadata[:element][:data_type]
+      when 'PL/SQL RECORD'
+        field_names = record_fields_sorted_by_position(argument_metadata[:element][:fields])
+        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
+        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
+        return_fields_string = is_index_by_table ? '*' : field_names.join(', ')
+      else
+        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]} VALUES (l_#{argument}(i__), i__);\n"
+        return_fields_string = '*'
+      end
+      @return_sql << "i__ := l_#{argument}.NEXT(i__);\n" if is_index_by_table
+      @return_sql << "END LOOP;\n"
+      @return_sql << "OPEN :#{argument} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
+      @return_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
+      "l_#{argument} := " if is_return_value
+    end
+
     # declare once temp variable i__ that is used as itertor
     def declare_i__
       unless @declared_i__
         @declare_sql << "i__ PLS_INTEGER;\n"
         @declared_i__ = true
       end
-    end
-
-    def add_return_table(argument, argument_metadata, is_return_value=false)
-      declare_i__
-      @declare_sql << "l_return #{return_metadata[:sql_type_name]};\n" if is_return_value
-      @return_vars << argument
-      @return_vars_metadata[argument] = argument_metadata.merge(:data_type => "REF CURSOR")
-      @return_sql << "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
-      case argument_metadata[:element][:data_type]
-      when 'PL/SQL RECORD'
-        field_names = record_fields_sorted_by_position(argument_metadata[:element][:fields])
-        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
-        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
-        return_fields_string = field_names.join(', ')
-      else
-        @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]}(element, i__) VALUES (l_#{argument}(i__), i__);\n"
-        return_fields_string = '*'
-      end
-      @return_sql << "END LOOP;\n"
-      @return_sql << "OPEN :#{argument} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
-      @return_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
-      "l_#{argument} := " if is_return_value
     end
 
     def type_to_sql(metadata)
@@ -412,11 +397,20 @@ module PLSQL
         numeric_value.nil? ? nil : numeric_value == 1
       else
         if argument_metadata[:tmp_table_name]
+          is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
           case argument_metadata[:element][:data_type]
           when 'PL/SQL RECORD'
-            @cursor[":#{argument}"].fetch_hash_all
+            if is_index_by_table
+              Hash[*@cursor[":#{argument}"].fetch_hash_all.map{|row| [row.delete(:i__), row]}.flatten]
+            else
+              @cursor[":#{argument}"].fetch_hash_all
+            end
           else
-            @cursor[":#{argument}"].fetch_all.map{|row| row[0]}
+            if is_index_by_table
+              Hash[*@cursor[":#{argument}"].fetch_all.map{|row| [row[1], row[0]]}.flatten]
+            else
+              @cursor[":#{argument}"].fetch_all.map{|row| row[0]}
+            end
           end
         else
           @cursor[":#{argument}"]
@@ -461,6 +455,49 @@ module PLSQL
 
     def procedure_name
       @procedure_name ||= @procedure.procedure
+    end
+
+    def dbms_output_sql
+      if @dbms_output_stream
+        dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
+        # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
+        if (@schema.connection.database_version <=> [10, 2]) >= 0
+          @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
+          dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
+          @bind_values[:dbms_output_lines] = nil
+          @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil,
+            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
+        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        else
+          dbms_output_get_sql = ""
+        end
+        [dbms_output_enable_sql, dbms_output_get_sql]
+      else
+        ["", ""]
+      end
+    end
+
+    def dbms_output_log
+      if @dbms_output_stream
+        # if database version is at least 10.2 then :dbms_output_lines output bind variable has dbms_output lines
+        if @bind_metadata[:dbms_output_lines]
+          @cursor[':dbms_output_lines'].each do |line|
+            @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+          end
+        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        else
+          cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")
+          while true do
+            cursor.bind_param(':line', nil, :data_type => 'VARCHAR2', :in_out => 'OUT')
+            cursor.bind_param(':status', nil, :data_type => 'NUMBER', :in_out => 'OUT')
+            cursor.exec
+            break unless cursor[':status'] == 0
+            @dbms_output_stream.puts "DBMS_OUTPUT: #{cursor[':line']}"
+          end
+          cursor.close
+        end
+        @dbms_output_stream.flush
+      end
     end
 
   end

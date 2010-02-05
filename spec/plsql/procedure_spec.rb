@@ -998,7 +998,6 @@ describe "Parameter type mapping /" do
 
     it "should return table of numbers type (defined inside package)" do
       plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
-      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
     end
 
     it "should clear temporary tables after executing function with table of numbers type (defined inside package) parameter" do
@@ -1032,6 +1031,108 @@ describe "Parameter type mapping /" do
     end
 
   end
+
+  describe "Function with table indexed by bynary integer parameter" do
+
+    before(:all) do
+      # Type definition inside package
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_collections IS
+          TYPE t_numbers IS TABLE OF NUMBER(15)
+            INDEX BY BINARY_INTEGER;
+          FUNCTION test_sum (p_numbers IN t_numbers)
+            RETURN NUMBER;
+          FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
+            RETURN t_numbers;
+          TYPE t_employee IS RECORD(
+            employee_id   NUMBER(15),
+            first_name    VARCHAR2(50),
+            last_name     VARCHAR2(50),
+            hire_date     DATE
+          );
+          TYPE t_employees IS TABLE OF t_employee
+            INDEX BY BINARY_INTEGER;
+          FUNCTION test_employees (p_employees IN OUT t_employees)
+            RETURN t_employees;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_collections IS
+          FUNCTION test_sum (p_numbers IN t_numbers)
+          RETURN NUMBER
+          IS
+            l_sum   NUMBER(15) := 0;
+            i BINARY_INTEGER;
+          BEGIN
+            IF p_numbers.COUNT > 0 THEN
+              i := p_numbers.FIRST;
+              LOOP
+                EXIT WHEN i IS NULL;
+                l_sum := l_sum + p_numbers(i);
+                i := p_numbers.NEXT(i);
+              END LOOP;
+              RETURN l_sum;
+            ELSE
+              RETURN NULL;
+            END IF;
+          END;
+          FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
+          RETURN t_numbers
+          IS
+          BEGIN
+            x_numbers := p_numbers;
+            RETURN p_numbers;
+          END;
+          FUNCTION test_employees (p_employees IN OUT t_employees)
+            RETURN t_employees
+          IS
+          BEGIN
+            RETURN p_employees;
+          END;
+        END;
+      SQL
+      # test with negative PL/SQL table indexes
+      @numbers = Hash[*(1..4).map{|i|[-i,i]}.flatten]
+      # test with reversed PL/SQL table indexes
+      @employees = Hash[*(1..10).map do |i|
+        [11-i, {
+          :employee_id => i,
+          :first_name => "First #{i}",
+          :last_name => "Last #{i}",
+          :hire_date => Time.local(2000,01,i),
+        }]
+      end.flatten]
+    end
+
+    after(:all) do
+      # plsql.execute "DROP PACKAGE test_collections"
+      plsql.connection.drop_session_ruby_temporary_tables
+    end
+
+    it "should execute function with index-by table of numbers type (defined inside package) parameter" do
+      plsql.test_collections.test_sum(@numbers).should == 10
+    end
+
+    it "should return index-by table of numbers type (defined inside package)" do
+      plsql.test_collections.test_numbers(@numbers).should == [@numbers, {:x_numbers => @numbers}]
+    end
+
+    it "should clear temporary tables when autocommit with index-by table of numbers type (defined inside package) parameter" do
+      old_autocommit = plsql.connection.autocommit?
+      plsql.connection.autocommit = true
+      numbers_hash = Hash[*(1..400).map{|i|[i,i]}.flatten]
+      plsql.test_collections.test_numbers(numbers_hash).should == [numbers_hash, {:x_numbers => numbers_hash}]
+      # after first call temporary tables should be cleared
+      plsql.test_collections.test_numbers(numbers_hash).should == [numbers_hash, {:x_numbers => numbers_hash}]
+      plsql.connection.autocommit = old_autocommit
+    end
+
+    it "should execute function with index-by table of records type (defined inside package) parameter" do
+      plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+    end
+
+  end
+
 
   describe "Function with VARRAY parameter" do
 
