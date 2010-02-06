@@ -160,7 +160,7 @@ module PLSQL
       raise ArgumentError, "No database connection" unless connection
       # search in database if not in cache at first
       object = (@schema_objects[method] ||= find_database_object(method) || find_other_schema(method) ||
-         find_public_synonym(method)) || find_standard_procedure(method)
+         find_public_synonym(method) || find_standard_procedure(method))
 
       raise ArgumentError, "No database object '#{method.to_s.upcase}' found" unless object
 

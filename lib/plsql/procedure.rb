@@ -76,11 +76,13 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
 
-      # store tmp tables for table parameters with types defined inside packages
-      @tmp_table_names = []
+      # store tmp tables for each overload for table parameters with types defined inside packages
+      @tmp_table_names = {}
+      # store if tmp tables are created for specific overload
+      @tmp_tables_created = {}
 
       @schema.select_all(
-        "SELECT subprogram_id, overload, argument_name, position, data_level,
+        "SELECT subprogram_id, TO_NUMBER(overload) overload, argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
               type_owner, type_name, type_subname
         FROM all_arguments
@@ -100,14 +102,17 @@ module PLSQL
         overload ||= 0
         @arguments[overload] ||= {}
         @return[overload] ||= nil
+        @tmp_table_names[overload] ||= []
 
         tmp_table_name = nil
         # type defined inside package
         if type_subname
           if collection_type?(data_type)
-            tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{overload}_#{position}"
+            tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{position}"
           elsif data_type != 'PL/SQL RECORD'
-            raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package"
+            # raise exception only when there are no overloaded procedure definitions
+            # (as probably this overload will not be used at all)
+            raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if overload == 0
           end
         end
 
@@ -125,7 +130,7 @@ module PLSQL
           :sql_type_name => type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
         }
         if tmp_table_name
-          @tmp_table_names << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]
+          @tmp_table_names[overload] << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]
         end
 
         if composite_type?(data_type)
@@ -160,8 +165,6 @@ module PLSQL
       @arguments[0] = {} if @arguments.keys.empty?
 
       construct_argument_list_for_overloads
-
-      create_tmp_tables
     end
 
     def construct_argument_list_for_overloads
@@ -172,8 +175,9 @@ module PLSQL
       end
     end
 
-    def create_tmp_tables
-      @tmp_table_names.each do |table_name, argument_metadata|
+    def ensure_tmp_tables_created(overload)
+      return if @tmp_tables_created.nil? || @tmp_tables_created[overload]
+      @tmp_table_names[overload] && @tmp_table_names[overload].each do |table_name, argument_metadata|
         sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
           element_metadata = argument_metadata[:element]
           case element_metadata[:data_type]
@@ -191,6 +195,7 @@ module PLSQL
         sql << ") ON COMMIT PRESERVE ROWS\n"
         @schema.execute sql
       end
+      @tmp_tables_created[overload] = true
     end
 
     PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze

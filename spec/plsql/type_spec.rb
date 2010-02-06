@@ -14,6 +14,7 @@ describe "Type" do
         CONSTRUCTOR FUNCTION t_address(p_full_address VARCHAR2)
           RETURN SELF AS RESULT,
         MEMBER FUNCTION display_address(p_separator VARCHAR2 DEFAULT ',') RETURN VARCHAR2,
+        MEMBER FUNCTION display_address(p_uppercase BOOLEAN, p_separator VARCHAR2 DEFAULT ',') RETURN VARCHAR2,
         MEMBER PROCEDURE set_country(p_country VARCHAR2),
         MEMBER PROCEDURE set_country2(p_country VARCHAR2, x_display_address OUT VARCHAR2),
         STATIC FUNCTION create_address(p_full_address VARCHAR2) RETURN t_address
@@ -41,6 +42,15 @@ describe "Type" do
             l_separator := l_separator || ' ';
           END IF;
           RETURN SELF.street || l_separator || SELF.city || l_separator || SELF.country;
+        END;
+        MEMBER FUNCTION display_address(p_uppercase BOOLEAN, p_separator VARCHAR2) RETURN VARCHAR2 IS
+          l_separator VARCHAR2(10) := p_separator;
+        BEGIN
+          IF p_uppercase THEN
+            RETURN UPPER(SELF.display_address(p_separator));
+          ELSE
+            RETURN SELF.display_address(p_separator);
+          END IF;
         END;
         MEMBER PROCEDURE set_country(p_country VARCHAR2) IS
         BEGIN
@@ -234,6 +244,11 @@ describe "Type" do
 
     it "should call object instance member function with named parameters" do
       plsql.t_address(@address_attributes).display_address(:p_separator => ',').should == @full_address
+    end
+
+    it "should call object overloaded instance member function" do
+      plsql.t_address(@address_attributes).display_address(true).should == @full_address.upcase
+      plsql.t_address(@address_attributes).display_address(true, ',').should == @full_address.upcase
     end
 
     it "should call object instance member function with explicit first SELF parameter" do

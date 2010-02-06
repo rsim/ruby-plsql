@@ -344,13 +344,12 @@ describe "Parameter type mapping /" do
     end
 
     it "should raise exception if procedure cannot be found based on number of arguments" do
-      lambda { plsql.test_package2.test_procedure() }.should raise_error(ArgumentError)
+      lambda { plsql.test_package2.test_procedure() }.should raise_error(/wrong number or types of arguments/i)
     end
   
-    # TODO: should try to implement matching by types of arguments
-    # it "should find procedure based on types of arguments" do
-    #   plsql.test_package2.test_procedure(111, nil).should == {:p_result => '111'}
-    # end
+    it "should find procedure based on types of arguments" do
+      plsql.test_package2.test_procedure(111, nil).should == {:p_result => '111'}
+    end
 
     it "should find procedure based on names of named arguments" do
       plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
@@ -1099,13 +1098,13 @@ describe "Parameter type mapping /" do
           :employee_id => i,
           :first_name => "First #{i}",
           :last_name => "Last #{i}",
-          :hire_date => Time.local(2000,01,i),
+          :hire_date => Time.local(2000,01,i)
         }]
       end.flatten]
     end
 
     after(:all) do
-      # plsql.execute "DROP PACKAGE test_collections"
+      plsql.execute "DROP PACKAGE test_collections"
       plsql.connection.drop_session_ruby_temporary_tables
     end
 
@@ -1492,6 +1491,23 @@ describe "SYS.STANDARD procedures /" do
 
   it "should execute function from SYS.STANDARD package" do
     plsql.upper('abc').should == 'ABC'
+  end
+
+  it "should find function overload based on types of sequential arguments" do
+    plsql.nvl(1, 2).should == 1
+    plsql.nvl(nil, 2).should == 2
+    plsql.nvl(1.1, 2.2).should == 1.1
+    plsql.nvl(nil, 2.2).should == 2.2
+    plsql.nvl(BigDecimal('1.1'), BigDecimal('2.2')).should == BigDecimal('1.1')
+    plsql.nvl(nil, BigDecimal('2.2')).should == BigDecimal('2.2')
+    plsql.nvl('a', 'b').should == 'a'
+    plsql.nvl(nil, 'b').should == 'b'
+    plsql.nvl(Date.new(2010,1,13), Date.new(2010,1,19)).should == Time.local(2010,1,13)
+    plsql.nvl(nil, Date.new(2010,1,19)).should == Time.local(2010,1,19)
+    plsql.nvl(Time.local(2010,1,13), Time.local(2010,1,19)).should == Time.local(2010,1,13)
+    plsql.nvl(nil, Time.local(2010,1,19)).should == Time.local(2010,1,19)
+    plsql.nvl(true, false).should == true
+    plsql.nvl(nil, false).should == false
   end
 
 end
