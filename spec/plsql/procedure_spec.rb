@@ -1034,6 +1034,14 @@ describe "Parameter type mapping /" do
   describe "Function with table indexed by bynary integer parameter" do
 
     before(:all) do
+      plsql.execute <<-SQL
+        CREATE TABLE test_employees (
+          employee_id   NUMBER(15),
+          first_name    VARCHAR2(50),
+          last_name     VARCHAR2(50),
+          hire_date     DATE
+        )
+      SQL
       # Type definition inside package
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_collections IS
@@ -1053,6 +1061,7 @@ describe "Parameter type mapping /" do
             INDEX BY BINARY_INTEGER;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
+          PROCEDURE insert_employees(p_employees IN t_employees);
         END;
       SQL
       plsql.execute <<-SQL
@@ -1088,6 +1097,11 @@ describe "Parameter type mapping /" do
           BEGIN
             RETURN p_employees;
           END;
+          PROCEDURE insert_employees(p_employees IN t_employees) IS
+          BEGIN
+            FORALL i IN p_employees.FIRST..p_employees.LAST
+              INSERT INTO test_employees VALUES p_employees(i);
+          END;
         END;
       SQL
       # test with negative PL/SQL table indexes
@@ -1105,6 +1119,7 @@ describe "Parameter type mapping /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_collections"
+      plsql.execute "DROP TABLE test_employees"
       plsql.connection.drop_session_ruby_temporary_tables
     end
 
@@ -1128,6 +1143,17 @@ describe "Parameter type mapping /" do
 
     it "should execute function with index-by table of records type (defined inside package) parameter" do
       plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+    end
+
+    it "should create temporary tables in autonomous transaction" do
+      old_autocommit = plsql.connection.autocommit?
+      plsql.connection.autocommit = false
+      plsql.test_employees.insert @employees[1]
+      # procedure call should not commit initial insert
+      plsql.test_collections.insert_employees(2=>@employees[2], 3=>@employees[3])
+      plsql.rollback
+      plsql.test_employees.all.should be_blank
+      plsql.connection.autocommit = old_autocommit
     end
 
   end

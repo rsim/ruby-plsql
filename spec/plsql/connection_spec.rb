@@ -447,9 +447,13 @@ describe "Connection" do
   end
 
   describe "logoff" do
-    after(:each) do
-      # restore connection after each test
+    before(:each) do
+      # restore connection before each test
       reconnect_connection
+    end
+
+    after(:all) do
+      @conn.exec "DROP TABLE test_dummy_table" rescue nil
     end
 
     def reconnect_connection
@@ -464,6 +468,20 @@ describe "Connection" do
       @conn.logoff
       reconnect_connection
       lambda { @conn.select_first("SELECT * FROM #{tmp_table}") }.should raise_error(/table or view does not exist/)
+    end
+
+    it "should rollback any uncommited transactions" do
+      tmp_table = "ruby_#{@conn.session_id}_222_333"
+      old_autocommit = @conn.autocommit?
+      @conn.autocommit = false
+      @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
+      @conn.exec "CREATE TABLE test_dummy_table (dummy CHAR(1))"
+      @conn.exec "INSERT INTO test_dummy_table VALUES ('1')"
+      # logoff will drop ruby temporary tables, it should do rollback before drop table
+      @conn.logoff
+      reconnect_connection
+      @conn.select_first("SELECT * FROM test_dummy_table").should == nil
+      @conn.autocommit = old_autocommit
     end
 
   end

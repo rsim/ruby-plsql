@@ -193,7 +193,8 @@ module PLSQL
           end
           sql << ",\ni__ NUMBER(38)\n"
         sql << ") ON COMMIT PRESERVE ROWS\n"
-        @schema.execute sql
+        sql_block = "DECLARE\nPRAGMA AUTONOMOUS_TRANSACTION;\nBEGIN\nEXECUTE IMMEDIATE :sql;\nEND;\n"
+        @schema.execute sql_block, sql
       end
       @tmp_tables_created[overload] = true
     end
