@@ -21,6 +21,8 @@ describe "Package variables /" do
           varchar2_default varchar2(50) := 'default' ;
           varchar2_default2 varchar2(50) DEFAULT 'default';
           varchar2_default3 varchar2(50) NOT NULL := 'default';
+          varchar2_3_char VARCHAR2(3 CHAR);
+          varchar2_3_byte VARCHAR2(3 BYTE);
           char_variable char(10) ;
           nvarchar2_variable NVARCHAR2(50);
           nchar_variable NCHAR(10);
@@ -51,6 +53,19 @@ describe "Package variables /" do
       plsql.test_package.varchar2_default.should == 'default'
       plsql.test_package.varchar2_default2.should == 'default'
       plsql.test_package.varchar2_default3.should == 'default'
+    end
+
+    it "should set and get VARCHAR2(n CHAR) variable" do
+      plsql.test_package.varchar2_3_char = 'āčē'
+      plsql.test_package.varchar2_3_char.should == 'āčē'
+      lambda { plsql.test_package.varchar2_3_char = 'aceg' }.should raise_error(/buffer too small/)
+    end
+
+    it "should set and get VARCHAR2(n BYTE) variable" do
+      plsql.test_package.varchar2_3_byte = 'ace'
+      plsql.test_package.varchar2_3_byte.should == 'ace'
+      lambda { plsql.test_package.varchar2_3_byte = 'āce' }.should raise_error(/buffer too small/)
+      lambda { plsql.test_package.varchar2_3_byte = 'aceg' }.should raise_error(/buffer too small/)
     end
 
     it "should set and get CHAR variable" do

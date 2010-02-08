@@ -158,6 +158,7 @@ describe "DBMS_OUTPUT logging" do
   after(:all) do
     plsql.dbms_output_stream = nil
     plsql.execute "DROP PROCEDURE test_dbms_output"
+    plsql.execute "DROP PROCEDURE test_dbms_output_large"
     plsql.logoff
   end
 
