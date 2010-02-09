@@ -77,7 +77,7 @@ module PLSQL
           score = 0 # lower score is better match
           ov_arg_list_size = overload_argument_list[ov].size
           if (number_of_args <= ov_arg_list_size &&
-              0.upto(number_of_args-1).all? do |i|
+              (0..(number_of_args-1)).all? do |i|
                 ov_arg = overload_argument_list[ov][i]
                 matching_types[i] == :all || # either value matches any type
                 (ind = matching_types[i].index(overload_arguments[ov][ov_arg][:data_type])) &&

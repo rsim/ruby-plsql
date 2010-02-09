@@ -101,7 +101,7 @@ module PLSQL
         order_by_sql = nil
         sql_params.each do |k,v|
           if k == :order_by
-            order_by_sql = "ORDER BY #{v} "
+            order_by_sql = " ORDER BY #{v} "
           elsif v.nil?
             where_sqls << "#{k} IS NULL"
           else

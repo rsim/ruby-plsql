@@ -260,6 +260,10 @@ describe "Table" do
       plsql.test_employees.first(:employee_id => @employees.first[:employee_id]).should == @employees.first
     end
 
+    it "should select records in table using WHERE condition and ORBER BY sorting" do
+      plsql.test_employees.all(:employee_id => @employees.first[:employee_id], :order_by => :employee_id).should == [@employees.first]
+    end
+
     it "should select record in table using :column => nil condition" do
       employee = @employees.last
       employee[:employee_id] = employee[:employee_id] + 1
