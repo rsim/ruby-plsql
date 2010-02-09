@@ -1156,6 +1156,23 @@ describe "Parameter type mapping /" do
       plsql.connection.autocommit = old_autocommit
     end
 
+    describe "using Oracle 9.2" do
+      before(:all) do
+        # simulate Oracle 9.2 connection
+        plsql(:oracle_9).connection = get_connection
+        plsql(:oracle_9).connection.stub!(:database_version).and_return([9, 2])
+      end
+
+      after(:all) do
+        plsql(:oracle_9).logoff
+      end
+
+      it "should create temporary tables when using Oracle 9.2" do
+        plsql(:oracle_9).test_collections.test_numbers(@numbers).should == [@numbers, {:x_numbers => @numbers}]
+      end
+
+    end
+
   end
 
 

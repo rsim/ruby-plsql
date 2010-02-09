@@ -81,8 +81,11 @@ module PLSQL
       # store if tmp tables are created for specific overload
       @tmp_tables_created = {}
 
+      # subprogram_id column is available just from version 10g
+      subprogram_id_column = (@schema.connection.database_version <=> [10, 2]) >= 0 ? 'subprogram_id' : 'NULL'
+
       @schema.select_all(
-        "SELECT subprogram_id, TO_NUMBER(overload) overload, argument_name, position, data_level,
+        "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
               type_owner, type_name, type_subname
         FROM all_arguments
@@ -93,7 +96,7 @@ module PLSQL
         @object_id, @schema_name, @procedure
       ) do |r|
 
-        subprogram_id, overload, argument_name, position, data_level,
+        subprogram_id, object_name, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
             type_owner, type_name, type_subname = r
 
@@ -108,6 +111,9 @@ module PLSQL
         # type defined inside package
         if type_subname
           if collection_type?(data_type)
+            # if subprogram_id was not supported by all_arguments view
+            # then generate unique ID from object_name and overload
+            subprogram_id ||= "#{object_name.hash % 10000}#{overload}"
             tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{position}"
           elsif data_type != 'PL/SQL RECORD'
             # raise exception only when there are no overloaded procedure definitions
