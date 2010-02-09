@@ -61,6 +61,27 @@ module PLSQL
       @connection.rollback
     end
 
+    # Create SAVEPOINT with specified name. Later use +rollback_to+ method to roll changes back
+    # to specified savepoint.
+    # Use beforehand
+    # 
+    #   plsql.connection.autocommit = false
+    # 
+    # to turn off automatic commits after each statement.
+    def savepoint(name)
+      execute "SAVEPOINT #{name}"
+    end
+
+    # Roll back changes to specified savepoint (that was created using +savepoint+ method)
+    # Use beforehand
+    # 
+    #   plsql.connection.autocommit = false
+    # 
+    # to turn off automatic commits after each statement.
+    def rollback_to(name)
+      execute "ROLLBACK TO #{name}"
+    end
+
   end
 end
 

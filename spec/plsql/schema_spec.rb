@@ -80,19 +80,43 @@ end
 describe "Schema commit and rollback" do
   before(:all) do
     plsql.connection = @conn = get_connection
+    plsql.connection.autocommit = false
+    plsql.execute "CREATE TABLE test_commit (dummy VARCHAR2(100))"
+    @data = {:dummy => 'test'}
+    @data2 = {:dummy => 'test2'}
   end
 
   after(:all) do
-    plsql.connection.logoff
+    plsql.execute "DROP TABLE test_commit"
+    plsql.logoff
+  end
+
+  after(:each) do
+    plsql.test_commit.delete
+    plsql.commit
   end
 
   it "should do commit" do
+    plsql.test_commit.insert @data
     plsql.commit
+    plsql.test_commit.first.should == @data
   end
-  
+
   it "should do rollback" do
+    plsql.test_commit.insert @data
     plsql.rollback
+    plsql.test_commit.first.should be_nil
   end
+
+  it "should create savepoint and rollback to savepoint" do
+    plsql.test_commit.insert @data
+    plsql.savepoint 'test'
+    plsql.test_commit.insert @data2
+    plsql.test_commit.all.should == [@data, @data2]
+    plsql.rollback_to 'test'
+    plsql.test_commit.all.should == [@data]
+  end
+
 end
 
 describe "ActiveRecord connection" do
