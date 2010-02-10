@@ -177,14 +177,24 @@ module PLSQL
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
-          "SELECT object_type, object_id FROM all_objects
+          "SELECT o.object_type, o.object_id, o.status,
+          (CASE WHEN o.object_type = 'PACKAGE'
+          THEN (SELECT ob.status FROM all_objects ob
+          WHERE ob.owner = o.owner AND ob.object_name = o.object_name AND ob.object_type = 'PACKAGE BODY')
+          ELSE NULL END) body_status
+          FROM all_objects o
           WHERE owner = :owner AND object_name = :object_name
           AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
           object_schema_name, object_name)
-        case row[0]
+        object_type, object_id, status, body_status = row
+        raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n" <<
+          _errors(object_schema_name, object_name, object_type) if status == 'INVALID'
+        raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n" <<
+          _errors(object_schema_name, object_name, 'PACKAGE BODY') if body_status == 'INVALID'
+        case object_type
         when 'PROCEDURE', 'FUNCTION'
-          Procedure.new(self, name, nil, override_schema_name, row[1])
-        when 'PACKAGE', 'PACKAGE BODY'
+          Procedure.new(self, name, nil, override_schema_name, object_id)
+        when 'PACKAGE'
           Package.new(self, name, override_schema_name)
         when 'TABLE'
           Table.new(self, name, override_schema_name)
@@ -199,6 +209,24 @@ module PLSQL
           find_database_object(target_object_name, target_schema_name)
         end
       end
+    end
+
+    def _errors(object_schema_name, object_name, object_type)
+      result = ""
+      previous_line = 0
+      select_all(
+        "SELECT e.line, e.position, e.text error_text, s.text source_text
+        FROM all_errors e, all_source s
+        WHERE e.owner = :owner AND e.name = :name AND e.type = :type
+          AND s.owner = e.owner AND s.name = e.name AND s.type = e.type AND s.line = e.line
+        ORDER BY e.sequence",
+        object_schema_name, object_name, object_type
+      ).each do |line, position, error_text, source_text|
+        result << "Error on line #{'%4d' % line}: #{source_text}" if line > previous_line
+        result << "     position #{'%4d' % position}: #{error_text}\n"
+        previous_line = line
+      end
+      result unless result.blank?
     end
 
     def find_other_schema(name)

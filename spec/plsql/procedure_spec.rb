@@ -1520,6 +1520,50 @@ describe "Synonyms /" do
 
   end
 
+  describe "invalid objects" do
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_invalid_function(p_dummy VARCHAR2) RETURN VARCHAR2 IS
+          l_dummy invalid_table.invalid_column%TYPE;
+        BEGIN
+          RETURN p_dummy;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_invalid_package IS
+          FUNCTION test_invalid_function(p_dummy VARCHAR2) RETURN VARCHAR2;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_invalid_package IS
+          FUNCTION test_invalid_function(p_dummy VARCHAR2) RETURN VARCHAR2 IS
+            l_dummy1 invalid_table.invalid_column%TYPE;
+            l_dummy2 invalid_table.invalid_column%TYPE;
+          BEGIN
+            RETURN p_dummy;
+          END;
+        END;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP FUNCTION test_invalid_function"
+      plsql.execute "DROP PACKAGE test_invalid_package"
+    end
+
+    it "should raise error when invalid function is called" do
+      lambda {
+        plsql.test_invalid_function('test')
+      }.should raise_error(ArgumentError, /is not in valid status/)
+    end
+
+    it "should raise error when function from invalid package body is called" do
+      lambda {
+        plsql.test_invalid_package.test_invalid_function('test')
+      }.should raise_error(ArgumentError, /body is not in valid status/)
+    end
+  end
+
 end
 
 describe "SYS.STANDARD procedures /" do
