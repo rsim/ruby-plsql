@@ -6,7 +6,7 @@ describe "View" do
     plsql.connection.autocommit = false
     plsql.execute <<-SQL
       CREATE TABLE test_employees (
-        employee_id   NUMBER(15),
+        employee_id   NUMBER(15) NOT NULL,
         first_name    VARCHAR2(50),
         last_name     VARCHAR2(50),
         hire_date     DATE,
@@ -97,16 +97,21 @@ describe "View" do
 
     it "should get columns metadata for view" do
       plsql.test_employees_v.columns.should == {
-        :employee_id =>
-          {:position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :first_name =>
-          {:position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :last_name =>
-          {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :hire_date => 
-          {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :status =>
-          {:position=>5, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
+        :employee_id => {
+          :position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => false, :data_default => nil},
+        :first_name => {
+          :position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :last_name => {
+          :position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :hire_date => {
+          :position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :status => {
+          :position=>5, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil}
       }
     end
 

@@ -210,10 +210,11 @@ module PLSQL
       Hash => Java::oracle.jdbc.OracleTypes::STRUCT,
       java.sql.ResultSet => Java::oracle.jdbc.OracleTypes::CURSOR,
     }
-    
+
     SQL_TYPE_TO_RUBY_CLASS = {
       java.sql.Types::CHAR => String,
       java.sql.Types::VARCHAR => String,
+      java.sql.Types::LONGVARCHAR => String,
       java.sql.Types::NUMERIC => BigDecimal,
       java.sql.Types::INTEGER => Fixnum,
       java.sql.Types::DATE => Time,

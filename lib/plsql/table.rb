@@ -49,7 +49,8 @@ module PLSQL
               CASE WHEN c.data_type_owner IS NULL THEN NULL
               ELSE (SELECT t.typecode FROM all_types t
                 WHERE t.owner = c.data_type_owner
-                AND t.type_name = c.data_type) END typecode
+                AND t.type_name = c.data_type) END typecode,
+              c.nullable, c.data_default
         FROM all_tab_columns c
         WHERE c.owner = :owner
         AND c.table_name = :table_name",
@@ -57,7 +58,7 @@ module PLSQL
       ) do |r|
         column_name, position,
               data_type, data_length, data_precision, data_scale, char_used,
-              data_type_owner, data_type_mod, typecode = r
+              data_type_owner, data_type_mod, typecode, nullable, data_default = r
         # remove scale (n) from data_type (returned for TIMESTAMPs and INTERVALs)
         data_type.sub!(/\(\d+\)/,'')
         # store column metadata
@@ -70,7 +71,9 @@ module PLSQL
           :char_used => char_used,
           :type_owner => data_type_owner,
           :type_name => data_type_owner && data_type,
-          :sql_type_name => data_type_owner && "#{data_type_owner}.#{data_type}"
+          :sql_type_name => data_type_owner && "#{data_type_owner}.#{data_type}",
+          :nullable => nullable == 'Y', # store as true or false
+          :data_default => data_default && data_default.strip # remove leading and trailing whitespace
         }
       end
     end

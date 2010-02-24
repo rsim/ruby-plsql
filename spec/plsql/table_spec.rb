@@ -6,7 +6,7 @@ describe "Table" do
     plsql.connection.autocommit = false
     plsql.execute <<-SQL
       CREATE TABLE test_employees (
-        employee_id   NUMBER(15),
+        employee_id   NUMBER(15) NOT NULL,
         first_name    VARCHAR2(50),
         last_name     VARCHAR2(50),
         hire_date     DATE,
@@ -33,10 +33,10 @@ describe "Table" do
     SQL
     plsql.execute <<-SQL
       CREATE TABLE test_employees2 (
-        employee_id   NUMBER(15),
+        employee_id   NUMBER(15) NOT NULL,
         first_name    VARCHAR2(50),
         last_name     VARCHAR2(50),
-        hire_date     DATE,
+        hire_date     DATE DEFAULT SYSDATE,
         address       t_address,
         phones        t_phones
       )
@@ -138,35 +138,47 @@ describe "Table" do
 
     it "should get columns metadata for table" do
       plsql.test_employees.columns.should == {
-        :employee_id =>
-          {:position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :first_name =>
-          {:position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :last_name =>
-          {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :hire_date =>
-          {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :created_at =>
-          {:position=>5, :data_type=>"TIMESTAMP", :data_length=>11, :data_precision=>nil, :data_scale=>6, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :status =>
-          {:position=>6, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil}
+        :employee_id => {
+          :position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => false, :data_default => nil},
+        :first_name => {
+          :position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :last_name => {
+          :position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :hire_date => {
+          :position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :created_at => {
+          :position=>5, :data_type=>"TIMESTAMP", :data_length=>11, :data_precision=>nil, :data_scale=>6, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :status => {
+          :position=>6, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => "'N'"}
       }
     end
 
     it "should get columns metadata for table with object columns" do
       plsql.test_employees2.columns.should == {
-        :employee_id =>
-          {:position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :first_name =>
-          {:position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :last_name =>
-          {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B", :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :hire_date => 
-          {:position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :address => 
-          {:position=>5, :data_type=>"OBJECT", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>"HR", :type_name=>"T_ADDRESS", :sql_type_name=>"HR.T_ADDRESS"},
-        :phones => 
-          {:position=>6, :data_type=>"TABLE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :char_used=>nil, :type_owner=>"HR", :type_name=>"T_PHONES", :sql_type_name=>"HR.T_PHONES"}
+        :employee_id => {
+          :position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => false, :data_default => nil},
+        :first_name => {
+          :position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :last_name => {
+          :position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil},
+        :hire_date => {
+          :position=>4, :data_type=>"DATE", :data_length=>7, :data_precision=>nil, :data_scale=>nil, :char_used=>nil,
+          :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => "SYSDATE"},
+        :address => {
+          :position=>5, :data_type=>"OBJECT", :data_length=>nil, :data_precision=>nil, :data_scale=>nil,
+          :char_used=>nil, :type_owner=>"HR", :type_name=>"T_ADDRESS", :sql_type_name=>"HR.T_ADDRESS", :nullable => true, :data_default => nil},
+        :phones => {
+          :position=>6, :data_type=>"TABLE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :char_used=>nil,
+          :type_owner=>"HR", :type_name=>"T_PHONES", :sql_type_name=>"HR.T_PHONES", :nullable => true, :data_default => nil}
       }
     end
 
