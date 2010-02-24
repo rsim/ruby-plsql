@@ -893,9 +893,21 @@ describe "Parameter type mapping /" do
             hire_date     DATE
           );
           TYPE t_employees IS TABLE OF t_employee;
-            --INDEX BY BINARY_INTEGER;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
+          -- these types with tables in lower level are not yet supported
+          TYPE t_employee2 IS RECORD(
+            employee_id   NUMBER(15),
+            first_name    VARCHAR2(50),
+            last_name     VARCHAR2(50),
+            hire_date     DATE,
+            numbers       t_numbers
+          );
+          FUNCTION test_employee2 (p_employee IN OUT t_employee2)
+            RETURN t_employee2;
+          TYPE t_employees2 IS TABLE OF t_employee2;
+          FUNCTION test_employees2 (p_employees IN OUT t_employees2)
+            RETURN t_employees2;
         END;
       SQL
       plsql.execute <<-SQL
@@ -925,6 +937,18 @@ describe "Parameter type mapping /" do
           END;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees
+          IS
+          BEGIN
+            RETURN p_employees;
+          END;
+          FUNCTION test_employee2 (p_employee IN OUT t_employee2)
+            RETURN t_employee2
+          IS
+          BEGIN
+            RETURN p_employee;
+          END;
+          FUNCTION test_employees2 (p_employees IN OUT t_employees2)
+            RETURN t_employees2
           IS
           BEGIN
             RETURN p_employees;
@@ -1027,6 +1051,18 @@ describe "Parameter type mapping /" do
     it "should execute function with empty object array" do
       phones = []
       plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+    end
+
+    it "should raise error with record parameter that has table as element" do
+      lambda {
+        plsql.test_collections.test_employee2(@employees[0]).should == [@employees[0], {:p_employee => @employees[0]}]
+      }.should raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
+    end
+
+    it "should raise error with table of records parameter when record has table as element" do
+      lambda {
+        plsql.test_collections.test_employees2(@employees).should == [@employees, {:p_employees => @employees}]
+      }.should raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
     end
 
   end

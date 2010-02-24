@@ -107,10 +107,14 @@ module PLSQL
         @return[overload] ||= nil
         @tmp_table_names[overload] ||= []
 
+        sql_type_name = type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
+
         tmp_table_name = nil
         # type defined inside package
         if type_subname
           if collection_type?(data_type)
+            raise ArgumentError, "#{data_type} type #{sql_type_name} definition inside package is not supported as part of other type definition," <<
+              " use CREATE TYPE outside package" if data_level > 0
             # if subprogram_id was not supported by all_arguments view
             # then generate unique ID from object_name and overload
             subprogram_id ||= "#{object_name.hash % 10000}#{overload}"
@@ -118,7 +122,7 @@ module PLSQL
           elsif data_type != 'PL/SQL RECORD'
             # raise exception only when there are no overloaded procedure definitions
             # (as probably this overload will not be used at all)
-            raise ArgumentError, "Parameter type definition inside package is not supported, use CREATE TYPE outside package" if overload == 0
+            raise ArgumentError, "Parameter type #{sql_type_name} definition inside package is not supported, use CREATE TYPE outside package" if overload == 0
           end
         end
 
@@ -133,7 +137,7 @@ module PLSQL
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,
-          :sql_type_name => type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}#{type_subname ? ".#{type_subname}" : nil}"
+          :sql_type_name => sql_type_name
         }
         if tmp_table_name
           @tmp_table_names[overload] << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]

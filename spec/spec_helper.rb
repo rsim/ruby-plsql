@@ -2,18 +2,18 @@ require "rubygems"
 gem "rspec"
 require "spec"
 
-gem "activerecord"
+# avoid loading activerecord 3.0 beta
+gem "activerecord", "= 2.3.5"
 require "active_record"
-gem "activerecord-oracle_enhanced-adapter"
+gem "activerecord-oracle_enhanced-adapter", "= 1.2.4"
 
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
-  # gem "ruby-oci8", "=2.0.2"
   gem "ruby-oci8", ">=2.0.3"
 end
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
-require "ruby_plsql"
+require "ruby-plsql"
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
