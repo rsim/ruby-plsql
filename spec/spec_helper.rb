@@ -2,10 +2,14 @@ require "rubygems"
 gem "rspec"
 require "spec"
 
-# avoid loading activerecord 3.0 beta
-gem "activerecord", "= 2.3.5"
-require "active_record"
-gem "activerecord-oracle_enhanced-adapter", "= 1.2.4"
+unless ENV['NO_ACTIVERECORD']
+  # avoid loading activerecord 3.0 beta
+  gem "activerecord", "= 2.3.5"
+  require "active_record"
+  gem "activerecord-oracle_enhanced-adapter", "= 1.2.4"
+else
+  puts "Without ActiveRecord"
+end
 
 if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
   gem "ruby-oci8", ">=2.0.3"
@@ -54,3 +58,13 @@ CONNECTION_PARAMS = {
   :username => DATABASE_USERS_AND_PASSWORDS[0][0],
   :password => DATABASE_USERS_AND_PASSWORDS[0][1]
 }
+
+class Hash
+  def except(*blacklist)
+    self.reject {|key, value| blacklist.include?(key) }
+  end unless method_defined?(:except)
+
+  def only(*whitelist)
+    self.reject {|key, value| !whitelist.include?(key) }
+  end unless method_defined?(:only)
+end

@@ -1188,7 +1188,7 @@ describe "Parameter type mapping /" do
       # procedure call should not commit initial insert
       plsql.test_collections.insert_employees(2=>@employees[2], 3=>@employees[3])
       plsql.rollback
-      plsql.test_employees.all.should be_blank
+      plsql.test_employees.all.should be_empty
       plsql.connection.autocommit = old_autocommit
     end
 

@@ -243,7 +243,7 @@ module PLSQL
         result << "     position #{'%4d' % position}: #{error_text}\n"
         previous_line = line
       end
-      result unless result.blank?
+      result unless result.empty?
     end
 
     def find_other_schema(name)
