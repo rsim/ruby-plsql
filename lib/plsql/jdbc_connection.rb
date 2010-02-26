@@ -31,6 +31,16 @@ end
 
 module PLSQL
   class JDBCConnection < Connection  #:nodoc:
+
+    def self.create_raw(params)
+      url = if ENV['TNS_ADMIN'] && params[:database] && !params[:host] && !params[:url]
+        "jdbc:oracle:thin:@#{params[:database]}"
+      else
+        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}:#{params[:database]}"
+      end
+      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
+    end
+
     def logoff
       super
       raw_connection.close

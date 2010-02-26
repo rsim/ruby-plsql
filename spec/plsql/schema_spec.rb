@@ -50,6 +50,52 @@ describe "Schema connection" do
 
 end
 
+describe "Connection with connect!" do
+
+  before(:all) do
+    @username, @password = DATABASE_USERS_AND_PASSWORDS[0]
+    @database = DATABASE_NAME
+    @host = DATABASE_HOST
+    @port = DATABASE_PORT
+  end
+
+  after(:each) do
+    plsql.logoff if plsql.connection
+  end
+
+  it "should connect with username, password and database alias" do
+    plsql.connect! @username, @password, @database
+    plsql.connection.should_not be_nil
+    plsql.schema_name.should == @username.upcase
+  end
+
+  it "should connect with username, password, host, port and database name" do
+    plsql.connect! @username, @password, :host => @host, :port => @port, :database => @database
+    plsql.connection.should_not be_nil
+    plsql.schema_name.should == @username.upcase
+  end
+
+  it "should connect with username, password, host, database name and default port" do
+    pending "Non-default port used for test database" unless @port == 1521
+    plsql.connect! @username, @password, :host => @host, :database => @database
+    plsql.connection.should_not be_nil
+    plsql.schema_name.should == @username.upcase
+  end
+
+  it "should not connect with wrong port number" do
+    lambda {
+      plsql.connect! @username, @password, :host => @host, :port => 9999, :database => @database
+    }.should raise_error(/no listener|could not establish the connection/)
+  end
+
+  it "should connect with one Hash parameter" do
+    plsql.connect! :username => @username, :password => @password, :database => @database
+    plsql.connection.should_not be_nil
+    plsql.schema_name.should == @username.upcase
+  end
+
+end
+
 describe "Named Schema" do
   before(:all) do
     plsql.connection = @conn = get_connection

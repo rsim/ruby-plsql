@@ -3,27 +3,49 @@ module PLSQL
     attr_reader :raw_driver
     attr_reader :activerecord_class
 
-    def initialize(raw_drv, raw_conn, ar_class = nil) #:nodoc:
-      @raw_driver = raw_drv
+    def initialize(raw_conn, ar_class = nil) #:nodoc:
+      @raw_driver = self.class.driver_type
       @raw_connection = raw_conn
       @activerecord_class = ar_class
     end
-    
+
     def self.create(raw_conn, ar_class = nil) #:nodoc:
       if ar_class && !(defined?(::ActiveRecord) && [ar_class, ar_class.superclass].include?(::ActiveRecord::Base))
         raise ArgumentError, "Wrong ActiveRecord class"
       end
-      # MRI 1.8.6 or YARV 1.9.1
-      if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && defined?(OCI8)
-        OCIConnection.new(:oci, raw_conn, ar_class)
-      # JRuby
-      elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby")
-        JDBCConnection.new(:jdbc, raw_conn, ar_class)
+      case driver_type
+      when :oci
+        OCIConnection.new(raw_conn, ar_class)
+      when :jdbc
+        JDBCConnection.new(raw_conn, ar_class)
       else
         raise ArgumentError, "Unknown raw driver"
       end
     end
-    
+
+    def self.create_new(params) #:nodoc:
+      case driver_type
+      when :oci
+        OCIConnection.create_raw(params)
+      when :jdbc
+        JDBCConnection.create_raw(params)
+      else
+        raise ArgumentError, "Unknown raw driver"
+      end
+    end
+
+    def self.driver_type
+      # MRI 1.8.6 or YARV 1.9.1
+      @driver_type ||= if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && defined?(OCI8)
+        :oci
+      # JRuby
+      elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby")
+        :jdbc
+      else
+        nil
+      end
+    end
+
     # Returns OCI8 or JDBC connection
     def raw_connection
       if @activerecord_class
@@ -32,7 +54,7 @@ module PLSQL
         @raw_connection
       end
     end
-    
+
     # Is it OCI8 connection
     def oci?
       @raw_driver == :oci

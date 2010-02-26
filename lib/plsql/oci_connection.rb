@@ -16,7 +16,16 @@ end
 
 module PLSQL
   class OCIConnection < Connection #:nodoc:
-    
+
+    def self.create_raw(params)
+      connection_string = if params[:host]
+        "//#{params[:host]}:#{params[:port]||1521}/#{params[:database]}"
+      else
+        params[:database]
+      end
+      new(OCI8.new(params[:username], params[:password], connection_string))
+    end
+
     def logoff
       super
       raw_connection.logoff

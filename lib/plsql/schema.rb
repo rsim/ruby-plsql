@@ -45,13 +45,30 @@ module PLSQL
     #     database_user, database_password)
     #
     def connection=(conn)
-      if conn.is_a?(::PLSQL::Connection)
+      if conn.is_a?(Connection)
         @connection = conn
         reset_instance_variables
       else
         self.raw_connection = conn
       end
       conn
+    end
+
+    # Create new OCI8 or JDBC connection using one of the following ways:
+    #
+    #   plsql.connect! username, password, database_tns_alias
+    #   plsql.connect! username, password, :host => host, :port => port, :database => database
+    #   plsql.connect! :username => username, :password => password, :database => database_tns_alias
+    #   plsql.connect! :username => username, :password => password, :host => host, :port => port, :database => database
+    #
+    def connect!(*args)
+      params = {}
+      params[:username] = args.shift if args[0].is_a?(String)
+      params[:password] = args.shift if args[0].is_a?(String)
+      params[:database] = args.shift if args[0].is_a?(String)
+      params.merge!(args.shift) if args[0].is_a?(Hash)
+      raise ArgumentError, "Wrong number of arguments" unless args.empty?
+      self.connection = Connection.create_new(params)
     end
 
     # Set connection to current ActiveRecord connection (use in initializer file):
