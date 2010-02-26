@@ -1,3 +1,21 @@
+== 0.4.2 2010-02-26
+
+* New features
+  * Support default and custom constructors of object types, support member and static method calls on PL/SQL objects
+  * Support for PL/SQL record types defined inside packages
+  * Support for PL/SQL table and index-by table of records types defined inside packages
+  * plsql.savepoint and plsql.rollback_to methods
+  * plsql.connect! method for establishing new connection
+* Improvements
+  * Better support for detecting matching overloaded implementation of procedure by sequential argument types
+  * Check if database object is valid and raise exception with compilation error if not valid
+  * Store :nullable and :data_default in table and view columns metadata
+* Bug fixes
+  * accessing package variables with schema prefixed object types
+  * insert of TIMESTAMP values in table
+  * support package variables with VARCHAR2(n CHAR) and VARCHAR2(n BYTE) types
+  * table select :order_by option
+
 == 0.4.1 2010-01-04
 
 * New features

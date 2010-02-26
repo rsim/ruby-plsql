@@ -42,12 +42,12 @@ module PLSQL
     end
   end
 
-  module ProcedureCommon
+  module ProcedureCommon #:nodoc:
     attr_reader :arguments, :argument_list, :out_list, :return
     attr_reader :schema, :schema_name, :package, :procedure
 
     # return type string from metadata that can be used in DECLARE block or table definition
-    def self.type_to_sql(metadata)
+    def self.type_to_sql(metadata) #:nodoc:
       case metadata[:data_type]
       when 'NUMBER'
         precision, scale = metadata[:data_precision], metadata[:data_scale]
@@ -66,7 +66,7 @@ module PLSQL
     end
 
     # get procedure argument metadata from data dictionary
-    def get_argument_metadata
+    def get_argument_metadata #:nodoc:
       @arguments = {}
       @argument_list = {}
       @out_list = {}
@@ -177,7 +177,7 @@ module PLSQL
       construct_argument_list_for_overloads
     end
 
-    def construct_argument_list_for_overloads
+    def construct_argument_list_for_overloads #:nodoc:
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
         @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
@@ -185,7 +185,7 @@ module PLSQL
       end
     end
 
-    def ensure_tmp_tables_created(overload)
+    def ensure_tmp_tables_created(overload) #:nodoc:
       return if @tmp_tables_created.nil? || @tmp_tables_created[overload]
       @tmp_table_names[overload] && @tmp_table_names[overload].each do |table_name, argument_metadata|
         sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
@@ -210,16 +210,16 @@ module PLSQL
     end
 
     PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
-    def composite_type?(data_type)
+    def composite_type?(data_type) #:nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end
 
     PLSQL_COLLECTION_TYPES = ['PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
-    def collection_type?(data_type)
+    def collection_type?(data_type) #:nodoc:
       PLSQL_COLLECTION_TYPES.include? data_type
     end
 
-    def overloaded?
+    def overloaded? #:nodoc:
       @overloaded
     end
   end

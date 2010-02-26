@@ -36,12 +36,12 @@ module PLSQL
 
     # Set connection to OCI8 or JDBC connection:
     # 
-    #   plsql.connection = OCI8.new(database_user, database_password, DATABASE_NAME)
+    #   plsql.connection = OCI8.new(database_user, database_password, database_name)
     #
     # or
     #
     #   plsql.connection = java.sql.DriverManager.getConnection(
-    #     "jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
+    #     "jdbc:oracle:thin:@#{database_host}:#{database_port}:#{database_name}",
     #     database_user, database_password)
     #
     def connection=(conn)

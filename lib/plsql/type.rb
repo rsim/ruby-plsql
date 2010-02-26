@@ -116,7 +116,7 @@ module PLSQL
       end
     end
 
-    def find_procedure(new_or_procedure)
+    def find_procedure(new_or_procedure) #:nodoc:
       @type_procedures[new_or_procedure] ||= begin
         procedure_name = new_or_procedure == :new ? @type_name : new_or_procedure
         # find defined procedure for type

@@ -34,7 +34,7 @@ module PLSQL
       end
     end
 
-    def self.driver_type
+    def self.driver_type #:nodoc:
       # MRI 1.8.6 or YARV 1.9.1
       @driver_type ||= if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && defined?(OCI8)
         :oci
