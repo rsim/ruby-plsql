@@ -49,12 +49,19 @@ module PLSQL
         args_keys = args[0].keys
         # implicit SELF argument for object instance procedures
         args_keys << :self if @self && !args_keys.include?(:self)
-        args_keys = args_keys.sort_by{|k| k.to_s}
         number_of_args = args_keys.size
-        overload = overload_argument_list.keys.detect do |ov|
-          overload_argument_list[ov].size == number_of_args &&
-          overload_arguments[ov].keys.sort_by{|k| k.to_s} == args_keys
+        matching_overloads = [] # overloads with exact or smaller number of matching named arguments
+        overload_argument_list.keys.each do |ov|
+          # assume that missing arguments have default value
+          missing_arguments_count = overload_argument_list[ov].size - number_of_args
+          if missing_arguments_count >= 0 &&
+              args_keys.all?{|k| overload_argument_list[ov].include?(k)}
+            matching_overloads << [ov, missing_arguments_count]
+          end
         end
+        # pick first matching overload with smallest missing arguments count
+        # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
+        overload = matching_overloads.sort_by{|ov, score| score}[0][0]
       # otherwise try matching by sequential arguments count and types
       else
         number_of_args = args.size
@@ -69,7 +76,7 @@ module PLSQL
           matching_types << matching_oracle_types_for_ruby_value(arg)
         end
         exact_overloads = [] # overloads with exact number of matching arguments
-        smaller_overloads = [] # overloads with exact number of matching arguments
+        smaller_overloads = [] # overloads with smaller number of matching arguments
         # overload = overload_argument_list.keys.detect do |ov|
         #   overload_argument_list[ov].size == number_of_args
         # end

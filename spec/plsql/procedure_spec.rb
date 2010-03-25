@@ -282,6 +282,10 @@ describe "Parameter type mapping /" do
             ;
           FUNCTION test_procedure2 ( p_string VARCHAR2 )
             RETURN VARCHAR2;
+          FUNCTION test_function ( p_string VARCHAR2, p_string2 VARCHAR2 DEFAULT ' ')
+            RETURN VARCHAR2;
+          FUNCTION test_function ( p_number NUMBER, p_number2 NUMBER DEFAULT 1 )
+            RETURN NUMBER;
         END;
       SQL
       plsql.execute <<-SQL
@@ -308,6 +312,18 @@ describe "Parameter type mapping /" do
           BEGIN
             RETURN UPPER(p_string);
           END test_procedure2;
+          FUNCTION test_function ( p_string VARCHAR2, p_string2 VARCHAR2)
+            RETURN VARCHAR2
+          IS
+          BEGIN
+            RETURN p_string||p_string2;
+          END;
+          FUNCTION test_function ( p_number NUMBER, p_number2 NUMBER)
+            RETURN NUMBER
+          IS
+          BEGIN
+            RETURN p_number + p_number2;
+          END;
         END;
       SQL
 
@@ -353,6 +369,11 @@ describe "Parameter type mapping /" do
 
     it "should find procedure based on names of named arguments" do
       plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
+    end
+
+    it "should find matching procedure based on partial list of named arguments" do
+      plsql.test_package2.test_function(:p_string => 'xxx').should == 'xxx '
+      plsql.test_package2.test_function(:p_number => 1).should == 2
     end
 
   end
