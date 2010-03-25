@@ -1,3 +1,13 @@
+== 0.4.3 2010-03-25
+
+* Improvements
+  * plsql.connection.database_version will return also update and patch components of version number
+  * :column => :is_null and :column => :is_not_null conditions in table select operations
+* Bug fixes
+  * Bugfix for calling procedure with table of records type (defined inside package) output parameter
+  * Use subprogram_id column in all_arguments view only if database version is >= 10.2.0.2
+  * Support partial list of named arguments for overloaded procedures (assuming that missing arguments will have default value)
+
 == 0.4.2 2010-02-26
 
 * New features
