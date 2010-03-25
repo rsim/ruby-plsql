@@ -272,17 +272,33 @@ describe "Table" do
       plsql.test_employees.first(:employee_id => @employees.first[:employee_id]).should == @employees.first
     end
 
-    it "should select records in table using WHERE condition and ORBER BY sorting" do
+    it "should select records in table using WHERE condition and ORDER BY sorting" do
       plsql.test_employees.all(:employee_id => @employees.first[:employee_id], :order_by => :employee_id).should == [@employees.first]
     end
 
     it "should select record in table using :column => nil condition" do
-      employee = @employees.last
+      employee = @employees.last.dup
       employee[:employee_id] = employee[:employee_id] + 1
       employee[:hire_date] = nil
       plsql.test_employees.insert employee
       plsql.test_employees.first("WHERE hire_date IS NULL").should == employee
       plsql.test_employees.first(:hire_date => nil).should == employee
+    end
+
+    it "should select record in table using :column => :is_null condition" do
+      employee = @employees.last.dup
+      employee[:employee_id] = employee[:employee_id] + 1
+      employee[:hire_date] = nil
+      plsql.test_employees.insert employee
+      plsql.test_employees.first(:hire_date => :is_null).should == employee
+    end
+
+    it "should select record in table using :column => :is_not_null condition" do
+      employee = @employees.last.dup
+      employee[:employee_id] = employee[:employee_id] + 1
+      employee[:hire_date] = nil
+      plsql.test_employees.insert employee
+      plsql.test_employees.all(:hire_date => :is_not_null, :order_by => :employee_id).should == @employees
     end
 
     it "should count records in table" do

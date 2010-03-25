@@ -105,8 +105,10 @@ module PLSQL
         sql_params.each do |k,v|
           if k == :order_by
             order_by_sql = " ORDER BY #{v} "
-          elsif v.nil?
+          elsif v.nil? || v == :is_null
             where_sqls << "#{k} IS NULL"
+          elsif v == :is_not_null
+            where_sqls << "#{k} IS NOT NULL"
           else
             where_sqls << "#{k} = :#{k}"
             bindvars << v
