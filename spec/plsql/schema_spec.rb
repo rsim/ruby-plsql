@@ -269,7 +269,7 @@ describe "DBMS_OUTPUT logging" do
     end
 
     it "should log output when database version is less than 10.2" do
-      plsql.connection.stub!(:database_version).and_return([9, 2])
+      plsql.connection.stub!(:database_version).and_return([9, 2, 0, 0])
       times = 2_000
       plsql.test_dbms_output_large("1234567890", times)
       @buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times

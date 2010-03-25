@@ -407,7 +407,7 @@ describe "Connection" do
   describe "session information" do
     it "should get database version" do
       # using Oracle version 10.2.0.4 for unit tests
-      @conn.database_version.should == [10, 2]
+      @conn.database_version.should == [10, 2, 0, 4]
     end
 
     it "should get session ID" do

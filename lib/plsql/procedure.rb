@@ -82,7 +82,7 @@ module PLSQL
       @tmp_tables_created = {}
 
       # subprogram_id column is available just from version 10g
-      subprogram_id_column = (@schema.connection.database_version <=> [10, 2]) >= 0 ? 'subprogram_id' : 'NULL'
+      subprogram_id_column = (@schema.connection.database_version <=> [10, 2, 0, 2]) >= 0 ? 'subprogram_id' : 'NULL'
 
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,

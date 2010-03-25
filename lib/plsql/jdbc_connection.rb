@@ -492,7 +492,17 @@ module PLSQL
     end
 
     def database_version
-      @database_version ||= (md = raw_connection.getMetaData) && [md.getDatabaseMajorVersion, md.getDatabaseMinorVersion]
+      @database_version ||= if md = raw_connection.getMetaData
+        major = md.getDatabaseMajorVersion
+        minor = md.getDatabaseMinorVersion
+        if md.getDatabaseProductVersion =~ /#{major}\.#{minor}\.(\d+)\.(\d+)/
+          update = $1.to_i
+          patch = $2.to_i
+        else
+          update = patch = 0
+        end
+        [major, minor, update, patch]
+      end
     end
 
     private

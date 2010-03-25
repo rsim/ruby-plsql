@@ -1206,7 +1206,7 @@ describe "Parameter type mapping /" do
       before(:all) do
         # simulate Oracle 9.2 connection
         plsql(:oracle_9).connection = get_connection
-        plsql(:oracle_9).connection.stub!(:database_version).and_return([9, 2])
+        plsql(:oracle_9).connection.stub!(:database_version).and_return([9, 2, 0, 0])
       end
 
       after(:all) do

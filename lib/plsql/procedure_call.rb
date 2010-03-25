@@ -534,7 +534,7 @@ module PLSQL
       if @dbms_output_stream
         dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
         # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
-        if (@schema.connection.database_version <=> [10, 2]) >= 0
+        if (@schema.connection.database_version <=> [10, 2, 0, 0]) >= 0
           @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
           dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
           @bind_values[:dbms_output_lines] = nil
