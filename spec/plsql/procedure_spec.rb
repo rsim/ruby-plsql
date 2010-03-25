@@ -1097,6 +1097,7 @@ describe "Parameter type mapping /" do
             INDEX BY BINARY_INTEGER;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
+          PROCEDURE test_employees_prc (p_employees IN OUT t_employees);
           PROCEDURE insert_employees(p_employees IN t_employees);
         END;
       SQL
@@ -1132,6 +1133,11 @@ describe "Parameter type mapping /" do
           IS
           BEGIN
             RETURN p_employees;
+          END;
+          PROCEDURE test_employees_prc (p_employees IN OUT t_employees)
+          IS
+          BEGIN
+            NULL;
           END;
           PROCEDURE insert_employees(p_employees IN t_employees) IS
           BEGIN
@@ -1179,6 +1185,10 @@ describe "Parameter type mapping /" do
 
     it "should execute function with index-by table of records type (defined inside package) parameter" do
       plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+    end
+
+    it "should execute procedure with index-by table of records type (defined inside package) parameter" do
+      plsql.test_collections.test_employees_prc(@employees).should == {:p_employees => @employees}
     end
 
     it "should create temporary tables in autonomous transaction" do

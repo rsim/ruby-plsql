@@ -399,7 +399,7 @@ module PLSQL
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
         field_names = record_fields_sorted_by_position(argument_metadata[:element][:fields])
-        values_string = field_names.map{|f| "l_return(i__).#{f}"}.join(', ')
+        values_string = field_names.map{|f| "l_#{argument}(i__).#{f}"}.join(', ')
         @return_sql << "INSERT INTO #{argument_metadata[:tmp_table_name]} VALUES (#{values_string}, i__);\n"
         return_fields_string = is_index_by_table ? '*' : field_names.join(', ')
       else
