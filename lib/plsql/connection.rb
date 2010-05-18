@@ -24,7 +24,7 @@ module PLSQL
     end
 
     def self.create_new(params) #:nodoc:
-      case driver_type
+      conn = case driver_type
       when :oci
         OCIConnection.create_raw(params)
       when :jdbc
@@ -32,6 +32,8 @@ module PLSQL
       else
         raise ArgumentError, "Unknown raw driver"
       end
+      conn.set_time_zone(params[:time_zone])
+      conn
     end
 
     def self.driver_type #:nodoc:
@@ -193,6 +195,17 @@ module PLSQL
     # Returns session ID
     def session_id
       @session_id ||= select_first("SELECT TO_NUMBER(USERENV('SESSIONID')) FROM dual")[0]
+    end
+
+    # Set time zone (default taken from TZ environment variable)
+    def set_time_zone(time_zone=nil)
+      time_zone ||= ENV['TZ']
+      exec("alter session set time_zone = '#{time_zone}'") if time_zone
+    end
+
+    # Returns session time zone
+    def time_zone
+      select_first("SELECT SESSIONTIMEZONE FROM dual")[0]
     end
 
     RUBY_TEMP_TABLE_PREFIX = 'ruby_'

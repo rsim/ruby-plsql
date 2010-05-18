@@ -41,6 +41,11 @@ module PLSQL
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
 
+    def set_time_zone(time_zone=nil)
+      time_zone ||= ENV['TZ']
+      raw_connection.setSessionTimeZone(time_zone)
+    end
+
     def logoff
       super
       raw_connection.close

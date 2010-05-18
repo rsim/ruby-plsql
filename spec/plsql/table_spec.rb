@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 
 describe "Table" do
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
     plsql.connection.autocommit = false
     plsql.execute <<-SQL
       CREATE TABLE test_employees (

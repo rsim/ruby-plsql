@@ -94,6 +94,16 @@ describe "Connection with connect!" do
     plsql.schema_name.should == @username.upcase
   end
 
+  it "should set session time zone from TZ environment variable" do
+    plsql.connect! @username, @password, @database
+    plsql.connection.time_zone.should == ENV['TZ']
+  end
+
+  it "should set session time zone from :time_zone parameter" do
+    plsql.connect! :username => @username, :password => @password, :database => @database, :time_zone => 'EET'
+    plsql.connection.time_zone.should == 'EET'
+  end
+
 end
 
 describe "Named Schema" do

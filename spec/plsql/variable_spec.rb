@@ -5,7 +5,7 @@ require File.dirname(__FILE__) + '/../spec_helper'
 describe "Package variables /" do
 
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
   end
 
   after(:all) do
