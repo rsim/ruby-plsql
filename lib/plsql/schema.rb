@@ -204,10 +204,10 @@ module PLSQL
           AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
           object_schema_name, object_name)
         object_type, object_id, status, body_status = row
-        raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n" <<
-          _errors(object_schema_name, object_name, object_type) if status == 'INVALID'
-        raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n" <<
-          _errors(object_schema_name, object_name, 'PACKAGE BODY') if body_status == 'INVALID'
+        raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n#{
+          _errors(object_schema_name, object_name, object_type)}" if status == 'INVALID'
+        raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n#{
+          _errors(object_schema_name, object_name, 'PACKAGE BODY')}" if body_status == 'INVALID'
         case object_type
         when 'PROCEDURE', 'FUNCTION'
           Procedure.new(self, name, nil, override_schema_name, object_id)
