@@ -1,10 +1,10 @@
 # encoding: utf-8
 
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe "Parameter type mapping /" do
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
   end
 
   after(:all) do
@@ -1508,7 +1508,7 @@ end
 describe "Synonyms /" do
 
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
   end
 
   after(:all) do
@@ -1636,7 +1636,7 @@ end
 describe "SYS.STANDARD procedures /" do
 
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
   end
 
   after(:all) do

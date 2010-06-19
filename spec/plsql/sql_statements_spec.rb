@@ -1,8 +1,8 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe "SQL statements /" do
   before(:all) do
-    plsql.connection = get_connection
+    plsql.connect! CONNECTION_PARAMS
     plsql.connection.autocommit = false
   end
 
