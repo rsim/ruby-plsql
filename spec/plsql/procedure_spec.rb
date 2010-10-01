@@ -1503,6 +1503,69 @@ describe "Parameter type mapping /" do
     end
 
   end
+
+  describe "Function with typed ref cursor return value" do
+
+    before(:all) do
+      plsql.execute "DROP TABLE typed_ref_cursor_table" rescue nil
+
+      plsql.execute <<-SQL
+        CREATE TABLE typed_ref_cursor_table
+        ( col1 VARCHAR2(10), col2 NUMBER )
+      SQL
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE typed_ref_cursor_test IS
+          TYPE test_rec IS RECORD ( col1 VARCHAR2(10), col2 NUMBER ) ;
+          TYPE test_rec_ref IS REF CURSOR RETURN test_rec ;
+
+          function get_all RETURN test_rec_ref ;
+        END typed_ref_cursor_test ;
+      SQL
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY typed_ref_cursor_test IS
+          FUNCTION get_all RETURN test_rec_ref IS
+            rc test_rec_ref ;
+          BEGIN
+            OPEN rc FOR SELECT * FROM typed_ref_cursor_table ;
+            RETURN rc ;
+          END get_all ;
+        END typed_ref_cursor_test ;
+      SQL
+
+      @fields = [:col1, :col2 ]
+      @rows = (1..3).map{|i| ["row #{i}", i]}
+      plsql.typed_ref_cursor_table.insert_values *@rows
+      plsql.commit
+
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE typed_ref_cursor_test"
+      plsql.execute "DROP TABLE typed_ref_cursor_table"
+    end
+
+    it "should return cursor and fetch first row" do
+      plsql.typed_ref_cursor_test.get_all do |cursor|
+        cursor.fetch.should == @rows[0]
+      end.should be_nil
+    end
+
+    it "should fetch hash from returned cursor" do
+      plsql.typed_ref_cursor_test.get_all do |cursor|
+        cursor.fetch_hash.should == Hash[*@fields.zip(@rows[0]).flatten]
+      end
+    end
+
+    it "should fetch all rows from returned cursor" do
+      plsql.typed_ref_cursor_test.get_all do |cursor|
+        cursor.fetch_all.should == @rows
+      end
+    end
+
+  end
+
 end
 
 describe "Synonyms /" do

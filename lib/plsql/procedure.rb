@@ -165,7 +165,7 @@ module PLSQL
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'PL/SQL RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-            when 'PL/SQL TABLE', 'TABLE', 'VARRAY'
+            when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'REF CURSOR'
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
@@ -209,7 +209,7 @@ module PLSQL
       @tmp_tables_created[overload] = true
     end
 
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'REF CURSOR'].freeze
     def composite_type?(data_type) #:nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end
