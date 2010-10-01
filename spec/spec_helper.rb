@@ -31,6 +31,8 @@ DATABASE_USERS_AND_PASSWORDS = [
   [ENV['DATABASE_USER'] || 'hr', ENV['DATABASE_PASSWORD'] || 'hr'],
   [ENV['DATABASE_USER2'] || 'arunit', ENV['DATABASE_PASSWORD2'] || 'arunit']
 ]
+# specify which database version is used (will be verified in one test)
+DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 
 def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
