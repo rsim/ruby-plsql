@@ -14,9 +14,9 @@ EOS
     gem.email = "raimonds.simanovskis@gmail.com"
     gem.homepage = "http://github.com/rsim/ruby-plsql"
     gem.authors = ["Raimonds Simanovskis"]
-    gem.add_development_dependency "rspec", ">= 1.2.9"
-    gem.add_development_dependency "activerecord", "= 2.3.5"
-    gem.add_development_dependency "activerecord-oracle_enhanced-adapter", ">= 1.2.4"
+    gem.add_development_dependency "rspec", "~> 1.3.0"
+    gem.add_development_dependency "activerecord", "= 2.3.8"
+    gem.add_development_dependency "activerecord-oracle_enhanced-adapter", "~> 1.3.1"
     gem.extra_rdoc_files = ['README.rdoc']
   end
   Jeweler::GemcutterTasks.new

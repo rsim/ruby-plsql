@@ -1,23 +1,28 @@
 require "rubygems"
-gem "rspec"
-require "spec"
 
-unless ENV['NO_ACTIVERECORD']
-  # avoid loading activerecord 3.0 beta
-  gem "activerecord", "= 2.3.5"
-  require "active_record"
-  gem "activerecord-oracle_enhanced-adapter", "= 1.2.4"
-else
-  puts "Without ActiveRecord"
-end
-
-if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
-  gem "ruby-oci8", ">=2.0.3"
-end
+# Set up gems listed in the Gemfile.
+gemfile = File.expand_path('../../Gemfile', __FILE__)
+begin
+  ENV['BUNDLE_GEMFILE'] = gemfile
+  require 'bundler'
+  Bundler.setup
+rescue Bundler::GemNotFound => e
+  STDERR.puts e.message
+  STDERR.puts "Try running `bundle install`."
+  exit!
+end if File.exist?(gemfile)
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
-require "ruby-plsql"
+require 'spec'
+
+unless ENV['NO_ACTIVERECORD']
+  require 'active_record'
+else
+  puts 'Without ActiveRecord'
+end
+
+require 'ruby-plsql'
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
