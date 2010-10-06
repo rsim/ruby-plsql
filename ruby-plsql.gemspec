@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-plsql}
-  s.version = "0.4.3"
+  s.version = "0.4.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Raimonds Simanovskis"]
-  s.date = %q{2010-10-01}
+  s.date = %q{2010-10-06}
   s.description = %q{ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.
 It could be used both for accessing Oracle PL/SQL API procedures in legacy applications
 as well as it could be used to create PL/SQL unit tests using Ruby testing libraries.
@@ -20,6 +20,7 @@ as well as it could be used to create PL/SQL unit tests using Ruby testing libra
   ]
   s.files = [
     ".gitignore",
+     "Gemfile",
      "History.txt",
      "License.txt",
      "README.rdoc",
@@ -43,6 +44,7 @@ as well as it could be used to create PL/SQL unit tests using Ruby testing libra
      "lib/plsql/view.rb",
      "lib/ruby-plsql.rb",
      "lib/ruby_plsql.rb",
+     "ruby-plsql.gemspec",
      "spec/plsql/connection_spec.rb",
      "spec/plsql/package_spec.rb",
      "spec/plsql/procedure_spec.rb",

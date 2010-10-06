@@ -1,3 +1,11 @@
+== 0.4.4 2010-10-06
+
+* Improvements
+  * When using plsql.connect! then set session time zone from ENV['TZ'] or from :time_zone option
+* Bug fixes
+  * Bugfix for case when object is in invalid state but has no errors
+  * Support ref cursor return value with type defined inside package
+
 == 0.4.3 2010-03-25
 
 * Improvements
