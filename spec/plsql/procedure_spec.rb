@@ -929,6 +929,18 @@ describe "Parameter type mapping /" do
           TYPE t_employees2 IS TABLE OF t_employee2;
           FUNCTION test_employees2 (p_employees IN OUT t_employees2)
             RETURN t_employees2;
+            
+          TYPE t_nstring IS RECORD(
+            ch_10bytes    CHAR(10 BYTE),
+            ch_10chars    CHAR(10 CHAR),
+            nch_10chars   NCHAR(10 CHAR),
+            str_10bytes   VARCHAR2(10 BYTE),
+            str_10chars   VARCHAR2(10 CHAR),
+            nstr_10chars  NVARCHAR2(10)
+          );
+          TYPE t_nstrings IS TABLE OF t_nstring;
+          FUNCTION test_nstring (p_strings IN t_nstrings, p_out OUT t_nstrings)
+            return NVARCHAR2;
         END;
       SQL
       plsql.execute <<-SQL
@@ -974,6 +986,23 @@ describe "Parameter type mapping /" do
           BEGIN
             RETURN p_employees;
           END;
+          FUNCTION test_nstring (p_strings IN t_nstrings, p_out OUT t_nstrings)
+            return NVARCHAR2
+          IS
+            tmp1 NVARCHAR2(2000);
+            x    pls_integer;
+          BEGIN
+            p_out := p_strings;
+            IF p_strings.count=0 THEN
+              RETURN N'';
+            END IF;
+            x := p_strings.first;
+            WHILE x IS NOT NULL LOOP
+              tmp1 := tmp1 || N' ' || p_strings(x).nch_10chars || p_strings(x).nstr_10chars || ',';
+              x := p_strings.next(x);
+            END LOOP;
+            RETURN tmp1;
+          END;
         END;
       SQL
       @employees = (1..10).map do |i|
@@ -982,6 +1011,16 @@ describe "Parameter type mapping /" do
           :first_name => "First #{i}",
           :last_name => "Last #{i}",
           :hire_date => Time.local(2000,01,i),
+        }
+      end
+      @nstrings = (1..5).map do |i|
+        {
+          :ch_10bytes => "Ch #{i}B",
+          :ch_10chars => "Ch #{i}C",
+          :nch_10chars => "NCh #{i}",
+          :str_10bytes => "Str #{i}C",
+          :str_10chars => "Str #{i}B",
+          :nstr_10chars => "NStr #{i}",
         }
       end
 
@@ -1062,6 +1101,10 @@ describe "Parameter type mapping /" do
 
     it "should execute function with table of records type (defined inside package) parameter" do
       plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+    end
+    
+    it "should execute function with table of records type (defined inside package and includes NVARCHAR columns) parameter" do
+      plsql.test_collections.test_nstring(@nstrings).should == ['NCh 1NStr 1NCh 2NStr 2NCh 3NStr 3NCh 4NStr 4NCh 5NStr 5', {:p_out => @nstrings}]
     end
 
     it "should execute function with object array and return object array output parameter" do
