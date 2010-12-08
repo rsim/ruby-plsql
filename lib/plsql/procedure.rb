@@ -52,10 +52,16 @@ module PLSQL
       when 'NUMBER'
         precision, scale = metadata[:data_precision], metadata[:data_scale]
         "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
-      when 'VARCHAR2', 'CHAR', 'NVARCHAR2', 'NCHAR'
-        length = metadata[:data_length]
+      when 'VARCHAR2', 'CHAR'
+        length = metadata[:char_used] == 'C' ? metadata[:char_length] : metadata[:data_length]
         if length && (char_used = metadata[:char_used])
           length = "#{length} #{char_used == 'C' ? 'CHAR' : 'BYTE'}"
+        end
+        "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
+      when 'NVARCHAR2', 'NCHAR'
+        length = metadata[:char_length]
+        if length
+          length = "#{length}"
         end
         "#{metadata[:data_type]}#{length ? "(#{length})": ""}"
       when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT'
@@ -87,7 +93,7 @@ module PLSQL
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
-              type_owner, type_name, type_subname
+              char_length, type_owner, type_name, type_subname
         FROM all_arguments
         WHERE object_id = :object_id
         AND owner = :owner
@@ -98,7 +104,7 @@ module PLSQL
 
         subprogram_id, object_name, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
-            type_owner, type_name, type_subname = r
+            char_length, type_owner, type_name, type_subname = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -134,6 +140,7 @@ module PLSQL
           :data_precision => data_precision && data_precision.to_i,
           :data_scale => data_scale && data_scale.to_i,
           :char_used => char_used,
+          :char_length => char_length && char_length.to_i,
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,

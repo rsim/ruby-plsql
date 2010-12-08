@@ -998,7 +998,7 @@ describe "Parameter type mapping /" do
             END IF;
             x := p_strings.first;
             WHILE x IS NOT NULL LOOP
-              tmp1 := tmp1 || N' ' || p_strings(x).nch_10chars || p_strings(x).nstr_10chars || ',';
+              tmp1 := tmp1 || rtrim(p_strings(x).nch_10chars) || p_strings(x).nstr_10chars || ',';
               x := p_strings.next(x);
             END LOOP;
             RETURN tmp1;
@@ -1015,9 +1015,9 @@ describe "Parameter type mapping /" do
       end
       @nstrings = (1..5).map do |i|
         {
-          :ch_10bytes => "Ch #{i}B",
-          :ch_10chars => "Ch #{i}C",
-          :nch_10chars => "NCh #{i}",
+          :ch_10bytes => "Ch #{i}B     ",
+          :ch_10chars => "Ch #{i}C     ",
+          :nch_10chars => "NCh #{i}     ",
           :str_10bytes => "Str #{i}C",
           :str_10chars => "Str #{i}B",
           :nstr_10chars => "NStr #{i}",
@@ -1104,7 +1104,7 @@ describe "Parameter type mapping /" do
     end
     
     it "should execute function with table of records type (defined inside package and includes NVARCHAR columns) parameter" do
-      plsql.test_collections.test_nstring(@nstrings).should == ['NCh 1NStr 1NCh 2NStr 2NCh 3NStr 3NCh 4NStr 4NCh 5NStr 5', {:p_out => @nstrings}]
+      plsql.test_collections.test_nstring(@nstrings).should == ['NCh 1NStr 1,NCh 2NStr 2,NCh 3NStr 3,NCh 4NStr 4,NCh 5NStr 5,', {:p_out => @nstrings}]
     end
 
     it "should execute function with object array and return object array output parameter" do
