@@ -7,6 +7,7 @@ describe "Connection" do
   before(:all) do
     @raw_conn = get_connection
     @conn = PLSQL::Connection.create( @raw_conn )
+    @conn.set_time_zone
   end
 
   after(:all) do
@@ -20,6 +21,7 @@ describe "Connection" do
   describe "create and destroy" do
     before(:each) do
       @conn = PLSQL::Connection.create( @raw_conn )
+      @conn.set_time_zone
     end
 
     it "should create connection" do
@@ -459,6 +461,7 @@ describe "Connection" do
     def reconnect_connection
       @raw_conn = get_connection
       @conn = PLSQL::Connection.create( @raw_conn )
+      @conn.set_time_zone
     end
 
     it "should drop current session ruby temporary tables" do
