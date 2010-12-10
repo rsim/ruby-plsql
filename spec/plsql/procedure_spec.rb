@@ -834,6 +834,11 @@ describe "Parameter type mapping /" do
       plsql.test_employee_object2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
     end
 
+    it "should accept NULL as input parameter" do
+      pending "NULL object type parameter support not yet released in ruby-oci8" unless defined?(JRUBY_VERSION)
+      plsql.test_employee_object(nil).should == nil
+    end
+
   end
 
 
