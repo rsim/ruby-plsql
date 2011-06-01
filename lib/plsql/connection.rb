@@ -1,32 +1,42 @@
 module PLSQL
+  
   class Connection
-    attr_reader :raw_driver
+    
+    RUBY_TEMP_TABLE_PREFIX = 'ruby_'
+    
     attr_reader :activerecord_class
+    attr_reader :dialect
 
-    def initialize(raw_conn, ar_class = nil) #:nodoc:
-      @raw_driver = self.class.driver_type
+    def initialize(raw_conn, params = {}) #:nodoc:
+      params.reverse_merge!(al_class: nil, dialect: :oracle)
+      @activerecord_class = params[:ar_class]
+      @dialect = params[:dialect]
       @raw_connection = raw_conn
-      @activerecord_class = ar_class
     end
 
-    def self.create(raw_conn, ar_class = nil) #:nodoc:
-      if ar_class && !(defined?(::ActiveRecord) && [ar_class, ar_class.superclass].include?(::ActiveRecord::Base))
+    def self.create(raw_conn, params = {}) #:nodoc:
+      params.reverse_merge!(ar_class: nil, dialect: :oracle)
+      if params[:ar_class] && !(defined?(::ActiveRecord) && [params[:ar_class], params[:ar_class].superclass].include?(::ActiveRecord::Base))
         raise ArgumentError, "Wrong ActiveRecord class"
       end
-      case driver_type
+      case driver_type(params[:dialect])
       when :oci
-        OCIConnection.new(raw_conn, ar_class)
+        OCIConnection.new(raw_conn, params)
+      when :pg
+        PGConnection.new(raw_conn, params)
       when :jdbc
-        JDBCConnection.new(raw_conn, ar_class)
+        JDBCConnection.new(raw_conn, params)
       else
         raise ArgumentError, "Unknown raw driver"
       end
     end
 
-    def self.create_new(params) #:nodoc:
-      conn = case driver_type
+    def self.create_new(params, dialect = :oracle) #:nodoc:
+      conn = case driver_type(dialect)
       when :oci
         OCIConnection.create_raw(params)
+      when :pg
+        PGConnection.create_raw(params)
       when :jdbc
         JDBCConnection.create_raw(params)
       else
@@ -36,11 +46,18 @@ module PLSQL
       conn
     end
 
-    def self.driver_type #:nodoc:
+    def self.driver_type(dialect) #:nodoc:
       # MRI 1.8.6 or YARV 1.9.1
-      @driver_type ||= if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && defined?(OCI8)
-        :oci
-      # JRuby
+      if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby")
+        case dialect
+        when :oracle
+          :oci if defined?(OCI8)
+        when :postgres
+          :pg
+        else
+          nil
+        end
+        # JRuby
       elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby")
         :jdbc
       else
@@ -55,16 +72,6 @@ module PLSQL
       else
         @raw_connection
       end
-    end
-
-    # Is it OCI8 connection
-    def oci?
-      @raw_driver == :oci
-    end
-
-    # Is it JDBC connection
-    def jdbc?
-      @raw_driver == :jdbc
     end
     
     def logoff #:nodoc:
@@ -179,55 +186,16 @@ module PLSQL
       end
     end
 
-    # all_synonyms view is quite slow therefore
-    # this implementation is overriden in OCI connection with faster native OCI method
+    # Describe the given synonym by querying the given schema.
     def describe_synonym(schema_name, synonym_name) #:nodoc:
-      select_first(
-      "SELECT table_owner, table_name FROM all_synonyms WHERE owner = :owner AND synonym_name = :synonym_name",
-        schema_name.to_s.upcase, synonym_name.to_s.upcase)
+      raise NoMethodError, "Not implemented for this raw driver"
     end
 
     # Returns array with major and minor version of database (e.g. [10, 2])
     def database_version
       raise NoMethodError, "Not implemented for this raw driver"
     end
-
-    # Returns session ID
-    def session_id
-      @session_id ||= select_first("SELECT TO_NUMBER(USERENV('SESSIONID')) FROM dual")[0]
-    end
-
-    # Set time zone (default taken from TZ environment variable)
-    def set_time_zone(time_zone=nil)
-      time_zone ||= ENV['TZ']
-      exec("alter session set time_zone = '#{time_zone}'") if time_zone
-    end
-
-    # Returns session time zone
-    def time_zone
-      select_first("SELECT SESSIONTIMEZONE FROM dual")[0]
-    end
-
-    RUBY_TEMP_TABLE_PREFIX = 'ruby_'
-
-    # Drop all ruby temporary tables that are used for calling packages with table parameter types defined in packages
-    def drop_all_ruby_temporary_tables
-      select_all("SELECT table_name FROM user_tables WHERE temporary='Y' AND table_name LIKE :table_name",
-                  RUBY_TEMP_TABLE_PREFIX.upcase+'%').each do |row|
-        exec "TRUNCATE TABLE #{row[0]}"
-        exec "DROP TABLE #{row[0]}"
-      end
-    end
-
-    # Drop ruby temporary tables created in current session that are used for calling packages with table parameter types defined in packages
-    def drop_session_ruby_temporary_tables
-      select_all("SELECT table_name FROM user_tables WHERE temporary='Y' AND table_name LIKE :table_name",
-                  RUBY_TEMP_TABLE_PREFIX.upcase+"#{session_id}_%").each do |row|
-        exec "TRUNCATE TABLE #{row[0]}"
-        exec "DROP TABLE #{row[0]}"
-      end
-    end
-
+    
   end
 
 end

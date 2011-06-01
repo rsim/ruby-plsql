@@ -4,7 +4,7 @@ require 'spec_helper'
 
 describe "Parameter type mapping /" do
   before(:all) do
-    plsql.connect! CONNECTION_PARAMS
+    plsql.connect! ORA_CONNECTION_PARAMS
   end
 
   after(:all) do
@@ -1619,7 +1619,7 @@ end
 describe "Synonyms /" do
 
   before(:all) do
-    plsql.connect! CONNECTION_PARAMS
+    plsql.connect! ORA_CONNECTION_PARAMS
   end
 
   after(:all) do
@@ -1747,7 +1747,7 @@ end
 describe "SYS.STANDARD procedures /" do
 
   before(:all) do
-    plsql.connect! CONNECTION_PARAMS
+    plsql.connect! ORA_CONNECTION_PARAMS
   end
 
   after(:all) do

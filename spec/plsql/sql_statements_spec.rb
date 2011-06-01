@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe "SQL statements /" do
   before(:all) do
-    plsql.connect! CONNECTION_PARAMS
+    plsql.connect! ORA_CONNECTION_PARAMS
     plsql.connection.autocommit = false
   end
 

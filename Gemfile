@@ -12,5 +12,6 @@ group :development do
 
   if !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
     gem 'ruby-oci8', '>=2.0.4'
+    gem 'pg', '>=0.11.0'
   end
 end

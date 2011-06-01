@@ -2,11 +2,11 @@
 
 require 'spec_helper'
 
-describe "Connection" do
+describe "Oracle Connection" do
 
   before(:all) do
-    @raw_conn = get_connection
-    @conn = PLSQL::Connection.create( @raw_conn )
+    @raw_conn = get_connection(dialect: :oracle)
+    @conn = PLSQL::Connection.create(@raw_conn, dialect: :oracle)
     @conn.set_time_zone
   end
 
@@ -20,7 +20,7 @@ describe "Connection" do
 
   describe "create and destroy" do
     before(:each) do
-      @conn = PLSQL::Connection.create( @raw_conn )
+      @conn = PLSQL::Connection.create( @raw_conn, dialect: :oracle)
       @conn.set_time_zone
     end
 
@@ -28,17 +28,17 @@ describe "Connection" do
       @conn.raw_connection.should == @raw_conn
     end
 
-    unless defined?(JRuby)
-      it "should be oci connection" do
-        @conn.should be_oci
-        @conn.raw_driver.should == :oci
-      end
-    else
-      it "should be jdbc connection" do
-        @conn.should be_jdbc
-        @conn.raw_driver.should == :jdbc
-      end
-    end
+#    unless defined?(JRuby)
+#      it "should be oci connection" do
+#        @conn.should be_oci
+#        @conn.raw_driver.should == :oci
+#      end
+#    else
+#      it "should be jdbc connection" do
+#        @conn.should be_jdbc
+#        @conn.raw_driver.should == :jdbc
+#      end
+#    end
 
     it "should logoff connection" do
       @conn.logoff.should be_true
@@ -409,7 +409,7 @@ describe "Connection" do
   describe "session information" do
     it "should get database version" do
       # using Oracle version 10.2.0.4 for unit tests
-      @conn.database_version.should == DATABASE_VERSION.split('.').map{|n| n.to_i}
+      @conn.database_version.should == ORA_DATABASE_VERSION.split('.').map{|n| n.to_i}
     end
 
     it "should get session ID" do

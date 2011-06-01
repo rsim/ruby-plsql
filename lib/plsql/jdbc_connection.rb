@@ -24,13 +24,17 @@ begin
 rescue LoadError, NameError
   # JDBC driver is unavailable.
   error_message = "ERROR: ruby-plsql could not load Oracle JDBC driver. "+
-                  "Please install ojdbc14.jar library."
+    "Please install ojdbc14.jar library."
   STDERR.puts error_message
   raise LoadError
 end
 
+require_relative "helpers"
+
 module PLSQL
   class JDBCConnection < Connection  #:nodoc:
+    
+    include OraConnectionHelper
 
     def self.create_raw(params)
       url = if ENV['TNS_ADMIN'] && params[:database] && !params[:host] && !params[:url]
@@ -494,6 +498,12 @@ module PLSQL
       else
         value
       end
+    end
+    
+    def describe_synonym(schema_name, synonym_name) #:nodoc:
+      select_first(
+        "SELECT table_owner, table_name FROM all_synonyms WHERE owner = :owner AND synonym_name = :synonym_name",
+        schema_name.to_s.upcase, synonym_name.to_s.upcase)
     end
 
     def database_version
