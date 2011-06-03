@@ -40,7 +40,7 @@ describe "Schema connection" do
   it "should return new schema name after reconnection" do
     plsql.connection = @conn
     plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
-    plsql.connection = get_connection(1)
+    plsql.connection = get_connection(user_number: 1)
     plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[1][0].upcase
   end
 
@@ -54,9 +54,9 @@ describe "Connection with connect!" do
 
   before(:all) do
     @username, @password = DATABASE_USERS_AND_PASSWORDS[0]
-    @database = DATABASE_NAME
+    @database = ORA_DATABASE_NAME
     @host = DATABASE_HOST
-    @port = DATABASE_PORT
+    @port = ORA_DATABASE_PORT
   end
 
   after(:each) do
@@ -177,7 +177,7 @@ end
 
 describe "ActiveRecord connection" do
   before(:all) do
-    ActiveRecord::Base.establish_connection(CONNECTION_PARAMS)
+    ActiveRecord::Base.establish_connection(ORA_CONNECTION_PARAMS)
   end
 
   before(:each) do
@@ -295,7 +295,7 @@ describe "DBMS_OUTPUT logging" do
   describe "with Activerecord connection" do
 
     before(:all) do
-      ActiveRecord::Base.establish_connection(CONNECTION_PARAMS)
+      ActiveRecord::Base.establish_connection(ORA_CONNECTION_PARAMS)
       plsql(:ar).activerecord_class = ActiveRecord::Base
       plsql(:ar).dbms_output_stream = @buffer
     end

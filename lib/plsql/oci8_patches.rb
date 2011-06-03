@@ -1,7 +1,7 @@
 # apply TIMESTAMP fractional seconds patch to ruby-oci8 2.0.3
 # see http://rubyforge.org/forum/forum.php?thread_id=46576&forum_id=1078
-if OCI8::VERSION == "2.0.3" &&
-  !OCI8::BindType::Util.method_defined?(:datetime_to_array_without_timestamp_patch)
+if OCI8::VERSION =~ /2\.0\.(3|4)/ &&
+    !OCI8::BindType::Util.method_defined?(:datetime_to_array_without_timestamp_patch)
 
   OCI8::BindType::Util.module_eval do
     alias :datetime_to_array_without_timestamp_patch :datetime_to_array

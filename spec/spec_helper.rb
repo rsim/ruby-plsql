@@ -24,44 +24,75 @@ end
 
 require 'ruby-plsql'
 
-DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+# Oracle-specific database connection parameters.
+ORA_DATABASE_NAME = ENV['ORA_DATABASE_NAME'] || 'orcl'
+ORA_DATABASE_PORT = ENV['ORA_DATABASE_PORT'] || 1521
+ORA_DATABASE_VERSION = ENV['ORA_DATABASE_VERSION'] || '10.2.0.4'
+
+# Postgres-specific database connection parameters.
+PG_DATABASE_NAME = ENV['PG_DATABASE_NAME'] || 'postgres'
+PG_DATABASE_PORT = ENV['PG_DATABASE_PORT'] || 5432
+PG_DATABASE_VERSION = ENV["PG_DATABASE_VERSION"] || '9.0.3'
+
+# Generic database connection parameters.
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
-DATABASE_PORT = ENV['DATABASE_PORT'] || 1521
 DATABASE_USERS_AND_PASSWORDS = [
   [ENV['DATABASE_USER'] || 'hr', ENV['DATABASE_PASSWORD'] || 'hr'],
   [ENV['DATABASE_USER2'] || 'arunit', ENV['DATABASE_PASSWORD2'] || 'arunit']
 ]
-# specify which database version is used (will be verified in one test)
-DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 
-def get_connection(user_number = 0)
-  database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
-  unless defined?(JRUBY_VERSION)
-    begin
-      OCI8.new(database_user, database_password, DATABASE_NAME)
-    # if connection fails then sleep 5 seconds and retry
-    rescue OCIError
-      sleep 5
-      OCI8.new(database_user, database_password, DATABASE_NAME)
+
+def get_connection(params = {})
+  params.reverse_merge!(user_number: 0, dialect: :oracle)
+  database_user, database_password = DATABASE_USERS_AND_PASSWORDS[params[:user_number]]
+  unless defined?(JRuby)
+    case params[:dialect]
+    when :oracle
+      connection_args = "//#{DATABASE_HOST}:#{ORA_DATABASE_PORT}/#{ORA_DATABASE_NAME}"
+      begin
+        OCI8.new(database_user, database_password, connection_args)
+        # if connection fails then sleep 5 seconds and retry
+      rescue OCIError
+        sleep 5
+        OCI8.new(database_user, database_password, connection_args)
+      end
+    when :postgres
+      connection_args = {user: database_user, password: database_password,
+        host: DATABASE_HOST, port: PG_DATABASE_PORT, dbname: PG_DATABASE_NAME}
+      begin
+        PGconn.open(connection_args)
+        # if connection fails then sleep 5 seconds and retry
+      rescue PGError
+        sleep 5
+        PGconn.open(connection_args)
+      end
     end
   else
     begin
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
+      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{ORA_DATABASE_PORT}:#{ORA_DATABASE_NAME}",
         database_user, database_password)
-    # if connection fails then sleep 5 seconds and retry
+      # if connection fails then sleep 5 seconds and retry
     rescue NativeException
       sleep 5
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
+      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{ORA_DATABASE_PORT}:#{ORA_DATABASE_NAME}",
         database_user, database_password)
     end
   end
 end
 
-CONNECTION_PARAMS = {
+ORA_CONNECTION_PARAMS = {
   :adapter => "oracle_enhanced",
-  :database => DATABASE_NAME,
+  :database => ORA_DATABASE_NAME,
   :host => DATABASE_HOST,
-  :port => DATABASE_PORT,
+  :port => ORA_DATABASE_PORT,
+  :username => DATABASE_USERS_AND_PASSWORDS[0][0],
+  :password => DATABASE_USERS_AND_PASSWORDS[0][1]
+}
+
+PG_CONNECTION_PARAMS = {
+  :database => PG_DATABASE_NAME,
+  :host => DATABASE_HOST,
+  :port => PG_DATABASE_PORT,
   :username => DATABASE_USERS_AND_PASSWORDS[0][0],
   :password => DATABASE_USERS_AND_PASSWORDS[0][1]
 }
@@ -78,5 +109,5 @@ end
 
 # set default time zone in TZ environment variable
 # which will be used to set session time zone
-ENV['TZ'] ||= 'Europe/Riga'
+ENV['TZ'] ||= 'Africa/Johannesburg'
 # ENV['TZ'] ||= 'UTC'

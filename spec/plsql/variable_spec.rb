@@ -5,7 +5,7 @@ require 'spec_helper'
 describe "Package variables /" do
 
   before(:all) do
-    plsql.connect! CONNECTION_PARAMS
+    plsql.connect! ORA_CONNECTION_PARAMS
   end
 
   after(:all) do

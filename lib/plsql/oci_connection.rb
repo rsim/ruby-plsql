@@ -5,7 +5,8 @@ rescue LoadError
   raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. Please install ruby-oci8 gem."
 end
 
-require "plsql/oci8_patches"
+require_relative "oci8_patches"
+require_relative "helpers"
 
 # check ruby-oci8 version
 required_oci8_version = [2, 0, 3]
@@ -16,6 +17,8 @@ end
 
 module PLSQL
   class OCIConnection < Connection #:nodoc:
+    
+    include OraConnectionHelper
 
     def self.create_raw(params)
       connection_string = if params[:host]
@@ -232,7 +235,7 @@ module PLSQL
             end
             type.new(raw_oci_connection, object_attrs)
           end
-        # all other cases
+          # all other cases
         else
           value
         end
@@ -291,8 +294,8 @@ module PLSQL
     def raw_oci_connection
       if raw_connection.is_a? OCI8
         raw_connection
-      # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
-      # in this case we need to pass original OCI8 connection
+        # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
+        # in this case we need to pass original OCI8 connection
       else
         raw_connection.instance_variable_get(:@connection)
       end
