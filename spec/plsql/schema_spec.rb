@@ -15,7 +15,7 @@ describe "Schema connection" do
   end
 
   after(:each) do
-    unless defined? JRUBY_VERSION
+    unless defined?(JRuby)
       @conn.logoff
     else
       @conn.close
@@ -40,7 +40,7 @@ describe "Schema connection" do
   it "should return new schema name after reconnection" do
     plsql.connection = @conn
     plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
-    plsql.connection = get_connection(user_number: 1)
+    plsql.connection = get_connection(:user_number => 1)
     plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[1][0].upcase
   end
 
@@ -185,10 +185,10 @@ describe "ActiveRecord connection" do
   end
 
   it "should connect to test database" do
-    unless defined?(JRUBY_VERSION)
+    unless defined?(JRuby)
       plsql.connection.is_a?(PLSQL::OCIConnection).should be_true
     else
-      plsql.connection.is_a?(PLSQL::JDBCConnection).should be_true
+      plsql.connection.is_a?(PLSQL::JDBCORAConnection).should be_true
     end
   end
 

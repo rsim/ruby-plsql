@@ -76,7 +76,7 @@ module PLSQL
     #   plsql.activerecord_class = ActiveRecord::Base
     #
     def activerecord_class=(ar_class)
-      @connection = ar_class ? Connection.create(nil, ar_class: ar_class) : nil
+      @connection = ar_class ? Connection.create(nil, :ar_class => ar_class) : nil
       reset_instance_variables
       ar_class
     end

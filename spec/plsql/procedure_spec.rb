@@ -481,7 +481,7 @@ describe "Parameter type mapping /" do
       plsql.test_clob(large_text).should == large_text
     end
 
-    unless defined?(JRUBY_VERSION)
+    unless defined?(JRuby)
 
       it "should execute function with empty string and return nil (oci8 cannot pass empty CLOB parameter)" do
         text = ''
@@ -1219,13 +1219,13 @@ describe "Parameter type mapping /" do
       @numbers = Hash[*(1..4).map{|i|[-i,i]}.flatten]
       # test with reversed PL/SQL table indexes
       @employees = Hash[*(1..10).map do |i|
-        [11-i, {
-          :employee_id => i,
-          :first_name => "First #{i}",
-          :last_name => "Last #{i}",
-          :hire_date => Time.local(2000,01,i)
-        }]
-      end.flatten]
+          [11-i, {
+              :employee_id => i,
+              :first_name => "First #{i}",
+              :last_name => "Last #{i}",
+              :hire_date => Time.local(2000,01,i)
+            }]
+        end.flatten]
     end
 
     after(:all) do

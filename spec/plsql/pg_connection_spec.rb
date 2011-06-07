@@ -3,10 +3,10 @@
 require 'spec_helper'
 
 describe "Postgres Connection" do
-  
+ 
   before(:all) do
-    @raw_conn = get_connection(dialect: :postgres)
-    @conn = PLSQL::Connection.create(@raw_conn, dialect: :postgres)
+    @raw_conn = get_connection(:dialect => :postgres)
+    @conn = PLSQL::Connection.create(@raw_conn, :dialect => :postgres)
     @conn.set_time_zone
   end
   
@@ -17,7 +17,7 @@ describe "Postgres Connection" do
   describe "create and destroy" do
     
     before (:each) do
-      @conn = PLSQL::Connection.create(@raw_conn, dialect: :postgres)
+      @conn = PLSQL::Connection.create(@raw_conn, :dialect => :postgres)
       @conn.set_time_zone
     end
     
@@ -45,12 +45,12 @@ describe "Postgres Connection" do
         to_timestamp('#{@now.strftime("%Y-%m-%d %H:%M:%S")}', 'YYYY-MM-DD HH24:MI:SS'))"
       ).should == ["abc", 123, 123.456, @now]
     end
-    
+   
     it "should execute SQL statement and return first result as hash" do
       @now = Time.local(2008, 05, 31, 23, 22, 11)
       @conn.select_hash_first("SELECT 'abc' a, 123 b, 123.456 c,
         to_timestamp('#{@now.strftime("%Y-%m-%d %H:%M:%S")}', 'YYYY-MM-DD HH24:MI:SS') d"
-      ).should == {a: "abc", b: 123, c: 123.456, d: @now}
+      ).should == {:a => "abc", :b => 123, :c => 123.456, :d => @now}
     end
     
     it "should execute SQL statement with bind parameters and return first result" do
@@ -88,7 +88,7 @@ describe "Postgres Connection" do
         to_timestamp('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d
         UNION ALL SELECT 'def' a, 123 b, 123.456 c,
         to_timestamp('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d"
-      ).should == [{a: "abc", b: 123, c: 123.456, d: @now}, {a: "def",b: 123,c: 123.456,d: @now}]
+      ).should == [{:a => "abc", :b => 123, :c => 123.456, :d => @now}, {:a => "def", :b => 123, :c => 123.456, :d => @now}]
     end
     
     it "should execute SQL statement with bind parameters and return all results" do
@@ -219,8 +219,8 @@ describe "Postgres Connection" do
     end
 
     def reconnect_connection
-      @raw_conn = get_connection(dialect: :postgres)
-      @conn = PLSQL::Connection.create(@raw_conn, dialect: :postgres)
+      @raw_conn = get_connection(:dialect => :postgres)
+      @conn = PLSQL::Connection.create(@raw_conn, :dialect => :postgres)
       @conn.set_time_zone
     end
 

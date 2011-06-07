@@ -5,8 +5,8 @@ rescue LoadError
   raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. Please install ruby-oci8 gem."
 end
 
-require_relative "oci8_patches"
-require_relative "helpers"
+require "plsql/oci8_patches"
+require "plsql/helpers"
 
 # check ruby-oci8 version
 required_oci8_version = [2, 0, 3]

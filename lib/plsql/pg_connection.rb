@@ -5,13 +5,13 @@ rescue LoadError
   raise LoadError, "ERROR: ruby-plsql could not load ruby-pg library. Please install pg gem."
 end
 
-require_relative "helpers"
+require "plsql/helpers"
 
 module PLSQL
   class PGConnection < Connection #:nodoc:
     
     # OID's of datatypes from pg_type.h file.
-    @@datatype_to_oid = {
+    DATA_TYPE_TO_OID = {
       :boolean => 16,
       :integer => 23,
       :text => 25,
@@ -131,19 +131,19 @@ module PLSQL
     end
     
     def ruby_value_to_pg_value(value, type = nil)
-      {value: value, format: 0, type:
-          (@@datatype_to_oid[type] ||
+      {:value => value, :format => 0, :type =>
+          (DATA_TYPE_TO_OID[type] ||
             case value.class.to_s.to_sym
           when :Fixnum
-            @@datatype_to_oid[:integer]
+            DATA_TYPE_TO_OID[:integer]
           when :BigDecimal, :Float
-            @@datatype_to_oid[:numeric]
+            DATA_TYPE_TO_OID[:numeric]
           when :String
-            @@datatype_to_oid[:text]
+            DATA_TYPE_TO_OID[:text]
           when :Time, :Date, :DateTime
-            @@datatype_to_oid[:timestamp_tz]
+            DATA_TYPE_TO_OID[:timestamp_tz]
           else
-            @@datatype_to_oid[:text]
+            DATA_TYPE_TO_OID[:text]
           end)
       }
       

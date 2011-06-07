@@ -5,8 +5,8 @@ require 'spec_helper'
 describe "Oracle Connection" do
 
   before(:all) do
-    @raw_conn = get_connection(dialect: :oracle)
-    @conn = PLSQL::Connection.create(@raw_conn, dialect: :oracle)
+    @raw_conn = get_connection(:dialect => :oracle)
+    @conn = PLSQL::Connection.create(@raw_conn, :dialect => :oracle)
     @conn.set_time_zone
   end
 
@@ -20,25 +20,13 @@ describe "Oracle Connection" do
 
   describe "create and destroy" do
     before(:each) do
-      @conn = PLSQL::Connection.create( @raw_conn, dialect: :oracle)
+      @conn = PLSQL::Connection.create( @raw_conn, :dialect => :oracle)
       @conn.set_time_zone
     end
 
     it "should create connection" do
       @conn.raw_connection.should == @raw_conn
     end
-
-#    unless defined?(JRuby)
-#      it "should be oci connection" do
-#        @conn.should be_oci
-#        @conn.raw_driver.should == :oci
-#      end
-#    else
-#      it "should be jdbc connection" do
-#        @conn.should be_jdbc
-#        @conn.raw_driver.should == :jdbc
-#      end
-#    end
 
     it "should logoff connection" do
       @conn.logoff.should be_true
@@ -116,7 +104,7 @@ describe "Oracle Connection" do
       
     end
 
-  # JRuby
+    # JRuby
   else
 
     describe "JDBC data type conversions" do

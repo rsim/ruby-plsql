@@ -29,10 +29,10 @@ rescue LoadError, NameError
   raise LoadError
 end
 
-require_relative "helpers"
+require "plsql/helpers"
 
 module PLSQL
-  class JDBCConnection < Connection  #:nodoc:
+  class JDBCORAConnection < Connection  #:nodoc:
     
     include OraConnectionHelper
 

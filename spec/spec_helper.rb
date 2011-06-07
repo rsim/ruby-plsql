@@ -43,7 +43,7 @@ DATABASE_USERS_AND_PASSWORDS = [
 
 
 def get_connection(params = {})
-  params.reverse_merge!(user_number: 0, dialect: :oracle)
+  params.reverse_merge!(:user_number => 0, :dialect => :oracle)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[params[:user_number]]
   unless defined?(JRuby)
     case params[:dialect]
@@ -57,8 +57,8 @@ def get_connection(params = {})
         OCI8.new(database_user, database_password, connection_args)
       end
     when :postgres
-      connection_args = {user: database_user, password: database_password,
-        host: DATABASE_HOST, port: PG_DATABASE_PORT, dbname: PG_DATABASE_NAME}
+      connection_args = {:user => database_user, :password => database_password,
+        :host => DATABASE_HOST, :port => PG_DATABASE_PORT, :dbname => PG_DATABASE_NAME}
       begin
         PGconn.open(connection_args)
         # if connection fails then sleep 5 seconds and retry

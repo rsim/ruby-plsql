@@ -8,60 +8,47 @@ module PLSQL
     attr_reader :dialect
 
     def initialize(raw_conn, params = {}) #:nodoc:
-      params.reverse_merge!(al_class: nil, dialect: :oracle)
+      params.reverse_merge!(:dialect => :oracle)
       @activerecord_class = params[:ar_class]
       @dialect = params[:dialect]
       @raw_connection = raw_conn
     end
 
     def self.create(raw_conn, params = {}) #:nodoc:
-      params.reverse_merge!(ar_class: nil, dialect: :oracle)
+      params.reverse_merge!(:dialect => :oracle)
       if params[:ar_class] && !(defined?(::ActiveRecord) && [params[:ar_class], params[:ar_class].superclass].include?(::ActiveRecord::Base))
         raise ArgumentError, "Wrong ActiveRecord class"
       end
-      case driver_type(params[:dialect])
-      when :oci
-        OCIConnection.new(raw_conn, params)
-      when :pg
-        PGConnection.new(raw_conn, params)
-      when :jdbc
-        JDBCConnection.new(raw_conn, params)
-      else
-        raise ArgumentError, "Unknown raw driver"
-      end
+      driver = driver_type(params[:dialect])
+      raise ArgumentError, "Unknown raw driver" unless driver
+      driver.new(raw_conn, params)
     end
 
     def self.create_new(params, dialect = :oracle) #:nodoc:
-      conn = case driver_type(dialect)
-      when :oci
-        OCIConnection.create_raw(params)
-      when :pg
-        PGConnection.create_raw(params)
-      when :jdbc
-        JDBCConnection.create_raw(params)
-      else
-        raise ArgumentError, "Unknown raw driver"
-      end
+      driver = driver_type(dialect)
+      raise ArgumentError, "Unknown raw driver" unless driver
+      conn = driver.create_raw(params)
       conn.set_time_zone(params[:time_zone])
       conn
     end
 
     def self.driver_type(dialect) #:nodoc:
       # MRI 1.8.6 or YARV 1.9.1
-      if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby")
+      if (!defined?(JRuby))
         case dialect
         when :oracle
-          :oci if defined?(OCI8)
+          OCIConnection
         when :postgres
-          :pg
-        else
+          PGConnection
+        end
+      # JRuby
+      else
+        case dialect
+        when :oracle
+          JDBCORAConnection
+        when :postgres
           nil
         end
-        # JRuby
-      elsif (defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby")
-        :jdbc
-      else
-        nil
       end
     end
 
