@@ -155,15 +155,45 @@ describe "Postgres Connection" do
   end
   
   describe "commit and rollback" do
-    # Need to think about implementation as Postgres autocommits by default.
+    
+    it "should do commit" do
+      pending "Postgres autocommits by default"
+    end
+
+    it "should do rollback" do
+      pending "Postgres autocommits by default"
+    end
+
+    it "should do commit and rollback should not undo commited transaction" do
+      pending "Postgres autocommits by default"
+    end
   end
 
   describe "prefetch rows" do
     # Can't prefetch using Postgres native driver.
+    
+    it "should set prefetch rows for connection" do
+      pending "can't prefetch using Postgres native driver"
+    end
+
+    it "should fetch just one row when using select_first" do
+      pending "can't prefetch using Postgres native driver"
+    end
   end
   
   describe "describe synonym" do
-    # Synonyms not supported in Postgres.
+    
+    it "should describe local synonym" do
+      pending "synonyms not supported in Postgres"
+    end
+
+    it "should return nil on non-existing synonym" do
+      pending "synonyms not supported in Postgres"
+    end
+
+    it "should describe public synonym" do
+      pending "synonyms not supported in Postgres"
+    end
   end
   
   describe "session information" do
@@ -234,7 +264,7 @@ describe "Postgres Connection" do
     end
 
     it "should rollback any uncommited transactions" do
-      # Need to think about implementation as Postgres autocommits by default.
+      pending "Postgres autocommits by default"
     end
 
   end
