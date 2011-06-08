@@ -11,4 +11,5 @@ unless defined?(JRuby)
   require "plsql/pg_connection"
 else
   require "plsql/jdbc_ora_connection"
+  require "plsql/jdbc_pg_connection"
 end

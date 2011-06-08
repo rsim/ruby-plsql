@@ -47,7 +47,7 @@ module PLSQL
         when :oracle
           JDBCORAConnection
         when :postgres
-          nil
+          JDBCPGConnection
         end
       end
     end

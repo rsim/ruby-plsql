@@ -10,21 +10,6 @@ require "plsql/helpers"
 module PLSQL
   class PGConnection < Connection #:nodoc:
     
-    # OID's of datatypes from pg_type.h file.
-    DATA_TYPE_TO_OID = {
-      :boolean => 16,
-      :integer => 23,
-      :text => 25,
-      :char => 1042,
-      :varchar => 1043,
-      :date => 1082,
-      :time => 1083,
-      :time_tz => 1266,
-      :timestamp => 1114,
-      :timestamp_tz => 1184,
-      :numeric => 1700
-    }
-    
     include PGConnectionHelper
     
     def self.create_raw(params)
@@ -85,24 +70,25 @@ module PLSQL
         cursor
       end
 
-      def bind_param(arg, value, type = nil)
-        @bindvars[arg] = @connection.ruby_value_to_pg_value(value, type)
+      def bind_param(arg, value, metadata)
+        type, length = @connection.plsql_to_ruby_data_type(metadata)
+        @bindvars[arg] = @connection.ruby_value_to_db_value(value, type)
       end
       
       def exec(*bindvars)
-        params = @bindvars + (bindvars.inject([]) {|r, v| r << @connection.ruby_value_to_pg_value(v)})
+        params = @bindvars + (bindvars.inject([]) {|r, v| r << @connection.ruby_value_to_db_value(v)})
         @table = @connection.raw_connection.exec(@sql, params)
         @row_idx = 0
       end
 
       def [](key)
         column_idx = @table.fnumber(key)
-        @connection.pg_value_to_ruby_value([@table[@row_idx][key], @table.ftype(column_idx), @table.fmod(column_idx)])
+        @connection.db_value_to_ruby_value([@table[@row_idx][key], @table.ftype(column_idx), @table.fmod(column_idx)])
       end
 
       def fetch
         row = (@table.values[(@row_idx += 1) - 1] if @table.ntuples > @row_idx)
-        row && row.each_with_index.map {|v, i| @connection.pg_value_to_ruby_value([v, @table.ftype(i), @table.fmod(i)])}
+        row && row.each_with_index.map {|v, i| @connection.db_value_to_ruby_value([v, @table.ftype(i), @table.fmod(i)])}
       end
 
       def fields
@@ -129,14 +115,53 @@ module PLSQL
     def cursor_from_query(sql, bindvars=[], *)
       Cursor.new_from_query(self, sql, bindvars)
     end
+
+    def plsql_to_ruby_data_type(metadata)
+      data_type, data_length = metadata[:data_type], metadata[:data_length]
+      case data_type
+      when "VARCHAR", "CHAR"
+        [String, data_length || 32767]
+      when "TEXT"
+        [String, nil]
+      when "NUMERIC"
+        [BigDecimal, nil]
+      when "INTEGER"
+        [Fixnum, nil]
+      when "DATE"
+        [Date, nil]
+      when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITHOUT TIME ZONE"
+        [DateTime, nil]
+      when "TIME", "TIME WITH TIME ZONE, TIME WITHOUT TIME ZONE"
+        [Time, nil]
+      when "ARRAY"
+        [Array, nil]
+      else
+        [String, nil]
+      end
+    end
     
-    def ruby_value_to_pg_value(value, type = nil)
+    # OID's of datatypes from pg_type.h file.
+    DATA_TYPE_TO_OID = {
+      :boolean => 16,
+      :integer => 23,
+      :text => 25,
+      :char => 1042,
+      :varchar => 1043,
+      :date => 1082,
+      :time => 1083,
+      :time_tz => 1266,
+      :timestamp => 1114,
+      :timestamp_tz => 1184,
+      :numeric => 1700
+    }
+    
+    def ruby_value_to_db_value(value, type = nil)
       {:value => value, :format => 0, :type =>
           (DATA_TYPE_TO_OID[type] ||
             case value.class.to_s.to_sym
           when :Fixnum
             DATA_TYPE_TO_OID[:integer]
-          when :BigDecimal, :Float
+          when :Bignum, :BigDecimal, :Float
             DATA_TYPE_TO_OID[:numeric]
           when :String
             DATA_TYPE_TO_OID[:text]
@@ -146,18 +171,18 @@ module PLSQL
             DATA_TYPE_TO_OID[:text]
           end)
       }
-      
     end
     
-    def pg_value_to_ruby_value(value)
-      type = raw_connection.exec("SELECT format_type($1,$2)", [value[1], value[2]]).getvalue(0,0).to_sym
+    def db_value_to_ruby_value(value)
+      type = raw_connection.exec("SELECT format_type($1, $2)", [value[1], value[2]]).getvalue(0, 0).to_sym
       case type
       when :integer, :numeric
         # return BigDecimal instead of Float to avoid rounding errors
         value[0] == (num_to_i = value[0].to_i).to_s ? num_to_i : BigDecimal.new(value[0])
-      when :"timestamp with time zone", :"timestamp without time zone",
-          :"time with time zone", :"time without time zone"
+      when :'time with time zone', :'time without time zone'
         Time.parse(value[0])
+      when :'timestamp with time zone', :'timestamp without time zone'
+        DateTime.parse(value[0])
       when :date
         Date.parse(value[0])
       else

@@ -10,7 +10,7 @@ begin
     # On Unix environment variable should be PATH, on Windows it is sometimes Path
     env_path = ENV["PATH"] || ENV["Path"] || ''
     if ojdbc_jar_path = env_path.split(/[:;]/).concat($LOAD_PATH).find{|d| File.exists?(File.join(d,ojdbc_jar))}
-      require File.join(ojdbc_jar_path,ojdbc_jar)
+      require File.join(ojdbc_jar_path, ojdbc_jar)
     end
   end
 
@@ -24,7 +24,7 @@ begin
 rescue LoadError, NameError
   # JDBC driver is unavailable.
   error_message = "ERROR: ruby-plsql could not load Oracle JDBC driver. "+
-    "Please install ojdbc14.jar library."
+    "Please install #{ojdbc_jar} library."
   STDERR.puts error_message
   raise LoadError
 end
@@ -35,6 +35,7 @@ module PLSQL
   class JDBCORAConnection < Connection  #:nodoc:
     
     include OraConnectionHelper
+    include JDBCConnectionHelper
 
     def self.create_raw(params)
       url = if ENV['TNS_ADMIN'] && params[:database] && !params[:host] && !params[:url]
@@ -44,18 +45,10 @@ module PLSQL
       end
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
-
+    
     def set_time_zone(time_zone=nil)
       time_zone ||= ENV['TZ']
       raw_connection.setSessionTimeZone(time_zone)
-    end
-
-    def logoff
-      super
-      raw_connection.close
-      true
-    rescue
-      false
     end
 
     def commit
@@ -76,139 +69,6 @@ module PLSQL
 
     def prefetch_rows=(value)
       raw_connection.setDefaultRowPrefetch(value)
-    end
-
-    def exec(sql, *bindvars)
-      cs = prepare_call(sql, *bindvars)
-      cs.execute
-      true
-    ensure
-      cs.close rescue nil
-    end
-
-    class CallableStatement #:nodoc:
-
-      def initialize(conn, sql)
-        @sql = sql
-        @connection = conn
-        @params = sql.scan(/\:\w+/)
-        @out_types = {}
-        @out_index = {}
-        @statement = @connection.prepare_call(sql)
-      end
-
-      def bind_param(arg, value, metadata)
-        type, length = @connection.plsql_to_ruby_data_type(metadata)
-        ora_value = @connection.ruby_value_to_ora_value(value, type, metadata)
-        @connection.set_bind_variable(@statement, arg, ora_value, type, length, metadata)
-        if metadata[:in_out] =~ /OUT/
-          @out_types[arg] = type || ora_value.class
-          @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
-              metadata[:sql_type_name])
-          else
-            @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
-          end
-        end
-      end
-      
-      def exec
-        @statement.execute
-      end
-
-      def [](key)
-        @connection.ora_value_to_ruby_value(@connection.get_bind_variable(@statement, @out_index[key], @out_types[key]))
-      end
-
-      def close
-        @statement.close
-      end
-      
-      private
-      
-      def bind_param_index(key)
-        return key if key.kind_of? Integer
-        key = ":#{key.to_s}" unless key.to_s =~ /^:/
-        @params.index(key)+1
-      end
-    end
-
-    class Cursor #:nodoc:
-      include Connection::CursorCommon
-
-      attr_reader :result_set
-      attr_accessor :statement
-
-      def initialize(conn, result_set)
-        @connection = conn
-        @result_set = result_set
-        @metadata = @result_set.getMetaData
-        @column_count = @metadata.getColumnCount
-        @column_type_names = [nil] # column numbering starts at 1
-        (1..@column_count).each do |i|
-          @column_type_names << {:type_name => @metadata.getColumnTypeName(i), :sql_type => @metadata.getColumnType(i)}
-        end
-      end
-
-      def self.new_from_query(conn, sql, bindvars=[], options={})
-        stmt = conn.prepare_statement(sql, *bindvars)
-        if prefetch_rows = options[:prefetch_rows]
-          stmt.setRowPrefetch(prefetch_rows)
-        end
-        cursor = Cursor.new(conn, stmt.executeQuery)
-        cursor.statement = stmt
-        cursor
-      rescue
-        # in case of any error close statement
-        stmt.close rescue nil
-        raise
-      end
-
-      def fetch
-        if @result_set.next
-          (1..@column_count).map do |i|
-            @connection.get_ruby_value_from_result_set(@result_set, i, @column_type_names[i])
-          end
-        else
-          nil
-        end
-      end
-
-      def fields
-        @fields ||= (1..@column_count).map do |i|
-          @metadata.getColumnName(i).downcase.to_sym
-        end
-      end
-
-      def close
-        @result_set.close
-        @statement.close if @statement
-      end
-    end
-
-    def parse(sql)
-      CallableStatement.new(self, sql)
-    end
-
-    def cursor_from_query(sql, bindvars=[], options={})
-      Cursor.new_from_query(self, sql, bindvars, options)
-    end
-
-    def prepare_statement(sql, *bindvars)
-      stmt = raw_connection.prepareStatement(sql)
-      bindvars.each_with_index do |bv, i|
-        set_bind_variable(stmt, i+1, ruby_value_to_ora_value(bv))
-      end
-      stmt
-    end
-
-    def prepare_call(sql, *bindvars)
-      stmt = raw_connection.prepareCall(sql)
-      bindvars.each_with_index do |bv, i|
-        set_bind_variable(stmt, i+1, bv)
-      end
-      stmt
     end
 
     RUBY_CLASS_TO_SQL_TYPE = {
@@ -327,7 +187,7 @@ module PLSQL
     def get_ruby_value_from_result_set(rset, i, metadata)
       ruby_type = SQL_TYPE_TO_RUBY_CLASS[metadata[:sql_type]]
       ora_value = get_bind_variable(rset, i, ruby_type)
-      result_new = ora_value_to_ruby_value(ora_value)
+      db_value_to_ruby_value(ora_value)
     end
 
     def result_set_to_ruby_data_type(column_type, column_type_name)
@@ -362,7 +222,7 @@ module PLSQL
       end
     end
 
-    def ruby_value_to_ora_value(value, type=nil, metadata={})
+    def ruby_value_to_db_value(value, type=nil, metadata={})
       type ||= value.class
       case type.to_s.to_sym
       when :Fixnum, :String
@@ -412,11 +272,11 @@ module PLSQL
           elem_list = value.map do |elem|
             case elem_type
             when Java::oracle.jdbc.OracleTypes::ARRAY
-              ruby_value_to_ora_value(elem, Java::OracleSql::ARRAY, :sql_type_name => elem_type_name)
+              ruby_value_to_db_value(elem, Java::OracleSql::ARRAY, :sql_type_name => elem_type_name)
             when Java::oracle.jdbc.OracleTypes::STRUCT
-              ruby_value_to_ora_value(elem, Java::OracleSql::STRUCT, :sql_type_name => elem_type_name)
+              ruby_value_to_db_value(elem, Java::OracleSql::STRUCT, :sql_type_name => elem_type_name)
             else
-              ruby_value_to_ora_value(elem)
+              ruby_value_to_db_value(elem)
             end
           end
           Java::OracleSql::ARRAY.new(descriptor, raw_connection, elem_list.to_java)
@@ -437,12 +297,12 @@ module PLSQL
             case field[:type]
             when Java::oracle.jdbc.OracleTypes::ARRAY
               # nested collection
-              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::ARRAY, :sql_type_name => field[:type_name]))
+              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value, Java::OracleSql::ARRAY, :sql_type_name => field[:type_name]))
             when Java::oracle.jdbc.OracleTypes::STRUCT
               # nested object type
-              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::STRUCT, :sql_type_name => field[:type_name]))
+              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value, Java::OracleSql::STRUCT, :sql_type_name => field[:type_name]))
             else
-              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value))
+              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value))
             end
           end
           Java::OracleSql::STRUCT.new(descriptor, raw_connection, object_attrs)
@@ -456,12 +316,12 @@ module PLSQL
       end
     end
 
-    def ora_value_to_ruby_value(value)
+    def db_value_to_ruby_value(value)
       case value
       when Float, BigDecimal
-        ora_number_to_ruby_number(value)
+        db_number_to_ruby_number(value)
       when Java::JavaMath::BigDecimal
-        value && ora_number_to_ruby_number(BigDecimal.new(value.to_s))
+        value && db_number_to_ruby_number(BigDecimal.new(value.to_s))
       when Java::OracleSql::DATE
         if value
           d = value.dateValue
@@ -486,12 +346,12 @@ module PLSQL
           String.from_java_bytes(value.getBytes(1, value.length))
         end
       when Java::OracleSql::ARRAY
-        value.getArray.map{|e| ora_value_to_ruby_value(e)}
+        value.getArray.map{|e| db_value_to_ruby_value(e)}
       when Java::OracleSql::STRUCT
         descriptor = value.getDescriptor
         struct_metadata = descriptor.getMetaData
         field_names = (1..descriptor.getLength).map {|i| struct_metadata.getColumnName(i).downcase.to_sym}
-        field_values = value.getAttributes.map{|e| ora_value_to_ruby_value(e)}
+        field_values = value.getAttributes.map{|e| db_value_to_ruby_value(e)}
         ArrayHelpers::to_hash(field_names, field_values)
       when Java::java.sql.ResultSet
         Cursor.new(self, value)
@@ -504,20 +364,6 @@ module PLSQL
       select_first(
         "SELECT table_owner, table_name FROM all_synonyms WHERE owner = :owner AND synonym_name = :synonym_name",
         schema_name.to_s.upcase, synonym_name.to_s.upcase)
-    end
-
-    def database_version
-      @database_version ||= if md = raw_connection.getMetaData
-        major = md.getDatabaseMajorVersion
-        minor = md.getDatabaseMinorVersion
-        if md.getDatabaseProductVersion =~ /#{major}\.#{minor}\.(\d+)\.(\d+)/
-          update = $1.to_i
-          patch = $2.to_i
-        else
-          update = patch = 0
-        end
-        [major, minor, update, patch]
-      end
     end
 
     private
@@ -534,7 +380,7 @@ module PLSQL
       value && java.math.BigDecimal.new(value.to_s)
     end
 
-    def ora_number_to_ruby_number(num)
+    def db_number_to_ruby_number(num)
       # return BigDecimal instead of Float to avoid rounding errors
       num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end

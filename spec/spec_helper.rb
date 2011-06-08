@@ -68,14 +68,19 @@ def get_connection(params = {})
       end
     end
   else
-    begin
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{ORA_DATABASE_PORT}:#{ORA_DATABASE_NAME}",
-        database_user, database_password)
+    connection_args = case params[:dialect]
+    when :oracle
+      "jdbc:oracle:thin:@#{DATABASE_HOST}:#{ORA_DATABASE_PORT}:#{ORA_DATABASE_NAME}"
+    when :postgres
+      "jdbc:postgresql://#{DATABASE_HOST}:#{PG_DATABASE_PORT}/#{PG_DATABASE_NAME}"
+    end
+    connection_args = 
+      begin
+      java.sql.DriverManager.getConnection(connection_args, database_user, database_password)
       # if connection fails then sleep 5 seconds and retry
     rescue NativeException
       sleep 5
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{ORA_DATABASE_PORT}:#{ORA_DATABASE_NAME}",
-        database_user, database_password)
+      java.sql.DriverManager.getConnection(connection_args, database_user, database_password)
     end
   end
 end
@@ -109,5 +114,5 @@ end
 
 # set default time zone in TZ environment variable
 # which will be used to set session time zone
-ENV['TZ'] ||= 'Africa/Johannesburg'
+ENV['TZ'] ||= 'Europe/Riga'
 # ENV['TZ'] ||= 'UTC'
