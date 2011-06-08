@@ -29,7 +29,7 @@ rescue LoadError, NameError
   raise LoadError
 end
 
-require "plsql/helpers"
+require "plsql/connection_helpers"
 
 module PLSQL
   class JDBCORAConnection < Connection  #:nodoc:

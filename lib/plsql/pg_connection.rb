@@ -5,7 +5,7 @@ rescue LoadError
   raise LoadError, "ERROR: ruby-plsql could not load ruby-pg library. Please install pg gem."
 end
 
-require "plsql/helpers"
+require "plsql/connection_helpers"
 
 module PLSQL
   class PGConnection < Connection #:nodoc:

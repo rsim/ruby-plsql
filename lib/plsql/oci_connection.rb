@@ -6,7 +6,7 @@ rescue LoadError
 end
 
 require "plsql/oci8_patches"
-require "plsql/helpers"
+require "plsql/connection_helpers"
 
 # check ruby-oci8 version
 required_oci8_version = [2, 0, 3]
