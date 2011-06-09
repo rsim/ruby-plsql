@@ -22,26 +22,21 @@ describe "Postgres Schema connection" do
     end
   end
 
-  it "should connect to test database" do
-    plsql.connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
-    plsql.connection.raw_connection.should == @conn
-  end
-
   it "should connect to test database using connection alias" do
-    plsql(:hr).connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
-    plsql(:hr).connection.raw_connection.should == @conn
+    plsql(:pg).connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
+    plsql(:pg).connection.raw_connection.should == @conn
   end
   
   it "should return schema name" do
-    plsql.connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
-    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
+    plsql(:pg).connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
+    plsql(:pg).schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
   end
 
   it "should return new schema name after reconnection" do
-    plsql.connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
-    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
-    plsql.connection = PLSQL::Connection.create(get_connection(:user_number => 1, :dialect => :postgres), :dialect => :postgres)
-    plsql.schema_name.should == DATABASE_USERS_AND_PASSWORDS[1][0].upcase
+    plsql(:pg).connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
+    plsql(:pg).schema_name.should == DATABASE_USERS_AND_PASSWORDS[0][0].upcase
+    plsql(:pg).connection = PLSQL::Connection.create(get_connection(:user_number => 1, :dialect => :postgres), :dialect => :postgres)
+    plsql(:pg).schema_name.should == DATABASE_USERS_AND_PASSWORDS[1][0].upcase
   end
 
   it "should return nil schema name if not connected" do
@@ -60,48 +55,48 @@ describe "Postgres Connection with connect!" do
   end
 
   after(:each) do
-    plsql.logoff if plsql.connection
+    plsql(:pg).logoff if plsql(:pg).connection
   end
 
   it "should connect with username, password and database alias" do
-    plsql.connect! @username, @password, @database, :dialect => :postgres
-    plsql.connection.should_not be_nil
-    plsql.schema_name.should == @username.upcase
+    plsql(:pg).connect! @username, @password, @database, :dialect => :postgres
+    plsql(:pg).connection.should_not be_nil
+    plsql(:pg).schema_name.should == @username.upcase
   end
 
   it "should connect with username, password, host, port and database name" do
-    plsql.connect! @username, @password, :host => @host, :port => @port, :database => @database, :dialect => :postgres
-    plsql.connection.should_not be_nil
-    plsql.schema_name.should == @username.upcase
+    plsql(:pg).connect! @username, @password, :host => @host, :port => @port, :database => @database, :dialect => :postgres
+    plsql(:pg).connection.should_not be_nil
+    plsql(:pg).schema_name.should == @username.upcase
   end
 
   it "should connect with username, password, host, database name and default port" do
     pending "Non-default port used for test database" unless @port == 1521
-    plsql.connect! @username, @password, :host => @host, :database => @database, :dialect => :postgres
-    plsql.connection.should_not be_nil
-    plsql.schema_name.should == @username.upcase
+    plsql(:pg).connect! @username, @password, :host => @host, :database => @database, :dialect => :postgres
+    plsql(:pg).connection.should_not be_nil
+    plsql(:pg).schema_name.should == @username.upcase
   end
 
   it "should not connect with wrong port number" do
     lambda {
-      plsql.connect! @username, @password, :host => @host, :port => 9999, :database => @database, :dialect => :postgres
+      plsql(:pg).connect! @username, @password, :host => @host, :port => 9999, :database => @database, :dialect => :postgres
     }.should raise_error
   end
 
   it "should connect with one Hash parameter" do
-    plsql.connect! :username => @username, :password => @password, :database => @database, :dialect => :postgres
-    plsql.connection.should_not be_nil
-    plsql.schema_name.should == @username.upcase
+    plsql(:pg).connect! :username => @username, :password => @password, :database => @database, :dialect => :postgres
+    plsql(:pg).connection.should_not be_nil
+    plsql(:pg).schema_name.should == @username.upcase
   end
 
   it "should set session time zone from TZ environment variable" do
-    plsql.connect! @username, @password, @database, :dialect => :postgres
-    plsql.connection.time_zone.should == ENV['TZ']
+    plsql(:pg).connect! @username, @password, @database, :dialect => :postgres
+    plsql(:pg).connection.time_zone.should == ENV['TZ']
   end
 
   it "should set session time zone from :time_zone parameter" do
-    plsql.connect! :username => @username, :password => @password, :database => @database, :dialect => :postgres, :time_zone => 'EET'
-    plsql.connection.time_zone.should == 'EET'
+    plsql(:pg).connect! :username => @username, :password => @password, :database => @database, :dialect => :postgres, :time_zone => 'EET'
+    plsql(:pg).connection.time_zone.should == 'EET'
   end
 
 end
@@ -110,27 +105,27 @@ end
 describe "Postgres Named Schema" do
   before(:all) do
     @conn = get_connection(:dialect => :postgres)
-    plsql.connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
+    plsql(:pg).connection = PLSQL::Connection.create(@conn, :dialect => :postgres)
   end
 
   after(:all) do
-    plsql.connection.logoff
+    plsql(:pg).connection.logoff
   end
 
   it "should find existing schema" do
-    plsql.hr.class.should == PLSQL::Schema
+    plsql(:pg).hr.class.should == PLSQL::Schema
   end
 
   it "should have the same connection as default schema" do
-    plsql.hr.connection.raw_connection.should == @conn
+    plsql(:pg).hr.connection.raw_connection.should == @conn
   end
 
   it "should return schema name" do
-    plsql.hr.schema_name.should == 'HR'
+    plsql(:pg).hr.schema_name.should == 'HR'
   end
 
   it "should not find named schema if specified twice" do
-    lambda { plsql.hr.hr }.should raise_error(ArgumentError)
+    lambda { plsql(:pg).hr.hr }.should raise_error(ArgumentError)
   end
 
 end
@@ -187,28 +182,28 @@ describe "Postgres ActiveRecord connection" do
   end
 
   before(:each) do
-    plsql.connection = PLSQL::Connection.create(nil, :ar_class => ActiveRecord::Base, :dialect => :postgres)
+    plsql(:pg).connection = PLSQL::Connection.create(nil, :ar_class => ActiveRecord::Base, :dialect => :postgres)
   end
 
   it "should connect to test database" do
     unless defined?(JRuby)
-      plsql.connection.is_a?(PLSQL::PGConnection).should be_true
+      plsql(:pg).connection.is_a?(PLSQL::PGConnection).should be_true
     else
-      plsql.connection.is_a?(PLSQL::JDBCPGConnection).should be_true
+      plsql(:pg).connection.is_a?(PLSQL::JDBCPGConnection).should be_true
     end
   end
 
   it "should return schema name" do
-    plsql.schema_name.should == 'HR'
+    plsql(:pg).schema_name.should == 'HR'
   end
 
   it "should use ActiveRecord::Base.default_timezone as default" do
     ActiveRecord::Base.default_timezone = :utc
-    plsql.default_timezone.should == :utc
+    plsql(:pg).default_timezone.should == :utc
   end
 
   it "should have the same connection as default schema" do
-    plsql.hr.connection.should == plsql.connection
+    plsql(:pg).hr.connection.should == plsql.connection
   end
 end if defined?(ActiveRecord) && !defined?(JRuby)
 
