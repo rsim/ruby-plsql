@@ -43,7 +43,7 @@ module PLSQL
       else
         params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}:#{params[:database]}"
       end
-      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
+      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]), params)
     end
     
     def set_time_zone(time_zone=nil)

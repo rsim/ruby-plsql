@@ -13,17 +13,19 @@ module PLSQL
     include PGConnectionHelper
     
     def self.create_raw(params)
+      params.reverse_merge!(:host => "localhost")
       new(PGconn.new(params.inject({}) do |p, (k,v)|
             case k
             when :username
               p[:user] = v
             when :database
               p[:dbname] = v
-            else p[k] = v
+            else
+              p[k] = v unless (k == :dialect || k == :time_zone)
             end
             p
           end
-        )
+        ), params
       )
     end
     

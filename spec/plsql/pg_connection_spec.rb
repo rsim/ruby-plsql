@@ -11,7 +11,11 @@ describe "Postgres Connection" do
   end
   
   after(:all) do
-    @raw_conn.close rescue nil
+    unless defined?(JRuby)
+      @raw_conn.finish rescue nil
+    else
+      @raw_conn.close rescue nil
+    end
   end
   
   describe "create and destroy" do
@@ -25,10 +29,8 @@ describe "Postgres Connection" do
       @conn.raw_connection.should == @raw_conn
     end
     
-    unless defined?(JRuby)
-      it "should be pg connection" do
-        @conn.dialect.should == :postgres
-      end
+    it "should be pg connection" do
+      @conn.dialect.should == :postgres
     end
     
     it "should logoff connection" do

@@ -24,8 +24,9 @@ module PLSQL
       driver.new(raw_conn, params)
     end
 
-    def self.create_new(params, dialect = :oracle) #:nodoc:
-      driver = driver_type(dialect)
+    def self.create_new(params) #:nodoc:
+      params.reverse_merge!(:dialect => :oracle)
+      driver = driver_type(params[:dialect])
       raise ArgumentError, "Unknown raw driver" unless driver
       conn = driver.create_raw(params)
       conn.set_time_zone(params[:time_zone])

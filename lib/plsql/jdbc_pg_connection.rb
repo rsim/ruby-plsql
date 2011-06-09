@@ -34,7 +34,7 @@ module PLSQL
     
     def self.create_raw(params)
       url = params[:url] || "jdbc:postgresql://#{params[:host] || 'localhost'}:#{params[:port] || 5432}/#{params[:database]}"
-      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
+      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]), params)
     end
     
     def commit

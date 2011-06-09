@@ -74,8 +74,7 @@ def get_connection(params = {})
     when :postgres
       "jdbc:postgresql://#{DATABASE_HOST}:#{PG_DATABASE_PORT}/#{PG_DATABASE_NAME}"
     end
-    connection_args = 
-      begin
+    begin
       java.sql.DriverManager.getConnection(connection_args, database_user, database_password)
       # if connection fails then sleep 5 seconds and retry
     rescue NativeException
@@ -95,6 +94,7 @@ ORA_CONNECTION_PARAMS = {
 }
 
 PG_CONNECTION_PARAMS = {
+  :adapter => "postgresql",
   :database => PG_DATABASE_NAME,
   :host => DATABASE_HOST,
   :port => PG_DATABASE_PORT,

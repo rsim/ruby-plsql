@@ -19,13 +19,18 @@ describe "Oracle Connection" do
   end
 
   describe "create and destroy" do
+    
     before(:each) do
-      @conn = PLSQL::Connection.create( @raw_conn, :dialect => :oracle)
+      @conn = PLSQL::Connection.create(@raw_conn, :dialect => :oracle)
       @conn.set_time_zone
     end
 
     it "should create connection" do
       @conn.raw_connection.should == @raw_conn
+    end
+    
+    it "should be ora connection" do
+      @conn.dialect.should == :oracle
     end
 
     it "should logoff connection" do
@@ -104,7 +109,7 @@ describe "Oracle Connection" do
       
     end
 
-  # JRuby
+    # JRuby
   else
 
     describe "JDBC data type conversions" do
