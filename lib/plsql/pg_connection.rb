@@ -178,7 +178,7 @@ module PLSQL
     def db_value_to_ruby_value(value)
       type = raw_connection.exec("SELECT format_type($1, $2)", [value[1], value[2]]).getvalue(0, 0).to_sym
       case type
-      when :integer, :numeric
+      when :integer, :bigint, :numeric
         # return BigDecimal instead of Float to avoid rounding errors
         value[0] == (num_to_i = value[0].to_i).to_s ? num_to_i : BigDecimal.new(value[0])
       when :'time with time zone', :'time without time zone'

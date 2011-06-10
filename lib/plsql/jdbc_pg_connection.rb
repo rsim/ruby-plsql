@@ -59,7 +59,7 @@ module PLSQL
     
     RUBY_CLASS_TO_SQL_TYPE = {
       Fixnum          => java.sql.Types::INTEGER,
-      Bignum          => java.sql.Types::INTEGER,
+      Bignum          => java.sql.Types::BIGINT,
       Integer         => java.sql.Types::INTEGER,
       Float           => java.sql.Types::FLOAT,
       BigDecimal      => java.sql.Types::NUMERIC,
@@ -82,6 +82,7 @@ module PLSQL
       java.sql.Types::DOUBLE      => BigDecimal,
       java.sql.Types::NUMERIC     => BigDecimal,
       java.sql.Types::INTEGER     => Fixnum,
+      java.sql.Types::BIGINT      => Bignum,
       java.sql.Types::DATE        => Date,
       java.sql.Types::TIME        => Time,
       java.sql.Types::TIMESTAMP   => DateTime,
@@ -199,7 +200,7 @@ module PLSQL
     def ruby_value_to_db_value(value, type=nil, metadata={})
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :String
+      when :Fixnum, :Bignum, :String
         value
       when :BigDecimal
         case value

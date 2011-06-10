@@ -93,7 +93,7 @@ module PLSQL
   
   module PGSchemaHelper
     
-    # Current Oracle schema name
+    # Current Postgres schema name
     def schema_name
       return nil unless connection
       @schema_name ||= select_first("SELECT UPPER(current_schema);")[0]

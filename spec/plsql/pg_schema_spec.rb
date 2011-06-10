@@ -203,7 +203,7 @@ describe "Postgres ActiveRecord connection" do
   end
 
   it "should have the same connection as default schema" do
-    plsql(:pg).hr.connection.should == plsql.connection
+    plsql(:pg).hr.connection.should == plsql(:pg).connection
   end
 end if defined?(ActiveRecord) && !defined?(JRuby)
 
