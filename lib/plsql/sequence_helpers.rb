@@ -2,16 +2,13 @@ module PLSQL
   
   module SequenceHelperProvider
     
-    def sequence_helper(schema)
-      sequence_helper = if schema.connection
-        case schema.connection.dialect
-        when :oracle
-          ORASequenceHelper
-        when :postgres
-          PGSequenceHelper
-        end
+    def sequence_helper(dialect)
+      case dialect
+      when :oracle
+        ORASequenceHelper
+      when :postgres
+        PGSequenceHelper
       end
-      sequence_helper || ORASequenceHelper
     end
     
   end
@@ -44,8 +41,8 @@ module PLSQL
             nil
           end
         when :postgres
-          if schema.select_first("
-            SELECT sequence_name FROM information_schema.sequences
+          if schema.select_first(
+              "SELECT sequence_name FROM information_schema.sequences
               WHERE UPPER(sequence_schema) = '#{schema.schema_name}'
               AND UPPER(sequence_name) = '#{sequence.to_s.upcase}'")
             new(schema, sequence)

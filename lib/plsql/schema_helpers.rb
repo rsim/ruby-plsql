@@ -2,16 +2,13 @@ module PLSQL
   
   module SchemaHelperProvider
     
-    def schema_helper()
-      schema_helper = if connection
-        case connection.dialect
-        when :oracle
-          ORASchemaHelper
-        when :postgres
-          PGSchemaHelper
-        end
+    def schema_helper(dialect)
+      case dialect
+      when :oracle
+        ORASchemaHelper
+      when :postgres
+        PGSchemaHelper
       end
-      schema_helper || ORASchemaHelper
     end
     
   end

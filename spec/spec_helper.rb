@@ -85,6 +85,7 @@ def get_connection(params = {})
 end
 
 ORA_CONNECTION_PARAMS = {
+  :dialect => :oracle,
   :adapter => "oracle_enhanced",
   :database => ORA_DATABASE_NAME,
   :host => DATABASE_HOST,
@@ -94,6 +95,7 @@ ORA_CONNECTION_PARAMS = {
 }
 
 PG_CONNECTION_PARAMS = {
+  :dialect => :postgres,
   :adapter => "postgresql",
   :database => PG_DATABASE_NAME,
   :host => DATABASE_HOST,

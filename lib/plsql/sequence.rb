@@ -11,7 +11,7 @@ module PLSQL
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @sequence_name = sequence.to_s.upcase
-      extend sequence_helper(schema)
+      extend sequence_helper(schema.connection.dialect)
     end
     
   end

@@ -28,6 +28,10 @@ module PLSQL
 
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
     attr_reader :connection
+    
+    def schema_name
+      # Placeholder to be replaced by database-specific method.
+    end
 
     def root_schema #:nodoc:
       @original_schema || self
@@ -172,7 +176,7 @@ module PLSQL
       
       # Whenever the connection is changed,
       # extend with correct database-specific schema-helper.
-      extend schema_helper
+      extend schema_helper(connection.dialect) if connection
     end
 
     def method_missing(method, *args, &block)

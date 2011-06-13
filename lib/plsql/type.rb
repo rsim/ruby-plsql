@@ -3,12 +3,12 @@ module PLSQL
   module TypeClassMethods #:nodoc:
     def find(schema, type)
       if schema.select_first(
-            "SELECT type_name FROM all_types
+          "SELECT type_name FROM all_types
             WHERE owner = :owner
               AND type_name = :table_name",
-            schema.schema_name, type.to_s.upcase)
+          schema.schema_name, type.to_s.upcase)
         new(schema, type)
-      # search for synonym
+        # search for synonym
       elsif (row = schema.select_first(
             "SELECT t.owner, t.type_name
             FROM all_synonyms s, all_types t
@@ -66,8 +66,8 @@ module PLSQL
         @schema_name, @type_name
       ) do |r|
         attr_name, position,
-              data_type, data_length, data_precision, data_scale,
-              data_type_owner, data_type_mod, typecode = r
+          data_type, data_length, data_precision, data_scale,
+          data_type_owner, data_type_mod, typecode = r
         @attributes[attr_name.downcase.to_sym] = {
           :position => position && position.to_i,
           :data_type => data_type_owner && (typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT' ) || data_type,
@@ -121,13 +121,13 @@ module PLSQL
         procedure_name = new_or_procedure == :new ? @type_name : new_or_procedure
         # find defined procedure for type
         if @schema.select_first(
-              "SELECT procedure_name FROM all_procedures
+            "SELECT procedure_name FROM all_procedures
               WHERE owner = :owner
                 AND object_name = :object_name
                 AND procedure_name = :procedure_name",
-              @schema_name, @type_name, procedure_name.to_s.upcase)
+            @schema_name, @type_name, procedure_name.to_s.upcase)
           TypeProcedure.new(@schema, self, procedure_name)
-        # call default constructor
+          # call default constructor
         elsif new_or_procedure == :new
           TypeProcedure.new(@schema, self, :new)
         end
@@ -137,6 +137,7 @@ module PLSQL
     # wrapper class to simulate Procedure class for ProcedureClass#exec
     class TypeProcedure #:nodoc:
       include ProcedureCommon
+      include ORAProcedureHelper
 
       def initialize(schema, type, procedure)
         @schema = schema
@@ -149,7 +150,7 @@ module PLSQL
         if @default_constructor = (procedure == :new)
           @procedure = @type.collection? ? nil : @type_name
           set_default_constructor_arguments
-        # if defined type procedure
+          # if defined type procedure
         else
           @procedure = procedure.to_s.upcase
           get_argument_metadata
@@ -230,7 +231,7 @@ module PLSQL
               :sql_type_name => "#{@schema_name}.#{@type_name}"
             }
           }
-        # otherwise if type is object type then expect object attributes as argument list
+          # otherwise if type is object type then expect object attributes as argument list
         else
           @arguments[overload] = @type.attributes
         end

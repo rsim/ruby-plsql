@@ -21,7 +21,7 @@ module PLSQL
             when :database
               p[:dbname] = v
             else
-              p[k] = v unless (k == :dialect || k == :time_zone)
+              p[k] = v unless (k == :dialect || k == :time_zone || k == :adapter)
             end
             p
           end
