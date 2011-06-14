@@ -59,8 +59,8 @@ module PLSQL
           end
         when :postgres
           if (row = schema.select_first(
-                "SELECT routine_name FROM information_schema.routines
-                WHERE UPPER(routine_schema) = '#{schema.schema_name}'
+                "SELECT specific_name FROM information_schema.routines
+                WHERE UPPER(routine_schema) = '#{override_schema_name || schema.schema_name}'
                 AND UPPER(routine_name) = '#{procedure.to_s.upcase}'"))
             new(schema, procedure, nil, override_schema_name, row[0])
           end
@@ -101,8 +101,8 @@ module PLSQL
 
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
-              data_type, in_out, data_length, data_precision, data_scale, char_used,
-              char_length, type_owner, type_name, type_subname
+        data_type, in_out, data_length, data_precision, data_scale, char_used,
+        char_length, type_owner, type_name, type_subname
         FROM all_arguments
         WHERE object_id = :object_id
         AND owner = :owner
@@ -243,8 +243,211 @@ module PLSQL
   
   module PGProcedureHelper
     
-    def get_argument_metadata #:nodoc:
+    attr_reader :arguments, :argument_list, :out_list, :return
+    attr_reader :schema, :schema_name, :package, :procedure
+    
+    # Function definition adapted from: http://www.alberton.info/postgresql_meta_info.html
+    def function_args
+      sql = <<-SQL
+        CREATE OR REPLACE FUNCTION function_args(
+          IN funcname CHARACTER VARYING,
+          IN schema CHARACTER VARYING,
+          OUT overload INTEGER,
+          OUT pos INTEGER,
+          OUT direction CHARACTER VARYING,
+          OUT argname CHARACTER VARYING,
+          OUT datatype CHARACTER VARYING,
+          OUT typeowner CHARACTER VARYING,
+          OUT typename CHARACTER VARYING)
+        RETURNS SETOF RECORD AS $$DECLARE
+
+        rettype CHARACTER VARYING;
+        argtypes oidvector;
+        allargtypes OID[];
+        argmodes "char"[];
+        argnames text[];
+        mini INTEGER;
+        maxi INTEGER;
+
+        BEGIN
+
+          /* get object ID of function */
+          SELECT INTO rettype, argtypes, allargtypes, argmodes, argnames
+          CASE
+            WHEN pg_proc.proretset
+            THEN 'setof ' || pg_catalog.format_type(pg_proc.prorettype, NULL)
+          ELSE pg_catalog.format_type(pg_proc.prorettype, NULL) END,
+          pg_proc.proargtypes,
+          pg_proc.proallargtypes,
+          pg_proc.proargmodes,
+          pg_proc.proargnames
+          FROM pg_catalog.pg_proc
+          JOIN pg_catalog.pg_namespace
+          ON (pg_proc.pronamespace = pg_namespace.oid)
+          WHERE pg_proc.prorettype <> 'pg_catalog.cstring'::pg_catalog.regtype
+          AND (pg_proc.proargtypes[0] IS NULL
+               OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
+          AND NOT pg_proc.proisagg
+          AND pg_proc.proname || '_' || CAST(pg_proc.oid AS text) = funcname
+          AND pg_namespace.nspname = schema
+          AND pg_catalog.pg_function_is_visible(pg_proc.oid);
+
+          /* bail out if not found */
+          IF NOT FOUND THEN
+            RETURN;
+          END IF;
+
+
+          /* return a row for the return value */
+          pos = 0;
+          direction = 'OUT';
+          argname = NULL;
+          datatype = rettype;
+          RETURN NEXT;
+
+
+          /* unfortunately allargtypes is NULL if there are no OUT parameters */
+          IF allargtypes IS NULL THEN
+            mini = array_lower(argtypes, 1);
+            maxi = array_upper(argtypes, 1);
+          ELSE
+            mini = array_lower(allargtypes, 1);
+            maxi = array_upper(allargtypes, 1);
+          END IF;
+          IF maxi < mini THEN RETURN; END IF;
+
+
+          /* loop all the arguments */
+          FOR i IN mini .. maxi LOOP
+            pos = i - mini + 1;
+            IF argnames IS NULL THEN
+              argname = NULL;
+            ELSE
+              argname = argnames[pos];
+            END IF;
+            IF allargtypes IS NULL THEN
+              direction = 'IN';
+              datatype = pg_catalog.format_type(argtypes[i], NULL);
+            ELSE
+              direction = CASE WHEN argmodes[i] = 'i' THEN 'IN'
+                WHEN argmodes[i] = 'o' THEN 'OUT'
+                WHEN argmodes[i] = 'b' THEN 'IN/OUT' END;
+              datatype = pg_catalog.format_type(allargtypes[i], NULL);
+            END IF;
+            RETURN NEXT;
+          END LOOP;
+
+
+          RETURN;
+        END;$$ LANGUAGE plpgsql STABLE STRICT SECURITY INVOKER;
+
+        COMMENT ON FUNCTION function_args(character varying, character varying)
+        IS $$For a function identifier and schema, this procedure selects for each
+        argument the following data:
+        - the overload-identifier if the function is overloaded (NULL if it isn't)
+        - position in the argument list (0 for the return value)
+        - direction 'IN', 'OUT', or 'IN/OUT'
+        - name (NULL if not defined)
+        - data type
+        - owner of the data type
+        - name of user-defined type (NULL if built-in)$$;
+      SQL
       
+      @schema.execute sql
+      
+    end
+    
+    def get_argument_metadata #:nodoc:
+      @arguments = {}
+      @argument_list = {}
+      @out_list = {}
+      @return = {}
+      @overloaded = false
+      
+      # store reference to previous level record or collection metadata
+      previous_level_argument_metadata = {}
+
+      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*") do |r|
+      
+        overload, position, in_out, argument_name, data_type, type_owner, type_name = r
+        
+        data_level ||= 0
+        
+        @overloaded ||= false
+        # if not overloaded then store arguments at key 0
+        overload ||= 0
+        @arguments[overload] ||= {}
+        @return[overload] ||= nil
+        
+        sql_type_name = type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}"
+        
+        argument_metadata = {
+          :position => position && position.to_i,
+          :data_type => data_type,
+          :in_out => in_out,
+          :data_length => nil,
+          :data_precision => nil,
+          :data_scale => nil,
+          :char_used => nil,
+          :char_length => nil,
+          :type_owner => type_owner,
+          :type_name => type_name,
+          :type_subname => nil,
+          :sql_type_name => sql_type_name
+        }
+        
+        if composite_type?(data_type)
+          case data_type
+          when 'PL/SQL RECORD'
+            argument_metadata[:fields] = {}
+          end
+          previous_level_argument_metadata[data_level] = argument_metadata
+        end
+
+        # if function has return value
+        if argument_name.nil? && data_level == 0 && in_out == 'OUT'
+          @return[overload] = argument_metadata
+          # if parameter
+        else
+          # top level parameter
+          if data_level == 0
+            # sometime there are empty IN arguments in all_arguments view for procedures without arguments (e.g. for DBMS_OUTPUT.DISABLE)
+            @arguments[overload][argument_name.downcase.to_sym] = argument_metadata if argument_name
+            # or lower level part of composite type
+          else
+            case previous_level_argument_metadata[data_level - 1][:data_type]
+            when 'PL/SQL RECORD'
+              previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
+            when 'ARRAY', 'REF CURSOR'
+              previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
+            end
+          end
+        end
+      end
+    
+      construct_argument_list_for_overloads
+    end
+
+    def construct_argument_list_for_overloads #:nodoc:
+      @overloads = @arguments.keys.sort
+      @overloads.each do |overload|
+        @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
+        @out_list[overload] = @argument_list[overload].select {|k| @arguments[overload][k][:in_out] =~ /OUT/}
+      end
+    end
+    
+    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'ARRAY', 'REF CURSOR'].freeze
+    def composite_type?(data_type) #:nodoc:
+      PLSQL_COMPOSITE_TYPES.include? data_type
+    end
+
+    PLSQL_COLLECTION_TYPES = ['ARRAY'].freeze
+    def collection_type?(data_type) #:nodoc:
+      PLSQL_COLLECTION_TYPES.include? data_type
+    end
+
+    def overloaded? #:nodoc:
+      @overloaded
     end
     
   end
