@@ -15,75 +15,6 @@ module PLSQL
   
   module ORAProcedureCallHelper
     
-    def get_overload_from_arguments_list(args)
-      # if not overloaded then overload index 0 is used
-      return 0 unless @procedure.overloaded?
-      # If named arguments are used then
-      # there should be just one Hash argument with symbol keys
-      if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)}
-        args_keys = args[0].keys
-        # implicit SELF argument for object instance procedures
-        args_keys << :self if @self && !args_keys.include?(:self)
-        number_of_args = args_keys.size
-        matching_overloads = [] # overloads with exact or smaller number of matching named arguments
-        overload_argument_list.keys.each do |ov|
-          # assume that missing arguments have default value
-          missing_arguments_count = overload_argument_list[ov].size - number_of_args
-          if missing_arguments_count >= 0 &&
-              args_keys.all?{|k| overload_argument_list[ov].include?(k)}
-            matching_overloads << [ov, missing_arguments_count]
-          end
-        end
-        # pick first matching overload with smallest missing arguments count
-        # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
-        overload = matching_overloads.sort_by{|ov, score| score}[0][0]
-        # otherwise try matching by sequential arguments count and types
-      else
-        number_of_args = args.size
-        matching_types = []
-        # if implicit SELF argument for object instance procedures should be passed
-        # then it should be added as first argument to find matches
-        if @self
-          number_of_args += 1
-          matching_types << ['OBJECT']
-        end
-        args.each do |arg|
-          matching_types << matching_oracle_types_for_ruby_value(arg)
-        end
-        exact_overloads = [] # overloads with exact number of matching arguments
-        smaller_overloads = [] # overloads with smaller number of matching arguments
-        # overload = overload_argument_list.keys.detect do |ov|
-        #   overload_argument_list[ov].size == number_of_args
-        # end
-        overload_argument_list.keys.each do |ov|
-          score = 0 # lower score is better match
-          ov_arg_list_size = overload_argument_list[ov].size
-          if (number_of_args <= ov_arg_list_size &&
-                (0..(number_of_args-1)).all? do |i|
-                ov_arg = overload_argument_list[ov][i]
-                matching_types[i] == :all || # either value matches any type
-                (ind = matching_types[i].index(overload_arguments[ov][ov_arg][:data_type])) &&
-                  (score += ind) # or add index of matched type
-              end)
-            if number_of_args == ov_arg_list_size
-              exact_overloads << [ov, score]
-            else
-              smaller_overloads << [ov, score]
-            end
-          end
-        end
-        # pick either first exact matching overload of first matching with smaller argument count
-        # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
-        overload = if !exact_overloads.empty?
-          exact_overloads.sort_by{|ov, score| score}[0][0]
-        elsif !smaller_overloads.empty?
-          smaller_overloads.sort_by{|ov, score| score}[0][0]
-        end
-      end
-      raise ArgumentError, "Wrong number or types of arguments passed to overloaded PL/SQL procedure" unless overload
-      overload
-    end
-    
     MATCHING_TYPES = {
       :integer => ['NUMBER', 'PLS_INTEGER', 'BINARY_INTEGER'],
       :decimal => ['NUMBER', 'BINARY_FLOAT', 'BINARY_DOUBLE'],
@@ -96,7 +27,7 @@ module PLSQL
       :cursor => ['REF CURSOR']
     }
     
-    def matching_oracle_types_for_ruby_value(value)
+    def matching_db_types_for_ruby_value(value)
       case value
       when NilClass
         :all
@@ -119,6 +50,32 @@ module PLSQL
       when CursorCommon
         MATCHING_TYPES[:cursor]
       end
+    end
+    
+    def exec
+      # puts "DEBUG: sql = #{@sql.gsub("\n","<br/>\n")}"
+      @cursor = @schema.connection.parse(@sql)
+
+      @bind_values.each do |arg, value|
+        @cursor.bind_param(":#{arg}", value, @bind_metadata[arg])
+      end
+
+      @return_vars.each do |var|
+        @cursor.bind_param(":#{var}", nil, @return_vars_metadata[var])
+      end
+
+      @cursor.exec
+
+      dbms_output_log
+
+      if block_given?
+        yield get_return_value
+        nil
+      else
+        get_return_value
+      end
+    ensure
+      @cursor.close if @cursor
     end
     
     def construct_sql(args)
@@ -474,6 +431,161 @@ module PLSQL
   end
   
   module PGProcedureCallHelper
+    
+    MATCHING_TYPES = {
+      :integer => ['INTEGER'],
+      :decimal => ['NUMERIC'],
+      :string => ['VARCHAR', 'CHAR', 'TEXT'],
+      :date => ['DATE'],
+      :time => ['DATE', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITHOUT TIME ZONE'],
+      :boolean => ['BOOLEAN'],
+      :hash => ['RECORD'],
+      :array => ['ARRAY'],
+      :cursor => ['CURSOR']
+    }
+    
+    def matching_db_types_for_ruby_value(value)
+      case value
+      when NilClass
+        :all
+      when Fixnum, Bignum
+        MATCHING_TYPES[:integer]
+      when BigDecimal, Float
+        MATCHING_TYPES[:decimal]
+      when String
+        MATCHING_TYPES[:string]
+      when Date
+        MATCHING_TYPES[:date]
+      when Time
+        MATCHING_TYPES[:time]
+      when TrueClass, FalseClass
+        MATCHING_TYPES[:boolean]
+      when Hash
+        MATCHING_TYPES[:hash]
+      when Array
+        MATCHING_TYPES[:array]
+      when CursorCommon
+        MATCHING_TYPES[:cursor]
+      end
+    end
+    
+    def exec
+      # puts "DEBUG: sql = #{@sql.gsub("\n","<br/>\n")}"
+      
+      @cursor = @schema.connection.parse(@sql)
+
+      @bind_values.each do |arg, value|
+        @cursor.bind_param(@bind_metadata[arg][:position], value, @bind_metadata[arg])
+      end
+
+      @return_vars.each do |var|
+        @cursor.bind_param(@return_vars_metadata[var][:position], nil, @return_vars_metadata[var])
+      end
+
+      @cursor.exec
+
+      if block_given?
+        yield get_return_value
+        nil
+      else
+        get_return_value
+      end
+    ensure
+      @cursor.close if @cursor
+    end
+    
+    def construct_sql(args)
+      @declare_sql = ""
+      @assignment_sql = ""
+      @sql = ""
+      @call_sql = ""
+      @return_sql = ""
+      @return_vars = []
+      @return_vars_metadata = {}
+
+      @call_sql << add_return if return_metadata
+      
+      # construct procedure call if procedure name is available
+      # otherwise will get surrounding call_sql from @procedure (used for table statements)
+      if procedure_name
+        @call_sql << "#{schema_name}." if schema_name
+        @call_sql << "#{package_name}." if package_name
+        @call_sql << "#{procedure_name}("
+      end
+
+      @bind_values = {}
+      @bind_metadata = {}
+
+      # Named arguments
+      # there should be just one Hash argument with symbol keys
+      if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
+          # do not use named arguments if procedure has just one PL/SQL record PL/SQL table or object type argument -
+        # in that case passed Hash should be used as value for this PL/SQL record argument
+        # (which will be processed in sequential arguments bracnh)
+        !(argument_list.size == 1 &&
+            ['PL/SQL RECORD','PL/SQL TABLE','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
+            args[0].keys != [only_argument])
+        # Add missing output arguments with nil value
+        arguments.each do |arg, metadata|
+          if !args[0].has_key?(arg) && metadata[:in_out] == 'OUT'
+            args[0][arg] = nil
+          end
+        end
+        # Add passed parameters to procedure call with parameter names
+        @call_sql << args[0].map do |arg, value|
+          "#{arg} := " << add_argument(arg, value)
+        end.join(', ')
+
+        # Sequential arguments
+      else
+        # add SELF as first argument if provided
+        args.unshift(@self) if @self
+        argument_count = argument_list.size
+        raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
+        # Add missing output arguments with nil value
+        if args.size < argument_count &&
+            (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
+          args += [nil] * (argument_count - args.size)
+        end
+        # Add passed parameters to procedure call in sequence
+        @call_sql << (0...args.size).map do |i|
+          arg = argument_list[i]
+          value = args[i]
+          add_argument(arg, value)
+        end.join(', ')
+      end
+
+      # finish procedure call construction if procedure name is available
+      # otherwise will get surrounding call_sql from @procedure (used for table statements)
+      if procedure_name
+        @call_sql << ")"
+      else
+        @call_sql = @procedure.call_sql(@call_sql)
+      end
+      add_out_variables
+      
+      @sql << "{" if defined?(JRuby)
+      @sql << @call_sql
+      @sql << "}" if defined?(JRuby)
+    end
+    
+    def add_argument(argument, value, argument_metadata=nil)
+      argument_metadata ||= arguments[argument]
+      raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
+      @bind_values[argument] = value
+      @bind_metadata[argument] = argument_metadata
+      (defined?(JRuby)? "?": "$#{argument_metadata[:position]}") + "::#{argument_metadata[:data_type]}"
+    end
+    
+    def add_return_variable(argument, argument_metadata, is_return_value=false)
+      @return_vars << argument
+      @return_vars_metadata[argument] = argument_metadata
+      defined?(JRuby)? "? = call ": "SELECT "
+    end
+    
+    def return_variable_value(argument, argument_metadata)
+      @cursor[argument_metadata[:position]]
+    end
     
   end
   

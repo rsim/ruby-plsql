@@ -100,17 +100,18 @@ module PLSQL
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
-          "SELECT objects.* FROM (SELECT 'TABLE' object_type, table_name object_name, table_schema object_schema
+          "SELECT objects.object_type, objects.object_id FROM (
+          SELECT 'TABLE' object_type, table_name object_name, table_name object_id, table_schema object_schema
           FROM information_schema.tables
           WHERE table_type = 'BASE TABLE'
           UNION ALL
-          SELECT 'VIEW' object_type, table_name object_name, table_schema object_schema
+          SELECT 'VIEW' object_type, table_name object_name, table_name object_id, table_schema object_schema
           FROM information_schema.views
           UNION ALL
-          SELECT 'SEQUENCE' object_type, sequence_name object_name, sequence_schema object_schema
+          SELECT 'SEQUENCE' object_type, sequence_name object_name, sequence_name object_id, sequence_schema object_schema
           FROM information_schema.sequences
           UNION ALL
-          SELECT 'FUNCTION' object_type, routine_name object_name, routine_schema object_schema
+          SELECT 'FUNCTION' object_type, routine_name object_name, specific_name object_id, routine_schema object_schema
           FROM information_schema.routines) objects
           WHERE UPPER(objects.object_schema) = '#{object_schema_name}' 
           AND UPPER(objects.object_name) = '#{object_name}'")

@@ -269,30 +269,20 @@ describe "Postgres Connection" do
       @conn.exec "DROP FUNCTION test_add_random(numeric, varchar, timestamp with time zone);"
     end
     
-    unless defined?(JRuby)
-      it "should parse PL/SQL procedure call and bind parameters and exec and get bind parameter value" do
-        cursor = @conn.parse("SELECT (test_add_random($1, $2, $3)).*;")
-        cursor.bind_param(0, 100, :data_type => 'NUMERIC')
-        cursor.bind_param(1, "abc", :data_type => 'VARCHAR')
-        cursor.bind_param(2, @now, :data_type => 'TIMESTAMP WITH TIME ZONE')
-        cursor.exec
-        cursor["p_number"].should == @random + 100
-        cursor["p_varchar"].should == "abc"
-        cursor["p_date"].should == @now
-        cursor.close.should be_nil
-      end
-    else
-      it "should parse PL/SQL procedure call and bind parameters and exec and get bind parameter value" do
+    it "should parse PL/SQL procedure call and bind parameters and exec and get bind parameter value" do
+      if defined?(JRuby)
         cursor = @conn.parse("{call test_add_random(?, ?, ?::timestamp with time zone)}")
-        cursor.bind_param(1, 100, :data_type => 'NUMERIC', :in_out => "IN/OUT")
-        cursor.bind_param(2, "abc", :data_type => 'VARCHAR', :in_out => "IN/OUT")
-        cursor.bind_param(3, @now, :data_type => 'TIMESTAMP WITH TIME ZONE', :in_out => "IN/OUT")
-        cursor.exec
-        cursor[1].should == @random + 100
-        cursor[2].should == "abc"
-        cursor[3].should == @now
-        cursor.close.should be_nil
+      else
+        cursor = @conn.parse("SELECT (test_add_random($1, $2, $3)).*;")
       end
+      cursor.bind_param(0, 100, :data_type => 'NUMERIC', :in_out => "IN/OUT")
+      cursor.bind_param(1, "abc", :data_type => 'VARCHAR', :in_out => "IN/OUT")
+      cursor.bind_param(2, @now, :data_type => 'TIMESTAMP WITH TIME ZONE', :in_out => "IN/OUT")
+      cursor.exec
+      cursor[0].should == @random + 100
+      cursor[1].should == "abc"
+      cursor[2].should == @now
+      cursor.close.should be_nil
     end
     
   end

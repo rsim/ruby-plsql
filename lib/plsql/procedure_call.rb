@@ -18,33 +18,76 @@ module PLSQL
       construct_sql(args)
     end
 
-    def exec
-      # puts "DEBUG: sql = #{@sql.gsub("\n","<br/>\n")}"
-      @cursor = @schema.connection.parse(@sql)
-
-      @bind_values.each do |arg, value|
-        @cursor.bind_param(":#{arg}", value, @bind_metadata[arg])
-      end
-
-      @return_vars.each do |var|
-        @cursor.bind_param(":#{var}", nil, @return_vars_metadata[var])
-      end
-
-      @cursor.exec
-
-      dbms_output_log
-
-      if block_given?
-        yield get_return_value
-        nil
-      else
-        get_return_value
-      end
-    ensure
-      @cursor.close if @cursor
-    end
-
     private
+    
+    def get_overload_from_arguments_list(args)
+      # if not overloaded then overload index 0 is used
+      return 0 unless @procedure.overloaded?
+      # If named arguments are used then
+      # there should be just one Hash argument with symbol keys
+      if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)}
+        args_keys = args[0].keys
+        # implicit SELF argument for object instance procedures
+        args_keys << :self if @self && !args_keys.include?(:self)
+        number_of_args = args_keys.size
+        matching_overloads = [] # overloads with exact or smaller number of matching named arguments
+        overload_argument_list.keys.each do |ov|
+          # assume that missing arguments have default value
+          missing_arguments_count = overload_argument_list[ov].size - number_of_args
+          if missing_arguments_count >= 0 &&
+              args_keys.all?{|k| overload_argument_list[ov].include?(k)}
+            matching_overloads << [ov, missing_arguments_count]
+          end
+        end
+        # pick first matching overload with smallest missing arguments count
+        # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
+        overload = matching_overloads.sort_by{|ov, score| score}[0][0]
+        # otherwise try matching by sequential arguments count and types
+      else
+        number_of_args = args.size
+        matching_types = []
+        # if implicit SELF argument for object instance procedures should be passed
+        # then it should be added as first argument to find matches
+        if @self
+          number_of_args += 1
+          matching_types << ['OBJECT']
+        end
+        args.each do |arg|
+          matching_types << matching_db_types_for_ruby_value(arg)
+        end
+        exact_overloads = [] # overloads with exact number of matching arguments
+        smaller_overloads = [] # overloads with smaller number of matching arguments
+        # overload = overload_argument_list.keys.detect do |ov|
+        #   overload_argument_list[ov].size == number_of_args
+        # end
+        overload_argument_list.keys.each do |ov|
+          score = 0 # lower score is better match
+          ov_arg_list_size = overload_argument_list[ov].size
+          if (number_of_args <= ov_arg_list_size &&
+                (0..(number_of_args-1)).all? do |i|
+                ov_arg = overload_argument_list[ov][i]
+                matching_types[i] == :all || # either value matches any type
+                (ind = matching_types[i].index(overload_arguments[ov][ov_arg][:data_type])) &&
+                  (score += ind) # or add index of matched type
+              end)
+            if number_of_args == ov_arg_list_size
+              exact_overloads << [ov, score]
+            else
+              smaller_overloads << [ov, score]
+            end
+          end
+        end
+        # pick either first exact matching overload of first matching with smaller argument count
+        # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
+        overload = if !exact_overloads.empty?
+          exact_overloads.sort_by{|ov, score| score}[0][0]
+        elsif !smaller_overloads.empty?
+          smaller_overloads.sort_by{|ov, score| score}[0][0]
+        end
+      end
+      raise ArgumentError, "Wrong number or types of arguments passed to overloaded PL/SQL procedure" unless overload
+      overload
+    end
 
     def record_fields_sorted_by_position(fields_metadata)
       fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}

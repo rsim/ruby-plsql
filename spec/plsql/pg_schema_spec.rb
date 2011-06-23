@@ -40,7 +40,7 @@ describe "Postgres Schema connection" do
   end
 
   it "should return nil schema name if not connected" do
-    plsql(:xxx).schema_name.should == nil
+    plsql(:xxx).schema_name.should be_nil
   end
 
 end

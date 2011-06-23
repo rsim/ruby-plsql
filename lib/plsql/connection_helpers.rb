@@ -95,7 +95,7 @@ module PLSQL
     end
     
     def parse(sql)
-      CallableStatement.new(self, sql)
+      create_callable_stmt(self, sql)
     end
 
     def cursor_from_query(sql, bindvars=[], options={})
@@ -116,54 +116,6 @@ module PLSQL
         set_bind_variable(stmt, i+1, bv)
       end
       stmt
-    end
-    
-    class CallableStatement #:nodoc:
-
-      def initialize(conn, sql)
-        @sql = sql
-        @connection = conn
-        @params = sql.scan(/\:\w+/)
-        @out_types = {}
-        @out_index = {}
-        @statement = @connection.prepare_call(sql)
-      end
-
-      def bind_param(arg, value, metadata)
-        type, length = @connection.plsql_to_ruby_data_type(metadata)
-        db_value = @connection.ruby_value_to_db_value(value, type, metadata)
-        @connection.set_bind_variable(@statement, arg, db_value, type, length, metadata)
-        if metadata[:in_out] =~ /OUT/
-          @out_types[arg] = type || db_value.class
-          @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(db_value,type), 
-              metadata[:sql_type_name])
-          else
-            @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(db_value,type))
-          end
-        end
-      end
-      
-      def exec
-        @statement.execute
-      end
-
-      def [](key)
-        @connection.db_value_to_ruby_value(@connection.get_bind_variable(@statement, @out_index[key], @out_types[key]))
-      end
-
-      def close
-        @statement.close
-      end
-      
-      private
-      
-      def bind_param_index(key)
-        return key if key.kind_of? Integer
-        key = ":#{key.to_s}" unless key.to_s =~ /^:/
-        @params.index(key)+1
-      end
     end
     
     class Cursor #:nodoc:

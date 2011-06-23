@@ -84,8 +84,8 @@ module PLSQL
       end
 
       def [](key)
-        column_idx = @table.fnumber(key)
-        @connection.db_value_to_ruby_value([@table[@row_idx][key], @table.ftype(column_idx), @table.fmod(column_idx)])
+        column_idx = (key.class == Fixnum)? key: @table.fnumber(key)
+        @connection.db_value_to_ruby_value([@table.getvalue(@row_idx, column_idx), @table.ftype(column_idx), @table.fmod(column_idx)])
       end
 
       def fetch
@@ -98,7 +98,7 @@ module PLSQL
       end
 
       def close_raw_cursor
-        @table.clear
+        @table.clear if @table
       end
 
       def close
@@ -180,7 +180,7 @@ module PLSQL
       case type
       when :integer, :bigint, :numeric
         # return BigDecimal instead of Float to avoid rounding errors
-        value[0] == (num_to_i = value[0].to_i).to_s ? num_to_i : BigDecimal.new(value[0])
+        value[0].to_s == (num_to_i = value[0].to_i).to_s ? num_to_i : (value[0].is_a?(BigDecimal) ? value[0] : BigDecimal.new(value[0].to_s))
       when :'time with time zone', :'time without time zone'
         Time.parse(value[0])
       when :'timestamp with time zone', :'timestamp without time zone'
@@ -189,7 +189,7 @@ module PLSQL
         Date.parse(value[0])
       else
         value[0]
-      end
+      end unless value[0].nil?
     end
     
     def database_version

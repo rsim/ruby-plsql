@@ -52,10 +52,10 @@ module PLSQL
         object.exec(*args, &block)
       when Variable
         if assignment
-          raise ArgumentError, "Just one value can be assigned to package variable '#{method.to_s.upcase}'" unless args.size == 1 && block == nil
+          raise ArgumentError, "Just one value can be assigned to package variable '#{method.to_s.upcase}'" unless args.size == 1 && block.nil?
           object.value = args[0]
         else
-          raise ArgumentError, "Cannot pass arguments when getting package variable '#{method.to_s.upcase}' value" unless args.size == 0 && block == nil
+          raise ArgumentError, "Cannot pass arguments when getting package variable '#{method.to_s.upcase}' value" unless args.size == 0 && block.nil?
           object.value
         end
       else

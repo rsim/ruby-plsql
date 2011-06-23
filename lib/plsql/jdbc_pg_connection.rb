@@ -57,6 +57,51 @@ module PLSQL
       #raw_connection.setDefaultRowPrefetch(value)
     end
     
+    def create_callable_stmt(conn, sql)
+      CallableStatement.new(conn, sql)
+    end
+    
+    class CallableStatement #:nodoc:
+
+      def initialize(conn, sql)
+        @sql = sql
+        @connection = conn
+        @out_types = {}
+        @out_index = {}
+        @statement = @connection.prepare_call(sql)
+      end
+
+      def bind_param(idx, value, metadata)
+        type, length = @connection.plsql_to_ruby_data_type(metadata)
+        db_value = @connection.ruby_value_to_db_value(value, type, metadata)
+        if metadata[:in_out] =~ /IN/
+          @connection.set_bind_variable(@statement, idx + 1, db_value, type, length, metadata)
+        end
+        if metadata[:in_out] =~ /OUT/
+          @out_types[idx] = type || db_value.class
+          @out_index[idx] = idx + 1
+          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
+            @statement.registerOutParameter(@out_index[idx], @connection.get_java_sql_type(db_value,type), 
+              metadata[:sql_type_name])
+          else
+            @statement.registerOutParameter(@out_index[idx],@connection.get_java_sql_type(db_value,type))
+          end
+        end
+      end
+      
+      def exec
+        @statement.execute
+      end
+
+      def [](key)
+        @connection.db_value_to_ruby_value(@connection.get_bind_variable(@statement, @out_index[key], @out_types[key]))
+      end
+
+      def close
+        @statement.close
+      end
+    end
+    
     RUBY_CLASS_TO_SQL_TYPE = {
       Fixnum          => java.sql.Types::INTEGER,
       Bignum          => java.sql.Types::BIGINT,
@@ -97,7 +142,7 @@ module PLSQL
     end
     
     def set_bind_variable(stmt, i, value, type=nil, length=nil, metadata={})
-      key = i.kind_of?(Integer) ? nil : i.to_s.gsub(':','')
+      key = i.kind_of?(Integer) ? nil : i.to_s
       type_symbol = (!value.nil? && type ? type : value.class).to_s.to_sym
       case type_symbol
       when :Fixnum, :Bignum, :Integer
@@ -123,8 +168,6 @@ module PLSQL
       when :'Java::JavaSql::Struct'
         stmt.send("setStruct#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::ResultSet'
-        # TODO: cannot find how to pass cursor parameter from JDBC
-        # setCursor is giving exception java.sql.SQLException: Unsupported feature
         stmt.send("setCursor#{key && "AtName"}", key || i, value)
       else
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
@@ -167,7 +210,7 @@ module PLSQL
     
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
-      case data_type
+      case data_type.upcase
       when "VARCHAR", "CHAR"
         [String, data_length || 32767]
       when "TEXT"
@@ -188,7 +231,7 @@ module PLSQL
         [Time, nil]
       when "ARRAY"
         [Java::JavaSql::Array, nil]
-      when "STRUCT"
+      when "RECORD"
         [Java::JavaSql::Struct, nil]
       when "CURSOR"
         [java.sql.ResultSet, nil]
@@ -211,12 +254,19 @@ module PLSQL
         else
           java_bigdecimal(value)
         end
-      when :Date, :DateTime
+      when :Date
+        case value
+        when DateTime, Date
+          java_date(Time.send(plsql.default_timezone, value.year, value.month, value.day, 0, 0, 0))
+        else
+          java_date(value)
+        end
+      when :DateTime
         case value
         when DateTime
           java_timestamp(Time.send(plsql.default_timezone, value.year, value.month, value.day, value.hour, value.min, value.sec))
         when Date
-          java_date(Time.send(plsql.default_timezone, value.year, value.month, value.day, 0, 0, 0))
+          java_timestamp(Time.send(plsql.default_timezone, value.year, value.month, value.day, 0, 0, 0))
         else
           java_timestamp(value)
         end
@@ -224,65 +274,12 @@ module PLSQL
         java_timestamp(value)
       when :'Java::JavaSql::Clob'
         value
-        #        if value
-        #          clob = Java::JavaSql::Clob.createTemporary(raw_connection, false, Java::OracleSql::CLOB::DURATION_SESSION)
-        #          clob.setString(1, value)
-        #          clob
-        #        else
-        #          Java::OracleSql::CLOB.getEmptyCLOB
-        #        end
       when :'Java::JavaSql::Blob'
         value
-        #        if value
-        #          blob = Java::OracleSql::BLOB.createTemporary(raw_connection, false, Java::OracleSql::BLOB::DURATION_SESSION)
-        #          blob.setBytes(1, value.to_java_bytes)
-        #          blob
-        #        else
-        #          Java::OracleSql::BLOB.getEmptyBLOB
-        #        end
-      when :'Java::JavaSql::Array'
         if value
-          #          raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
-          #          descriptor = Java::OracleSql::ArrayDescriptor.createDescriptor(metadata[:sql_type_name], raw_connection)
-          #          elem_type = descriptor.getBaseType
-          #          elem_type_name = descriptor.getBaseName
-          #          elem_list = value.map do |elem|
-          #            case elem_type
-          #            when Java::oracle.jdbc.OracleTypes::ARRAY
-          #              ruby_value_to_db_value(elem, Java::JavaSql::Array, :sql_type_name => elem_type_name)
-          #            when Java::oracle.jdbc.OracleTypes::STRUCT
-          #              ruby_value_to_db_value(elem, Java::JavaSql::Struct, :sql_type_name => elem_type_name)
-          #            else
-          #              ruby_value_to_db_value(elem)
-          #            end
-          #          end
-          #          Java::OracleSql::ARRAY.new(descriptor, raw_connection, elem_list.to_java)
         end
       when :'Java::JavaSql::Struct'
         if value
-          #          raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
-          #          descriptor = Java::OracleSql::StructDescriptor.createDescriptor(metadata[:sql_type_name], raw_connection)
-          #          struct_metadata = descriptor.getMetaData
-          #          struct_fields = (1..descriptor.getLength).inject({}) do |hash, i|
-          #            hash[struct_metadata.getColumnName(i).downcase.to_sym] =
-          #              {:type => struct_metadata.getColumnType(i), :type_name => struct_metadata.getColumnTypeName(i)}
-          #            hash
-          #          end
-          #          object_attrs = java.util.HashMap.new
-          #          value.each do |key, attr_value|
-          #            raise ArgumentError, "Wrong object type field passed to PL/SQL procedure" unless (field = struct_fields[key])
-          #            case field[:type]
-          #            when Java::oracle.jdbc.OracleTypes::ARRAY
-          #              # nested collection
-          #              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value, Java::OracleSql::ARRAY, :sql_type_name => field[:type_name]))
-          #            when Java::oracle.jdbc.OracleTypes::STRUCT
-          #              # nested object type
-          #              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value, Java::OracleSql::STRUCT, :sql_type_name => field[:type_name]))
-          #            else
-          #              object_attrs.put(key.to_s.upcase, ruby_value_to_db_value(attr_value))
-          #            end
-          #          end
-          #          Java::OracleSql::STRUCT.new(descriptor, raw_connection, object_attrs)
         end
       when :'Java::JavaSql::ResultSet'
         if value
@@ -305,8 +302,7 @@ module PLSQL
         end
       when Java::JavaSql::Timestamp
         if value
-          Time.send(plsql.default_timezone, value.year + 1900, value.month + 1, value.date, value.hours, value.minutes, value.seconds,
-            value.nanos / 1000)
+          Time.send(plsql.default_timezone, value.year + 1900, value.month + 1, value.date, value.hours, value.minutes, value.seconds, value.nanos / 1000)
         end
       when Java::JavaSql::Clob
         if value.isEmptyLob
@@ -338,11 +334,11 @@ module PLSQL
     private
     
     def java_date(value)
-      value && Java::java.sql.Date.new(value.year-1900, value.month-1, value.day)
+      value && Java::java.sql.Date.new(value.year - 1900, value.month - 1, value.day)
     end
 
     def java_timestamp(value)
-      value && Java::java.sql.Timestamp.new(value.year-1900, value.month-1, value.day, value.hour, value.min, value.sec, value.usec * 1000)
+      value && Java::java.sql.Timestamp.new(value.year - 1900, value.month - 1, value.day, value.hour, value.min, value.sec, value.usec * 1000)
     end
 
     def java_bigdecimal(value)

@@ -476,7 +476,7 @@ describe "Oracle Connection" do
       # logoff will drop ruby temporary tables, it should do rollback before drop table
       @conn.logoff
       reconnect_connection
-      @conn.select_first("SELECT * FROM test_dummy_table").should == nil
+      @conn.select_first("SELECT * FROM test_dummy_table").should be_nil
       @conn.autocommit = old_autocommit
     end
 

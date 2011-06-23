@@ -289,7 +289,7 @@ module PLSQL
                OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
           AND NOT pg_proc.proisagg
           AND pg_proc.proname || '_' || CAST(pg_proc.oid AS text) = funcname
-          AND pg_namespace.nspname = schema
+          AND UPPER(pg_namespace.nspname) = schema
           AND pg_catalog.pg_function_is_visible(pg_proc.oid);
 
           /* bail out if not found */
@@ -366,8 +366,8 @@ module PLSQL
       
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
-
-      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*") do |r|
+      
+      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*;") do |r|
       
         overload, position, in_out, argument_name, data_type, type_owner, type_name = r
         
