@@ -80,12 +80,7 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[idx] = type || db_value.class
           @out_index[idx] = idx + 1
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[idx], @connection.get_java_sql_type(db_value,type), 
-              metadata[:sql_type_name])
-          else
-            @statement.registerOutParameter(@out_index[idx],@connection.get_java_sql_type(db_value,type))
-          end
+          @statement.registerOutParameter(@out_index[idx], @connection.get_java_sql_type(db_value, type))
         end
       end
       
@@ -103,21 +98,22 @@ module PLSQL
     end
     
     RUBY_CLASS_TO_SQL_TYPE = {
-      Fixnum          => java.sql.Types::INTEGER,
-      Bignum          => java.sql.Types::BIGINT,
-      Integer         => java.sql.Types::INTEGER,
-      Float           => java.sql.Types::FLOAT,
-      BigDecimal      => java.sql.Types::NUMERIC,
-      String          => java.sql.Types::VARCHAR,
-      java.sql.Clob   => java.sql.Types::CLOB,
-      java.sql.Blob   => java.sql.Types::BLOB,
-      Date            => java.sql.Types::DATE,
-      Time            => java.sql.Types::TIMESTAMP,
-      DateTime        => java.sql.Types::TIMESTAMP,
-      java.sql.Array  => java.sql.Types::ARRAY,
-      Array           => java.sql.Types::ARRAY,
-      java.sql.Struct => java.sql.Types::STRUCT,
-      Hash            => java.sql.Types::STRUCT
+      Fixnum            => java.sql.Types::INTEGER,
+      Bignum            => java.sql.Types::BIGINT,
+      Integer           => java.sql.Types::INTEGER,
+      Float             => java.sql.Types::FLOAT,
+      BigDecimal        => java.sql.Types::NUMERIC,
+      String            => java.sql.Types::VARCHAR,
+      java.lang.Boolean => java.sql.Types::BOOLEAN,
+      java.sql.Clob     => java.sql.Types::CLOB,
+      java.sql.Blob     => java.sql.Types::BLOB,
+      Date              => java.sql.Types::DATE,
+      Time              => java.sql.Types::TIMESTAMP,
+      DateTime          => java.sql.Types::TIMESTAMP,
+      java.sql.Array    => java.sql.Types::ARRAY,
+      Array             => java.sql.Types::ARRAY,
+      java.sql.Struct   => java.sql.Types::STRUCT,
+      Hash              => java.sql.Types::STRUCT
     }
 
     SQL_TYPE_TO_RUBY_CLASS = {
@@ -153,6 +149,8 @@ module PLSQL
         stmt.send("setBigDecimal#{key && "AtName"}", key || i, value)
       when :String
         stmt.send("setString#{key && "AtName"}", key || i, value)
+      when :'Java::JavaLang::Boolean'
+        stmt.send("setBoolean#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::Clob'
         stmt.send("setClob#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::Blob'
@@ -175,7 +173,7 @@ module PLSQL
     end
     
     def get_bind_variable(stmt, i, type)
-      case type.to_s.to_sym
+      variable = case type.to_s.to_sym
       when :Fixnum, :Bignum, :Integer
         stmt.getInt(i)
       when :Float
@@ -185,6 +183,8 @@ module PLSQL
         bd && BigDecimal.new(bd.to_s)
       when :String
         stmt.getString(i)
+      when :'Java::JavaLang::Boolean'
+        stmt.getBoolean(i)
       when :'Java::JavaSql::Clob'
         stmt.getClob(i)
       when :'Java::JavaSql::Blob'
@@ -200,6 +200,7 @@ module PLSQL
       when :'Java::JavaSql::ResultSet'
         stmt.getCursor(i)
       end
+      variable unless stmt.wasNull()
     end
     
     def get_ruby_value_from_result_set(rset, i, metadata)
@@ -210,11 +211,13 @@ module PLSQL
     
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
-      case data_type.upcase
+      case data_type
       when "VARCHAR", "CHAR"
         [String, data_length || 32767]
       when "TEXT"
         [String, nil]
+      when "BOOLEAN"
+        [Java::JavaLang::Boolean, nil]
       when "CLOB", "NCLOB"
         [Java::JavaSql::Clob, nil]
       when "BLOB"
@@ -243,7 +246,7 @@ module PLSQL
     def ruby_value_to_db_value(value, type=nil, metadata={})
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :Bignum, :String
+      when :Fixnum, :Bignum, :String, :'Java::JavaLang::Boolean'
         value
       when :BigDecimal
         case value
@@ -346,7 +349,6 @@ module PLSQL
     end
 
     def db_number_to_ruby_number(num)
-      # return BigDecimal instead of Float to avoid rounding errors
       num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end
     

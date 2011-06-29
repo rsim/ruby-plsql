@@ -266,6 +266,7 @@ module PLSQL
         allargtypes OID[];
         argmodes "char"[];
         argnames text[];
+        argidx INTEGER;
         mini INTEGER;
         maxi INTEGER;
 
@@ -289,7 +290,7 @@ module PLSQL
                OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
           AND NOT pg_proc.proisagg
           AND pg_proc.proname || '_' || CAST(pg_proc.oid AS text) = funcname
-          AND UPPER(pg_namespace.nspname) = schema
+          AND upper(pg_namespace.nspname) = schema
           AND pg_catalog.pg_function_is_visible(pg_proc.oid);
 
           /* bail out if not found */
@@ -297,14 +298,16 @@ module PLSQL
             RETURN;
           END IF;
 
+          pos = -1;
 
-          /* return a row for the return value */
-          pos = 0;
-          direction = 'OUT';
-          argname = NULL;
-          datatype = rettype;
-          RETURN NEXT;
-
+          /* return a row for the return value if there are no OUT parameters */
+          IF allargtypes IS NULL THEN
+            pos = 0;
+            direction = 'OUT';
+            argname = NULL;
+            datatype = upper(rettype);
+            RETURN NEXT;
+          END IF;
 
           /* unfortunately allargtypes is NULL if there are no OUT parameters */
           IF allargtypes IS NULL THEN
@@ -316,27 +319,26 @@ module PLSQL
           END IF;
           IF maxi < mini THEN RETURN; END IF;
 
-
           /* loop all the arguments */
           FOR i IN mini .. maxi LOOP
-            pos = i - mini + 1;
+            pos = pos + 1;
+            argidx = i - mini + 1;
             IF argnames IS NULL THEN
               argname = NULL;
             ELSE
-              argname = argnames[pos];
+              argname = argnames[argidx];
             END IF;
             IF allargtypes IS NULL THEN
               direction = 'IN';
-              datatype = pg_catalog.format_type(argtypes[i], NULL);
+              datatype = upper(pg_catalog.format_type(argtypes[i], NULL));
             ELSE
               direction = CASE WHEN argmodes[i] = 'i' THEN 'IN'
                 WHEN argmodes[i] = 'o' THEN 'OUT'
                 WHEN argmodes[i] = 'b' THEN 'IN/OUT' END;
-              datatype = pg_catalog.format_type(allargtypes[i], NULL);
+              datatype = upper(pg_catalog.format_type(allargtypes[i], NULL));
             END IF;
             RETURN NEXT;
           END LOOP;
-
 
           RETURN;
         END;$$ LANGUAGE plpgsql STABLE STRICT SECURITY INVOKER;
@@ -367,13 +369,14 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
       
-      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*;") do |r|
+      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*") do |r|
       
         overload, position, in_out, argument_name, data_type, type_owner, type_name = r
         
         data_level ||= 0
         
         @overloaded ||= false
+        
         # if not overloaded then store arguments at key 0
         overload ||= 0
         @arguments[overload] ||= {}
@@ -385,11 +388,6 @@ module PLSQL
           :position => position && position.to_i,
           :data_type => data_type,
           :in_out => in_out,
-          :data_length => nil,
-          :data_precision => nil,
-          :data_scale => nil,
-          :char_used => nil,
-          :char_length => nil,
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => nil,
@@ -398,7 +396,7 @@ module PLSQL
         
         if composite_type?(data_type)
           case data_type
-          when 'PL/SQL RECORD'
+          when 'RECORD'
             argument_metadata[:fields] = {}
           end
           previous_level_argument_metadata[data_level] = argument_metadata
@@ -416,7 +414,7 @@ module PLSQL
             # or lower level part of composite type
           else
             case previous_level_argument_metadata[data_level - 1][:data_type]
-            when 'PL/SQL RECORD'
+            when 'RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
             when 'ARRAY', 'REF CURSOR'
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
@@ -427,7 +425,7 @@ module PLSQL
     
       construct_argument_list_for_overloads
     end
-
+    
     def construct_argument_list_for_overloads #:nodoc:
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
@@ -436,7 +434,7 @@ module PLSQL
       end
     end
     
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'ARRAY', 'REF CURSOR'].freeze
+    PLSQL_COMPOSITE_TYPES = ['RECORD', 'ARRAY', 'REF CURSOR'].freeze
     def composite_type?(data_type) #:nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end

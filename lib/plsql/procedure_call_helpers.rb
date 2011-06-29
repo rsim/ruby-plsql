@@ -470,8 +470,6 @@ module PLSQL
     end
     
     def exec
-      # puts "DEBUG: sql = #{@sql.gsub("\n","<br/>\n")}"
-      
       @cursor = @schema.connection.parse(@sql)
 
       @bind_values.each do |arg, value|
@@ -495,74 +493,48 @@ module PLSQL
     end
     
     def construct_sql(args)
-      @declare_sql = ""
-      @assignment_sql = ""
       @sql = ""
       @call_sql = ""
-      @return_sql = ""
       @return_vars = []
       @return_vars_metadata = {}
-
-      @call_sql << add_return if return_metadata
       
-      # construct procedure call if procedure name is available
-      # otherwise will get surrounding call_sql from @procedure (used for table statements)
-      if procedure_name
-        @call_sql << "#{schema_name}." if schema_name
-        @call_sql << "#{package_name}." if package_name
-        @call_sql << "#{procedure_name}("
+      if return_metadata
+        add_return
+        @call_sql << "?= " if defined?(JRuby)
       end
+      
+      @call_sql << (defined?(JRuby)? "call ": "SELECT ")
+      @call_sql << "#{schema_name}." if schema_name
+      @call_sql << "#{package_name}." if package_name
+      @call_sql << "#{procedure_name}("
 
       @bind_values = {}
       @bind_metadata = {}
 
-      # Named arguments
-      # there should be just one Hash argument with symbol keys
       if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
-          # do not use named arguments if procedure has just one PL/SQL record PL/SQL table or object type argument -
-        # in that case passed Hash should be used as value for this PL/SQL record argument
-        # (which will be processed in sequential arguments bracnh)
-        !(argument_list.size == 1 &&
-            ['PL/SQL RECORD','PL/SQL TABLE','OBJECT'].include?(arguments[(only_argument=argument_list[0])][:data_type]) &&
-            args[0].keys != [only_argument])
-        # Add missing output arguments with nil value
+          !(argument_list.size == 1 && (arguments[(only_argument = argument_list[0])][:data_type]) == "RECORD" && args[0].keys != [only_argument])
         arguments.each do |arg, metadata|
           if !args[0].has_key?(arg) && metadata[:in_out] == 'OUT'
             args[0][arg] = nil
           end
         end
-        # Add passed parameters to procedure call with parameter names
         @call_sql << args[0].map do |arg, value|
           "#{arg} := " << add_argument(arg, value)
         end.join(', ')
-
-        # Sequential arguments
       else
-        # add SELF as first argument if provided
-        args.unshift(@self) if @self
         argument_count = argument_list.size
         raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
-        # Add missing output arguments with nil value
-        if args.size < argument_count &&
-            (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
+        if args.size < argument_count && (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
           args += [nil] * (argument_count - args.size)
         end
-        # Add passed parameters to procedure call in sequence
         @call_sql << (0...args.size).map do |i|
           arg = argument_list[i]
           value = args[i]
           add_argument(arg, value)
         end.join(', ')
       end
-
-      # finish procedure call construction if procedure name is available
-      # otherwise will get surrounding call_sql from @procedure (used for table statements)
-      if procedure_name
-        @call_sql << ")"
-      else
-        @call_sql = @procedure.call_sql(@call_sql)
-      end
-      add_out_variables
+      
+      @call_sql << ")"
       
       @sql << "{" if defined?(JRuby)
       @sql << @call_sql
@@ -574,13 +546,14 @@ module PLSQL
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
       @bind_values[argument] = value
       @bind_metadata[argument] = argument_metadata
-      (defined?(JRuby)? "?": "$#{argument_metadata[:position]}") + "::#{argument_metadata[:data_type]}"
+      return_str = defined?(JRuby)? "?": "$#{argument_metadata[:position]}"
+      return_str << "::#{argument_metadata[:data_type]}" unless argument_metadata[:in_out] == "OUT"
+      return_str
     end
     
     def add_return_variable(argument, argument_metadata, is_return_value=false)
       @return_vars << argument
       @return_vars_metadata[argument] = argument_metadata
-      defined?(JRuby)? "? = call ": "SELECT "
     end
     
     def return_variable_value(argument, argument_metadata)

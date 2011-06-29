@@ -32,7 +32,7 @@ ORA_DATABASE_VERSION = ENV['ORA_DATABASE_VERSION'] || '10.2.0.4'
 # Postgres-specific database connection parameters.
 PG_DATABASE_NAME = ENV['PG_DATABASE_NAME'] || 'postgres'
 PG_DATABASE_PORT = ENV['PG_DATABASE_PORT'] || 5432
-PG_DATABASE_VERSION = ENV["PG_DATABASE_VERSION"] || '9.0.3'
+PG_DATABASE_VERSION = ENV["PG_DATABASE_VERSION"] || '9.0.4'
 
 # Generic database connection parameters.
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'

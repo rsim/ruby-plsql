@@ -503,7 +503,7 @@ describe "Parameter type mapping /" do
 
   end
 
-  describe "Procedrue with CLOB parameter and return value" do
+  describe "Procedure with CLOB parameter and return value" do
   
     before(:all) do
       plsql.execute <<-SQL
@@ -531,7 +531,7 @@ describe "Parameter type mapping /" do
     end
   end
 
-  describe "Procedrue with BLOB parameter and return value" do
+  describe "Procedure with BLOB parameter and return value" do
   
     before(:all) do
       plsql.execute <<-SQL

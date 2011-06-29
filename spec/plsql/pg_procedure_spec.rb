@@ -3,6 +3,7 @@
 require 'spec_helper'
 
 describe "Parameter type mapping /" do
+  
   before(:all) do
     plsql(:pg).connect! PG_CONNECTION_PARAMS
   end
@@ -29,11 +30,11 @@ describe "Parameter type mapping /" do
       plsql(:pg).execute "DROP FUNCTION test_uppercase(varchar)"
     end
   
-    it "should find existing procedure" do
+    it "should find existing function" do
       PLSQL::Procedure.find(plsql(:pg), :test_uppercase).should_not be_nil
     end
 
-    it "should not find nonexisting procedure" do
+    it "should not find nonexisting function" do
       PLSQL::Procedure.find(plsql(:pg), :qwerty123456).should be_nil
     end
 
@@ -138,7 +139,7 @@ describe "Parameter type mapping /" do
       plsql(:pg).test_number_1(false).should == 'N'
     end
 
-    it "should process binary integer parameters" do
+    it "should process integer parameters" do
       plsql(:pg).test_integers(123, 456).should == {:x_pls_int => 123, :x_bin_int => 456}
     end
   end
@@ -210,7 +211,8 @@ describe "Parameter type mapping /" do
 
   end
   
-  describe "Procedure with output parameters" do
+  describe "Function with output parameters" do
+    
     before(:all) do
       plsql(:pg).execute <<-SQL
         CREATE OR REPLACE FUNCTION test_copy(p_from varchar, OUT p_to varchar, OUT p_to_double varchar)
@@ -229,7 +231,7 @@ describe "Parameter type mapping /" do
     end
   
     it "should return hash with output parameters" do
-      #plsql(:pg).test_copy("abc", nil, nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
+      plsql(:pg).test_copy("abc", nil, nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
     it "should return hash with output parameters when called with named parameters" do
@@ -237,13 +239,243 @@ describe "Parameter type mapping /" do
     end
 
     it "should substitute output parameters with nil if they are not specified" do
-      #plsql(:pg).test_copy("abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
+      plsql(:pg).test_copy("abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
     it "should substitute named output parameters with nil if they are not specified" do
       #plsql(:pg).test_copy(:p_from => "abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
+  end
+  
+  describe "Functions with same name but different argument lists" do
+    
+    before(:all) do
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function(p_string varchar)
+          RETURNS varchar
+        AS $$
+        BEGIN
+          RETURN upper(p_string);
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function(p_string varchar, OUT p_result varchar)
+        AS $$
+        BEGIN
+          p_result := upper(p_string);
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      
+      plsql(:pg).execute <<-SQL
+      
+        CREATE OR REPLACE FUNCTION test_function(p_number numeric, OUT p_result varchar)
+        AS $$
+        BEGIN
+          p_result := lower(to_char(p_number, '999'));
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function2(p_string varchar)
+          RETURNS varchar
+        AS $$
+        BEGIN
+          RETURN upper(p_string);
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+
+    end
+  
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_function(varchar)"
+      plsql(:pg).execute "DROP FUNCTION test_function(numeric)"
+      plsql(:pg).execute "DROP FUNCTION test_function2(varchar)"
+    end
+
+    it "should identify overloaded function definition" do
+      @procedure = PLSQL::Procedure.find(plsql(:pg), :test_function)
+      @procedure.should_not be_nil
+      @procedure.should be_overloaded
+    end
+
+    it "should identify non-overloaded function definition" do
+      @procedure = PLSQL::Procedure.find(plsql(:pg), :test_function2)
+      @procedure.should_not be_nil
+      @procedure.should_not be_overloaded
+    end
+
+#    it "should execute correct procedures based on number of arguments and return correct value" do
+#      plsql.test_package2.test_procedure('xxx').should == 'XXX'
+#      plsql.test_package2.test_procedure('xxx', nil).should == {:p_result => 'XXX'}
+#    end
+#
+#    it "should execute correct procedures based on number of named arguments and return correct value" do
+#      plsql.test_package2.test_procedure(:p_string => 'xxx').should == 'XXX'
+#      plsql.test_package2.test_procedure(:p_string => 'xxx', :p_result => nil).should == {:p_result => 'XXX'}
+#    end
+#
+#    it "should raise exception if procedure cannot be found based on number of arguments" do
+#      lambda { plsql.test_package2.test_procedure() }.should raise_error(/wrong number or types of arguments/i)
+#    end
+#  
+#    it "should find procedure based on types of arguments" do
+#      plsql.test_package2.test_procedure(111, nil).should == {:p_result => '111'}
+#    end
+#
+#    it "should find procedure based on names of named arguments" do
+#      plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
+#    end
+#
+#    it "should find matching procedure based on partial list of named arguments" do
+#      plsql.test_package2.test_function(:p_string => 'xxx').should == 'xxx '
+#      plsql.test_package2.test_function(:p_number => 1).should == 2
+#    end
+
+  end
+  
+  describe "Function with input and output parameters" do
+    before(:all) do
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_copy_function(INOUT p_from varchar, OUT p_to varchar, OUT p_to_double varchar)
+        AS $$
+        BEGIN
+          p_to := p_from;
+          p_to_double := p_from || p_from;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    end
+  
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_copy_function(varchar)"
+    end
+  
+    it "should return hash of input and output parameters" do
+      plsql(:pg).test_copy_function("abc", nil, nil).should == { :p_from => "abc", :p_to => "abc", :p_to_double => "abcabc" }
+    end
+
+    it "should return hash of input and output parameters when called with named parameters" do
+      #plsql(:pg).test_copy_function(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == { :p_from => "abc", :p_to => "abc", :p_to_double => "abcabc" }
+    end
+
+    it "should substitute output parameters with nil if they are not specified" do
+      plsql(:pg).test_copy_function("abc").should == { :p_from => "abc", :p_to => "abc", :p_to_double => "abcabc" }
+    end
+
+  end
+  
+  describe "Function without parameters" do
+    before(:all) do
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_no_params()
+          RETURNS varchar
+        AS $$
+        BEGIN
+          RETURN 'dummy';
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    end
+  
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_no_params()"
+    end
+
+    it "should find function" do
+      PLSQL::Procedure.find(plsql(:pg), :test_no_params).should_not be_nil
+    end
+
+    it "should return function value" do
+      plsql(:pg).test_no_params.should == "dummy"
+    end
+
+  end
+  
+  describe "Function with CLOB parameter and return value" do
+    
+  end
+  
+  describe "Function with BLOB parameter and return value" do
+    
+  end
+  
+  describe "Function with record parameter" do
+    
+  end
+  
+  describe "Function with boolean parameters" do
+
+    before(:all) do
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_boolean(p_boolean boolean)
+          RETURNS boolean
+        AS $$
+        BEGIN
+          RETURN p_boolean;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_boolean2(p_boolean boolean, OUT x_boolean boolean)
+        AS $$
+        BEGIN
+          x_boolean := p_boolean;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    end
+
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_boolean(boolean)"
+      plsql(:pg).execute "DROP FUNCTION test_boolean2(boolean)"
+    end
+
+    it "should accept true value and return true value" do
+      plsql(:pg).test_boolean(true).should == true
+    end
+
+    it "should accept false value and return false value" do
+      plsql(:pg).test_boolean(false).should == false
+    end
+
+    it "should accept nil value and return nil value" do
+      plsql(:pg).test_boolean(nil).should be_nil
+    end
+
+    it "should accept true value and assign true value to output parameter" do
+      plsql(:pg).test_boolean2(true, nil).should == {:x_boolean => true}
+    end
+
+    it "should accept false value and assign false value to output parameter" do
+      plsql(:pg).test_boolean2(false, nil).should == {:x_boolean => false}
+    end
+
+    it "should accept nil value and assign nil value to output parameter" do
+      plsql(:pg).test_boolean2(nil, nil).should == {:x_boolean => nil}
+    end
+
+  end
+  
+  describe "Function with custom type parameter" do
+    
+  end
+  
+  describe "Function with array parameter" do
+    
+  end
+  
+  describe "Function with cursor return value or parameter" do
+    
   end
   
 end
