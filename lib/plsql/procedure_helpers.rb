@@ -28,7 +28,7 @@ module PLSQL
                   AND object_type IN ('PROCEDURE','FUNCTION')",
                   schema.schema_name, procedure.to_s.upcase))
               new(schema, procedure, nil, nil, row[0])
-              # search for synonym
+            # search for synonym
             elsif (row = schema.select_first(
                   "SELECT o.owner, o.object_name, o.object_id
                   FROM all_synonyms s, all_objects o
@@ -58,11 +58,11 @@ module PLSQL
             nil
           end
         when :postgres
-          if (row = schema.select_first(
+          if (schema.select_first(
                 "SELECT specific_name FROM information_schema.routines
                 WHERE UPPER(routine_schema) = '#{override_schema_name || schema.schema_name}'
                 AND UPPER(routine_name) = '#{procedure.to_s.upcase}'"))
-            new(schema, procedure, nil, override_schema_name, row[0])
+            new(schema, procedure, nil, override_schema_name, nil)
           end
         end
       end
@@ -250,94 +250,110 @@ module PLSQL
     def function_args
       sql = <<-SQL
         CREATE OR REPLACE FUNCTION function_args(
-          IN funcname CHARACTER VARYING,
-          IN schema CHARACTER VARYING,
-          OUT overload INTEGER,
-          OUT pos INTEGER,
-          OUT direction CHARACTER VARYING,
-          OUT argname CHARACTER VARYING,
-          OUT datatype CHARACTER VARYING,
-          OUT typeowner CHARACTER VARYING,
-          OUT typename CHARACTER VARYING)
+          IN funcname character varying,
+          IN schema character varying,
+          OUT overload integer,
+          OUT pos integer,
+          OUT direction character varying,
+          OUT argname character varying,
+          OUT datatype character varying,
+          OUT typeowner character varying,
+          OUT typename character varying)
         RETURNS SETOF RECORD AS $$DECLARE
 
-        rettype CHARACTER VARYING;
+        procids oid[];
+        rettype character varying;
         argtypes oidvector;
-        allargtypes OID[];
+        allargtypes oid[];
         argmodes "char"[];
         argnames text[];
-        argidx INTEGER;
-        mini INTEGER;
-        maxi INTEGER;
+        argidx integer;
+        mini integer;
+        maxi integer;
 
         BEGIN
-
-          /* get object ID of function */
-          SELECT INTO rettype, argtypes, allargtypes, argmodes, argnames
-          CASE
-            WHEN pg_proc.proretset
-            THEN 'setof ' || pg_catalog.format_type(pg_proc.prorettype, NULL)
-          ELSE pg_catalog.format_type(pg_proc.prorettype, NULL) END,
-          pg_proc.proargtypes,
-          pg_proc.proallargtypes,
-          pg_proc.proargmodes,
-          pg_proc.proargnames
+          
+          /* get all function ids with the same name */
+          SELECT array(SELECT pg_proc.oid
           FROM pg_catalog.pg_proc
           JOIN pg_catalog.pg_namespace
           ON (pg_proc.pronamespace = pg_namespace.oid)
-          WHERE pg_proc.prorettype <> 'pg_catalog.cstring'::pg_catalog.regtype
-          AND (pg_proc.proargtypes[0] IS NULL
-               OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
-          AND NOT pg_proc.proisagg
-          AND pg_proc.proname || '_' || CAST(pg_proc.oid AS text) = funcname
+          WHERE pg_catalog.pg_function_is_visible(pg_proc.oid)
+          AND upper(pg_proc.proname) = funcname
           AND upper(pg_namespace.nspname) = schema
-          AND pg_catalog.pg_function_is_visible(pg_proc.oid);
+          ORDER BY pg_proc.oid) INTO procids;
 
-          /* bail out if not found */
-          IF NOT FOUND THEN
+          /* exit if function not found */
+          IF array_dims(procids) IS NULL THEN
             RETURN;
           END IF;
 
-          pos = -1;
+          /* for each function definition with the same name do */
+          FOR i IN array_lower(procids, 1) .. array_upper(procids, 1) LOOP
+          
+            SELECT INTO rettype, argtypes, allargtypes, argmodes, argnames
+            CASE WHEN pg_proc.proretset THEN 'SETOF ' || pg_catalog.format_type(pg_proc.prorettype, NULL)
+            ELSE pg_catalog.format_type(pg_proc.prorettype, NULL) END,
+            pg_proc.proargtypes,
+            pg_proc.proallargtypes,
+            pg_proc.proargmodes,
+            pg_proc.proargnames
+            FROM pg_catalog.pg_proc
+            WHERE pg_proc.prorettype <> 'pg_catalog.cstring'::pg_catalog.regtype
+            AND (pg_proc.proargtypes[0] IS NULL OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
+            AND NOT pg_proc.proisagg
+            AND pg_proc.oid  = procids[i];
 
-          /* return a row for the return value if there are no OUT parameters */
-          IF allargtypes IS NULL THEN
-            pos = 0;
-            direction = 'OUT';
-            argname = NULL;
-            datatype = upper(rettype);
-            RETURN NEXT;
-          END IF;
-
-          /* unfortunately allargtypes is NULL if there are no OUT parameters */
-          IF allargtypes IS NULL THEN
-            mini = array_lower(argtypes, 1);
-            maxi = array_upper(argtypes, 1);
-          ELSE
-            mini = array_lower(allargtypes, 1);
-            maxi = array_upper(allargtypes, 1);
-          END IF;
-          IF maxi < mini THEN RETURN; END IF;
-
-          /* loop all the arguments */
-          FOR i IN mini .. maxi LOOP
-            pos = pos + 1;
-            argidx = i - mini + 1;
-            IF argnames IS NULL THEN
-              argname = NULL;
-            ELSE
-              argname = argnames[argidx];
+            IF array_upper(procids, 1) > 1 THEN
+              overload := i;
             END IF;
+
+            pos := -1;
+
+            /* return a row for the return value if there are no OUT parameters */
             IF allargtypes IS NULL THEN
-              direction = 'IN';
-              datatype = upper(pg_catalog.format_type(argtypes[i], NULL));
-            ELSE
-              direction = CASE WHEN argmodes[i] = 'i' THEN 'IN'
-                WHEN argmodes[i] = 'o' THEN 'OUT'
-                WHEN argmodes[i] = 'b' THEN 'IN/OUT' END;
-              datatype = upper(pg_catalog.format_type(allargtypes[i], NULL));
+              pos := 0;
+              direction := 'OUT';
+              argname := NULL;
+              datatype := upper(rettype);
+              RETURN NEXT;
             END IF;
-            RETURN NEXT;
+
+            /* allargtypes is NULL if there are no OUT parameters */
+            IF allargtypes IS NULL THEN
+              mini = array_lower(argtypes, 1);
+              maxi = array_upper(argtypes, 1);
+            ELSE
+              mini = array_lower(allargtypes, 1);
+              maxi = array_upper(allargtypes, 1);
+            END IF;
+            IF maxi < mini THEN RETURN; END IF;
+
+            /* for each argument do */
+            FOR j IN mini .. maxi LOOP
+              pos = pos + 1;
+              argidx = j - mini + 1;
+
+              IF argnames IS NULL THEN
+                argname = NULL;
+              ELSE
+                argname = argnames[argidx];
+              END IF;
+
+              IF allargtypes IS NULL THEN
+                direction = 'IN';
+                datatype = upper(pg_catalog.format_type(argtypes[j], NULL));
+              ELSE
+                direction = CASE WHEN argmodes[j] = 'i' THEN 'IN'
+                  WHEN argmodes[j] = 'o' THEN 'OUT'
+                  WHEN argmodes[j] = 'b' THEN 'IN/OUT' END;
+                datatype = upper(pg_catalog.format_type(allargtypes[j], NULL));
+              END IF;
+
+              RETURN NEXT;
+
+            END LOOP;
+
           END LOOP;
 
           RETURN;
@@ -369,13 +385,13 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
       
-      @schema.select_all("SELECT (function_args('#{@object_id}', '#{@schema_name}')).*") do |r|
+      @schema.select_all("SELECT (function_args('#{@procedure}', '#{@schema_name}')).*") do |r|
       
         overload, position, in_out, argument_name, data_type, type_owner, type_name = r
         
         data_level ||= 0
         
-        @overloaded ||= false
+        @overloaded ||= !overload.nil?
         
         # if not overloaded then store arguments at key 0
         overload ||= 0

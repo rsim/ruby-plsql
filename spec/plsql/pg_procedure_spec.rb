@@ -235,6 +235,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should return hash with output parameters when called with named parameters" do
+      pending "Need to implement this."
       #plsql(:pg).test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
@@ -243,6 +244,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should substitute named output parameters with nil if they are not specified" do
+      pending "Need to implement this."
       #plsql(:pg).test_copy(:p_from => "abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
     end
 
@@ -262,21 +264,30 @@ describe "Parameter type mapping /" do
       SQL
       
       plsql(:pg).execute <<-SQL
-        CREATE OR REPLACE FUNCTION test_function(p_string varchar, OUT p_result varchar)
+        CREATE OR REPLACE FUNCTION test_function(p_string varchar, p_string2 varchar)
+          RETURNS varchar
         AS $$
         BEGIN
-          p_result := upper(p_string);
+          RETURN p_string || p_string2;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function(p_number numeric, OUT p_result varchar)
+        AS $$
+        BEGIN
+          p_result := trim(to_char(p_number, '999'));
           RETURN;
         END;
         $$ LANGUAGE 'plpgsql';
       SQL
       
       plsql(:pg).execute <<-SQL
-      
-        CREATE OR REPLACE FUNCTION test_function(p_number numeric, OUT p_result varchar)
+        CREATE OR REPLACE FUNCTION test_function(p_number numeric, p_number2 numeric, OUT p_result numeric)
         AS $$
         BEGIN
-          p_result := lower(to_char(p_number, '999'));
+          p_result := p_number + p_number2;
           RETURN;
         END;
         $$ LANGUAGE 'plpgsql';
@@ -291,13 +302,37 @@ describe "Parameter type mapping /" do
         END;
         $$ LANGUAGE 'plpgsql';
       SQL
+      
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function3(p_string varchar, p_string2 varchar DEFAULT ' ')
+          RETURNS varchar
+        AS $$
+        BEGIN
+          RETURN p_string || p_string2;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_function3(p_number numeric, p_number2 numeric, OUT p_result numeric)
+        AS $$
+        BEGIN
+          p_result := p_number + p_number2;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
 
     end
   
     after(:all) do
       plsql(:pg).execute "DROP FUNCTION test_function(varchar)"
+      plsql(:pg).execute "DROP FUNCTION test_function(varchar, varchar)"
       plsql(:pg).execute "DROP FUNCTION test_function(numeric)"
+      plsql(:pg).execute "DROP FUNCTION test_function(numeric, numeric)"
       plsql(:pg).execute "DROP FUNCTION test_function2(varchar)"
+      plsql(:pg).execute "DROP FUNCTION test_function3(varchar, varchar)"
+      plsql(:pg).execute "DROP FUNCTION test_function3(numeric, numeric)"
     end
 
     it "should identify overloaded function definition" do
@@ -312,32 +347,36 @@ describe "Parameter type mapping /" do
       @procedure.should_not be_overloaded
     end
 
-#    it "should execute correct procedures based on number of arguments and return correct value" do
-#      plsql.test_package2.test_procedure('xxx').should == 'XXX'
-#      plsql.test_package2.test_procedure('xxx', nil).should == {:p_result => 'XXX'}
-#    end
-#
-#    it "should execute correct procedures based on number of named arguments and return correct value" do
-#      plsql.test_package2.test_procedure(:p_string => 'xxx').should == 'XXX'
-#      plsql.test_package2.test_procedure(:p_string => 'xxx', :p_result => nil).should == {:p_result => 'XXX'}
-#    end
-#
-#    it "should raise exception if procedure cannot be found based on number of arguments" do
-#      lambda { plsql.test_package2.test_procedure() }.should raise_error(/wrong number or types of arguments/i)
-#    end
-#  
-#    it "should find procedure based on types of arguments" do
-#      plsql.test_package2.test_procedure(111, nil).should == {:p_result => '111'}
-#    end
-#
-#    it "should find procedure based on names of named arguments" do
-#      plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
-#    end
-#
-#    it "should find matching procedure based on partial list of named arguments" do
-#      plsql.test_package2.test_function(:p_string => 'xxx').should == 'xxx '
-#      plsql.test_package2.test_function(:p_number => 1).should == 2
-#    end
+    it "should execute correct functions based on number of arguments and return correct value" do
+      plsql(:pg).test_function('xxx').should == 'XXX'
+      plsql(:pg).test_function('xxx', 'xxx').should == "xxxxxx"
+    end
+
+    it "should execute correct functions based on number of named arguments and return correct value" do
+      plsql(:pg).test_function(:p_string => 'xxx').should == 'XXX'
+      plsql(:pg).test_function(:p_string => 'xxx', :p_string2 => 'xxx').should == 'xxxxxx'
+    end
+
+    it "should raise exception if procedure cannot be found based on number of arguments" do
+      lambda { plsql(:pg).test_function }.should raise_error(/no function matches the given name and argument types/i)
+    end
+  
+    it "should find procedure based on types of arguments" do
+      plsql(:pg).test_function(111).should == {:p_result => '111'}
+      plsql(:pg).test_function(111, 111).should == {:p_result => 222}
+    end
+
+    it "should find function based on names of named arguments" do
+      pending "Need to implement this."
+      #plsql(:pg).test_function(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
+    end
+
+    it "should find matching procedure based on partial list of named arguments" do
+      plsql(:pg).test_function3(:p_string => 'xxx').should == 'xxx '
+      plsql(:pg).test_function3(:p_string => 'xxx', :p_string2 => 'xxx').should == 'xxxxxx'
+      pending "Make the following test work."
+      #plsql(:pg).test_function3(:p_number => 1).should == 2
+    end
 
   end
   
@@ -364,6 +403,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should return hash of input and output parameters when called with named parameters" do
+      pending "Need to implement this."
       #plsql(:pg).test_copy_function(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == { :p_from => "abc", :p_to => "abc", :p_to_double => "abcabc" }
     end
 

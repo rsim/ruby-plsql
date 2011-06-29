@@ -433,9 +433,9 @@ module PLSQL
   module PGProcedureCallHelper
     
     MATCHING_TYPES = {
-      :integer => ['INTEGER'],
+      :integer => ['INTEGER', 'NUMERIC'],
       :decimal => ['NUMERIC'],
-      :string => ['VARCHAR', 'CHAR', 'TEXT'],
+      :string => ['TEXT', 'CHARACTER VARYING', 'VARCHAR', 'CHAR'],
       :date => ['DATE'],
       :time => ['DATE', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITHOUT TIME ZONE'],
       :boolean => ['BOOLEAN'],
