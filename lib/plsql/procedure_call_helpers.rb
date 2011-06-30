@@ -132,9 +132,8 @@ module PLSQL
           args += [nil] * (argument_count - args.size)
         end
         # Add passed parameters to procedure call in sequence
-        @call_sql << (0...args.size).map do |i|
+        @call_sql << args.each_with_index.map do |value, i|
           arg = argument_list[i]
-          value = args[i]
           add_argument(arg, value)
         end.join(', ')
       end
@@ -497,17 +496,19 @@ module PLSQL
       @call_sql = ""
       @return_vars = []
       @return_vars_metadata = {}
+      @params = []
       
       if return_metadata
         add_return
-        @call_sql << "?= " if defined?(JRuby)
+        @call_sql << '?= ' if defined?(JRuby)
+        @params += ['$1::void'] unless defined?(JRuby)
       end
       
-      @call_sql << (defined?(JRuby)? "call ": "SELECT ")
+      @call_sql << (defined?(JRuby)? 'call ': 'SELECT * FROM ')
       @call_sql << "#{schema_name}." if schema_name
       @call_sql << "#{package_name}." if package_name
       @call_sql << "#{procedure_name}("
-
+      
       @bind_values = {}
       @bind_metadata = {}
 
@@ -518,27 +519,28 @@ module PLSQL
             args[0][arg] = nil
           end
         end
-        @call_sql << args[0].map do |arg, value|
+        @params += args[0].map do |arg, value|
           "#{arg} := " << add_argument(arg, value)
-        end.join(', ')
+        end
       else
         argument_count = argument_list.size
         raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
         if args.size < argument_count && (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
           args += [nil] * (argument_count - args.size)
         end
-        @call_sql << (0...args.size).map do |i|
+        
+        @params += args.each_with_index.map do |value, i|
           arg = argument_list[i]
-          value = args[i]
           add_argument(arg, value)
-        end.join(', ')
+        end
       end
+      @call_sql << @params.join(', ')
+      @call_sql << ')'
+      @call_sql << ' AS return' unless defined?(JRuby)
       
-      @call_sql << ")"
-      
-      @sql << "{" if defined?(JRuby)
+      @sql << '{' if defined?(JRuby)
       @sql << @call_sql
-      @sql << "}" if defined?(JRuby)
+      @sql << '}' if defined?(JRuby)
     end
     
     def add_argument(argument, value, argument_metadata=nil)
@@ -546,9 +548,8 @@ module PLSQL
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
       @bind_values[argument] = value
       @bind_metadata[argument] = argument_metadata
-      return_str = defined?(JRuby)? "?": "$#{argument_metadata[:position]}"
-      return_str << "::#{argument_metadata[:data_type]}" unless argument_metadata[:in_out] == "OUT"
-      return_str
+      return_str = defined?(JRuby)? '?': "$#{argument_metadata[:position] + 1}"
+      return_str << '::' << (argument_metadata[:in_out] == 'OUT'? 'void': argument_metadata[:data_type]) && return_str
     end
     
     def add_return_variable(argument, argument_metadata, is_return_value=false)
@@ -557,7 +558,7 @@ module PLSQL
     end
     
     def return_variable_value(argument, argument_metadata)
-      @cursor[argument_metadata[:position]]
+      defined?(JRuby)? @cursor[argument_metadata[:position]]: @cursor[argument.to_s]
     end
     
   end

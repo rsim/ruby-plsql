@@ -117,6 +117,8 @@ module PLSQL
     def cursor_from_query(sql, bindvars=[], *)
       Cursor.new_from_query(self, sql, bindvars)
     end
+    
+    module PGBoolean end;
 
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
@@ -125,6 +127,8 @@ module PLSQL
         [String, data_length || 32767]
       when "TEXT"
         [String, nil]
+      when "BOOLEAN"
+        [PGBoolean, nil]
       when "NUMERIC"
         [BigDecimal, nil]
       when "INTEGER"
@@ -158,21 +162,29 @@ module PLSQL
     }
     
     def ruby_value_to_db_value(value, type = nil)
-      {:value => value, :format => 0, :type =>
-          (DATA_TYPE_TO_OID[type] ||
-            case value.class.to_s.to_sym
-          when :Fixnum
-            DATA_TYPE_TO_OID[:integer]
-          when :Bignum, :BigDecimal, :Float
-            DATA_TYPE_TO_OID[:numeric]
-          when :String
-            DATA_TYPE_TO_OID[:text]
-          when :Time, :Date, :DateTime
-            DATA_TYPE_TO_OID[:timestamp_tz]
+      type ||= value.class
+      case type.to_s.to_sym
+      when :Fixnum
+        {:value => value, :type => DATA_TYPE_TO_OID[:integer]}
+      when :Bignum, :BigDecimal, :Float
+        {:value =>
+            case value
+          when TrueClass
+            1
+          when FalseClass
+            0
           else
-            DATA_TYPE_TO_OID[:text]
-          end)
-      }
+            value
+          end, :type => DATA_TYPE_TO_OID[:numeric]}
+      when :PGBoolean
+        {:value => value, :type => DATA_TYPE_TO_OID[:boolean]}
+      when :String
+        {:value => value, :type => DATA_TYPE_TO_OID[:text]}
+      when :Time, :Date, :DateTime
+        {:value => value, :type => DATA_TYPE_TO_OID[:timestamp_tz]}
+      else
+        {:value => value, type => DATA_TYPE_TO_OID[:text]}
+      end.merge(:format => 0) unless value.nil?
     end
     
     def db_value_to_ruby_value(value)
@@ -181,10 +193,10 @@ module PLSQL
       when :integer, :bigint, :numeric
         # return BigDecimal instead of Float to avoid rounding errors
         value[0].to_s == (num_to_i = value[0].to_i).to_s ? num_to_i : (value[0].is_a?(BigDecimal) ? value[0] : BigDecimal.new(value[0].to_s))
-      when :'time with time zone', :'time without time zone'
+      when :boolean
+        value[0] == 't'? true: false
+      when :'time with time zone', :'time without time zone', :'timestamp with time zone', :'timestamp without time zone'
         Time.parse(value[0])
-      when :'timestamp with time zone', :'timestamp without time zone'
-        DateTime.parse(value[0])
       when :date
         Date.parse(value[0])
       else
