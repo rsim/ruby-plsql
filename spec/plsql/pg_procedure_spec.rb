@@ -450,6 +450,98 @@ describe "Parameter type mapping /" do
   
   describe "Function with record parameter" do
     
+    before(:all) do
+      plsql(:pg).execute "DROP TABLE test_employees" rescue nil
+      plsql(:pg).execute <<-SQL
+        CREATE TABLE test_employees (
+          employee_id   integer,
+          first_name    varchar,
+          last_name     varchar,
+          hire_date     timestamp with time zone
+        )
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_full_name(p_employee test_employees)
+          RETURNS varchar
+        AS $$
+        BEGIN
+          RETURN p_employee.first_name || ' ' || p_employee.last_name;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_employee_record(p_employee test_employees)
+          RETURNS test_employees
+        AS $$
+        BEGIN
+          RETURN p_employee;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_employee_record2(p_employee test_employees, INOUT x_employee test_employees)
+          RETURNS test_employees
+        AS $$
+        BEGIN
+          x_employee.employee_id := p_employee.employee_id;
+          x_employee.first_name := p_employee.first_name;
+          x_employee.last_name := p_employee.last_name;
+          x_employee.hire_date := p_employee.hire_date;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      @p_employee = {
+        :employee_id => 1,
+        :first_name => 'First',
+        :last_name => 'Last',
+        :hire_date => Time.local(2000,01,31)
+      }
+      @p_employee2 = {
+        'employee_id' => 1,
+        'FIRST_NAME' => 'Second',
+        'last_name' => 'Last',
+        'hire_date' => Time.local(2000,01,31)
+      }
+    end
+    
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_full_name(test_employees)"
+      plsql(:pg).execute "DROP FUNCTION test_employee_record(test_employees)"
+      plsql(:pg).execute "DROP FUNCTION test_employee_record2(test_employees, test_employees)"
+      plsql(:pg).execute "DROP TABLE test_employees"
+    end
+    
+    it "should find existing function" do
+      PLSQL::Procedure.find(plsql(:pg), :test_full_name).should_not be_nil
+    end
+
+    it "should execute function with named parameter and return correct value" do
+      plsql(:pg).test_full_name(:p_employee => @p_employee).should == 'First Last'
+    end
+
+    it "should execute function with sequential parameter and return correct value" do
+      plsql(:pg).test_full_name(@p_employee).should == 'First Last'
+    end
+
+    it "should execute function with Hash parameter using strings as keys" do
+      plsql(:pg).test_full_name(@p_employee2).should == 'Second Last'
+    end
+
+    it "should raise error if wrong field name is passed for record parameter" do
+      lambda do
+        plsql(:pg).test_full_name(@p_employee.merge(:xxx => 'xxx')).should == 'Second Last'
+      end.should raise_error(ArgumentError)
+    end
+
+    it "should return record return value" do
+      plsql(:pg).test_employee_record(@p_employee).should == @p_employee
+    end
+
+    it "should return record return value and output record parameter value" do
+      plsql(:pg).test_employee_record2(@p_employee, @p_employee2).should == [@p_employee, {:x_employee => @p_employee}]
+    end
+    
   end
   
   describe "Function with boolean parameters" do

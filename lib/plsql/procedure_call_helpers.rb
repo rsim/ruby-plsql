@@ -492,8 +492,8 @@ module PLSQL
     end
     
     def construct_sql(args)
-      @sql = ""
-      @call_sql = ""
+      @sql = ''
+      @call_sql = ''
       @return_vars = []
       @return_vars_metadata = {}
       @params = []
@@ -513,7 +513,7 @@ module PLSQL
       @bind_metadata = {}
 
       if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
-          !(argument_list.size == 1 && (arguments[(only_argument = argument_list[0])][:data_type]) == "RECORD" && args[0].keys != [only_argument])
+          !(argument_list.size == 1 && (arguments[(only_argument = argument_list[0])][:data_type]) == 'RECORD' && args[0].keys != [only_argument])
         arguments.each do |arg, metadata|
           if !args[0].has_key?(arg) && metadata[:in_out] == 'OUT'
             args[0][arg] = nil
@@ -524,7 +524,7 @@ module PLSQL
         end
       else
         argument_count = argument_list.size
-        raise ArgumentError, "Too many arguments passed to PL/SQL procedure" if args.size > argument_count
+        raise ArgumentError, 'Too many arguments passed to PL/SQL procedure' if args.size > argument_count
         if args.size < argument_count && (args.size...argument_count).all?{|i| arguments[argument_list[i]][:in_out] == 'OUT'}
           args += [nil] * (argument_count - args.size)
         end
@@ -543,16 +543,32 @@ module PLSQL
       @sql << '}' if defined?(JRuby)
     end
     
-    def add_argument(argument, value, argument_metadata=nil)
+    def add_argument(argument, value, argument_metadata = nil)
       argument_metadata ||= arguments[argument]
       raise ArgumentError, "Wrong argument #{argument.inspect} passed to PL/SQL procedure" unless argument_metadata
-      @bind_values[argument] = value
-      @bind_metadata[argument] = argument_metadata
-      return_str = defined?(JRuby)? '?': "$#{argument_metadata[:position] + 1}"
-      return_str << '::' << (argument_metadata[:in_out] == 'OUT'? 'void': argument_metadata[:data_type]) && return_str
+      case argument_metadata[:data_type]
+      when 'RECORD'
+        add_record(argument, value, argument_metadata)
+      else
+        @bind_values[argument] = value
+        @bind_metadata[argument] = argument_metadata
+        sql = defined?(JRuby)? '?': "$#{argument_metadata[:position] + 1}"
+        sql << '::' << (argument_metadata[:in_out] == 'OUT'? 'void': (argument_metadata[:data_type]))
+      end
     end
     
-    def add_return_variable(argument, argument_metadata, is_return_value=false)
+    def add_record(argument, record_value, argument_metadata)
+      sql = 'ROW(' << (record_value||{}).map do |key, value|
+        field = key.is_a?(Symbol) ? key : key.to_s.downcase.to_sym
+        metadata = argument_metadata[:fields][field]
+        raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
+        bind_variable = :"#{argument}_f#{metadata[:position]}"
+        add_argument(bind_variable, value, metadata)
+      end.join(', ')
+      sql << ')'
+    end
+    
+    def add_return_variable(argument, argument_metadata, is_return_value = false)
       @return_vars << argument
       @return_vars_metadata[argument] = argument_metadata
     end

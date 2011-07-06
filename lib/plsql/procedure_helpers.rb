@@ -246,30 +246,132 @@ module PLSQL
     attr_reader :arguments, :argument_list, :out_list, :return
     attr_reader :schema, :schema_name, :package, :procedure
     
-    # Function definition adapted from: http://www.alberton.info/postgresql_meta_info.html
+    # Function definitions adapted from: http://www.alberton.info/postgresql_meta_info.html
     def function_args
       sql = <<-SQL
+      
+        CREATE OR REPLACE FUNCTION datatype(
+          IN typename character varying,
+          IN schema character varying)
+        RETURNS character varying AS $$
+          SELECT types.data_type FROM (SELECT n.nspname AS type_schema, t.typname AS type_name,
+          CASE WHEN t.typrelid = 0 THEN 'ENUM' ELSE 'RECORD' END data_type
+          FROM pg_catalog.pg_type t
+          LEFT JOIN pg_catalog.pg_namespace n
+          ON (n.oid = t.typnamespace)
+          WHERE (t.typrelid = 0 OR 
+            (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
+          AND NOT EXISTS
+            (SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+          UNION ALL
+          SELECT pg_tables.schemaname AS type_schema, pg_tables.tablename AS type_name,
+          'RECORD' data_type
+          FROM pg_catalog.pg_tables) types
+          WHERE upper(types.type_name) = $1
+          AND upper(types.type_schema) = $2
+          AND pg_type_is_visible((types.type_schema || '.' || types.type_name)::regtype);
+        $$ LANGUAGE 'sql' STABLE STRICT SECURITY INVOKER;
+
+
+
+        CREATE OR REPLACE FUNCTION subtypes(
+          IN typename character varying,
+          IN schema character varying,
+          INOUT datalevel integer,
+          OUT pos integer,
+          OUT subtype_name character varying,
+          OUT subtype_datatype character varying,
+          OUT subtype_typename character varying)
+        RETURNS SETOF record AS $$
+        DECLARE
+          tmp_datalevel integer;
+          tmp_position integer;
+          subtype_info record;
+          nested_subtype_info record;
+          tmp_typename character varying;
+        BEGIN
+          tmp_datalevel := datalevel;
+          tmp_position := 0;
+          FOR subtype_info IN
+          (SELECT upper(attributes.attribute_name) AS name,
+          CASE WHEN attributes.data_type = 'USER-DEFINED'
+            THEN upper(attributes.attribute_udt_name)
+            ELSE upper(attributes.data_type)
+          END typename
+          FROM information_schema.attributes
+          WHERE upper(attributes.udt_name) = typename
+          AND upper(attributes.udt_schema) = schema
+          ORDER BY attributes.ordinal_position)
+          UNION ALL
+          (SELECT upper(columns.column_name) AS name,
+          upper(columns.data_type) AS typename
+          FROM information_schema.columns
+          WHERE upper(columns.table_name) = typename
+          AND upper(columns.table_schema) = schema
+          ORDER BY columns.ordinal_position)
+          LOOP
+            tmp_position := tmp_position + 1;
+            pos := tmp_position;
+            subtype_name := subtype_info.name;
+            tmp_typename := subtype_info.typename;
+            subtype_datatype := datatype(tmp_typename, schema);
+
+            /* if subtype-datatype is complex type */
+            IF subtype_datatype IS NOT NULL THEN
+              subtype_typename := tmp_typename;
+              RETURN NEXT;
+
+              /* call subtypes recursively for nested subtypes */
+              FOR nested_subtype_info IN SELECT * FROM subtypes(subtype_typename, schema, datalevel + 1) LOOP
+                datalevel := nested_subtype_info.datalevel;
+                pos := nested_subtype_info.pos;
+                subtype_name := nested_subtype_info.subtype_name;
+                subtype_datatype := nested_subtype_info.subtype_datatype;
+                subtype_typename := nested_subtype_info.subtype_typename;
+                RETURN NEXT;
+                datalevel := tmp_datalevel;
+              END LOOP;
+
+            ELSE
+              subtype_datatype := tmp_typename;
+              RETURN NEXT;
+            END IF;
+          END LOOP;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql' STABLE STRICT SECURITY INVOKER;
+
+
+
         CREATE OR REPLACE FUNCTION function_args(
           IN funcname character varying,
           IN schema character varying,
           OUT overload integer,
+          OUT datalevel integer,
           OUT pos integer,
           OUT direction character varying,
           OUT argname character varying,
           OUT datatype character varying,
           OUT typeowner character varying,
           OUT typename character varying)
-        RETURNS SETOF RECORD AS $$DECLARE
+        RETURNS SETOF record AS $$
 
-        procids oid[];
-        rettype character varying;
-        argtypes oidvector;
-        allargtypes oid[];
-        argmodes "char"[];
-        argnames text[];
-        argidx integer;
-        mini integer;
-        maxi integer;
+        DECLARE
+          procids oid[];
+          rettype character varying;
+          argtypes oidvector;
+          allargtypes oid[];
+          argmodes "char"[];
+          argnames text[];
+
+          typeid oid;
+          tmp_typename character varying;
+          subtype_info record;
+
+          argidx integer;
+          mini integer;
+          maxi integer;
 
         BEGIN
           
@@ -291,6 +393,7 @@ module PLSQL
           /* for each function definition with the same name do */
           FOR i IN array_lower(procids, 1) .. array_upper(procids, 1) LOOP
           
+            /* select argument type information into arrays */
             SELECT INTO rettype, argtypes, allargtypes, argmodes, argnames
             CASE WHEN pg_proc.proretset THEN 'SETOF ' || pg_catalog.format_type(pg_proc.prorettype, NULL)
             ELSE pg_catalog.format_type(pg_proc.prorettype, NULL) END,
@@ -313,9 +416,11 @@ module PLSQL
             /* return a row for the return value if there are no OUT parameters */
             IF allargtypes IS NULL THEN
               pos := 0;
+              datalevel := 0;
               direction := 'OUT';
               argname := NULL;
               datatype := upper(rettype);
+              typename := NULL;
               RETURN NEXT;
             END IF;
 
@@ -342,33 +447,58 @@ module PLSQL
 
               IF allargtypes IS NULL THEN
                 direction = 'IN';
-                datatype = upper(pg_catalog.format_type(argtypes[j], NULL));
+                typeid = argtypes[j];
               ELSE
                 direction = CASE WHEN argmodes[j] = 'i' THEN 'IN'
                   WHEN argmodes[j] = 'o' THEN 'OUT'
                   WHEN argmodes[j] = 'b' THEN 'IN/OUT' END;
-                datatype = upper(pg_catalog.format_type(allargtypes[j], NULL));
+                typeid = allargtypes[j];
               END IF;
 
-              RETURN NEXT;
+              datalevel := 0;
+              tmp_typename := upper(pg_catalog.format_type(typeid, NULL));
+              datatype := datatype(tmp_typename, schema);
+              typename := NULL;
+
+              /* if argument datatype is complex type */
+              IF datatype IS NOT NULL THEN
+                typename := tmp_typename;
+
+                RETURN NEXT;
+                
+                /* loop over all subtypes and return record for each */
+                FOR subtype_info IN SELECT * from subtypes(typename, schema, 1) LOOP
+                  datalevel := subtype_info.datalevel;
+                  pos := subtype_info.pos;
+                  argname := subtype_info.subtype_name;
+                  datatype := subtype_info.subtype_datatype;
+                  typename := subtype_info.subtype_typename;
+                  RETURN NEXT;
+                END LOOP;
+
+              ELSE
+                datatype := tmp_typename;
+                RETURN NEXT;
+              END IF;
 
             END LOOP;
 
           END LOOP;
 
           RETURN;
-        END;$$ LANGUAGE plpgsql STABLE STRICT SECURITY INVOKER;
+        END;$$ LANGUAGE 'plpgsql' STABLE STRICT SECURITY INVOKER;
 
         COMMENT ON FUNCTION function_args(character varying, character varying)
         IS $$For a function identifier and schema, this procedure selects for each
         argument the following data:
         - the overload-identifier if the function is overloaded (NULL if it isn't)
+        - datalevel nested level of subtype (0 if top-level type)
         - position in the argument list (0 for the return value)
         - direction 'IN', 'OUT', or 'IN/OUT'
         - name (NULL if not defined)
         - data type
         - owner of the data type
-        - name of user-defined type (NULL if built-in)$$;
+        - name of complex type (NULL if simple-type)$$;
       SQL
       
       @schema.execute sql
@@ -387,7 +517,7 @@ module PLSQL
       
       @schema.select_all("SELECT (function_args('#{@procedure}', '#{@schema_name}')).*") do |r|
       
-        overload, position, in_out, argument_name, data_type, type_owner, type_name = r
+        overload, data_level, position, in_out, argument_name, data_type, type_owner, type_name = r
         
         data_level ||= 0
         
@@ -432,7 +562,7 @@ module PLSQL
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'RECORD'
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-            when 'ARRAY', 'REF CURSOR'
+            when 'ARRAY'
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
@@ -450,7 +580,7 @@ module PLSQL
       end
     end
     
-    PLSQL_COMPOSITE_TYPES = ['RECORD', 'ARRAY', 'REF CURSOR'].freeze
+    PLSQL_COMPOSITE_TYPES = ['RECORD', 'ARRAY'].freeze
     def composite_type?(data_type) #:nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end
