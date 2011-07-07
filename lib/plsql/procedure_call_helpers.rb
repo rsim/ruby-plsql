@@ -574,7 +574,16 @@ module PLSQL
     end
     
     def return_variable_value(argument, argument_metadata)
-      defined?(JRuby)? @cursor[argument_metadata[:position]]: @cursor[argument.to_s]
+      case argument_metadata[:data_type]
+      when 'RECORD'
+        return_value = {}
+        argument_metadata[:fields].each do |field, metadata|
+          return_value[field] = defined?(JRuby)? @cursor[metadata[:position]]: @cursor[field.to_s]
+        end
+        return_value
+      else
+        defined?(JRuby)? @cursor[argument_metadata[:position]]: @cursor[argument.to_s]
+      end
     end
     
   end

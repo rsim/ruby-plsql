@@ -539,7 +539,7 @@ describe "Parameter type mapping /" do
     end
 
     it "should return record return value and output record parameter value" do
-      plsql(:pg).test_employee_record2(@p_employee, @p_employee2).should == [@p_employee, {:x_employee => @p_employee}]
+      plsql(:pg).test_employee_record2(@p_employee, @p_employee2).should == {:x_employee => @p_employee}
     end
     
   end

@@ -286,33 +286,35 @@ module PLSQL
         RETURNS SETOF record AS $$
         DECLARE
           tmp_datalevel integer;
-          tmp_position integer;
           subtype_info record;
           nested_subtype_info record;
           tmp_typename character varying;
         BEGIN
           tmp_datalevel := datalevel;
-          tmp_position := 0;
           FOR subtype_info IN
           (SELECT upper(attributes.attribute_name) AS name,
           CASE WHEN attributes.data_type = 'USER-DEFINED'
             THEN upper(attributes.attribute_udt_name)
             ELSE upper(attributes.data_type)
-          END typename
+          END typename,
+          attributes.ordinal_position AS pos
           FROM information_schema.attributes
           WHERE upper(attributes.udt_name) = typename
           AND upper(attributes.udt_schema) = schema
           ORDER BY attributes.ordinal_position)
           UNION ALL
           (SELECT upper(columns.column_name) AS name,
-          upper(columns.data_type) AS typename
+          CASE WHEN columns.data_type = 'USER-DEFINED'
+            THEN upper(columns.udt_name)
+            ELSE upper(columns.data_type)
+          END typename,
+          columns.ordinal_position AS pos
           FROM information_schema.columns
           WHERE upper(columns.table_name) = typename
           AND upper(columns.table_schema) = schema
           ORDER BY columns.ordinal_position)
           LOOP
-            tmp_position := tmp_position + 1;
-            pos := tmp_position;
+            pos := subtype_info.pos;
             subtype_name := subtype_info.name;
             tmp_typename := subtype_info.typename;
             subtype_datatype := datatype(tmp_typename, schema);
@@ -515,9 +517,11 @@ module PLSQL
       # store reference to previous level record or collection metadata
       previous_level_argument_metadata = {}
       
+      bind_position = -1
+      
       @schema.select_all("SELECT (function_args('#{@procedure}', '#{@schema_name}')).*") do |r|
       
-        overload, data_level, position, in_out, argument_name, data_type, type_owner, type_name = r
+        overload, data_level, ordinal_position, in_out, argument_name, data_type, type_owner, type_name = r
         
         data_level ||= 0
         
@@ -525,13 +529,14 @@ module PLSQL
         
         # if not overloaded then store arguments at key 0
         overload ||= 0
+        bind_position = -1 unless @arguments.has_key?(overload)
         @arguments[overload] ||= {}
         @return[overload] ||= nil
         
         sql_type_name = type_owner && "#{type_owner == 'PUBLIC' ? nil : "#{type_owner}."}#{type_name}"
         
         argument_metadata = {
-          :position => position && position.to_i,
+          :position => ordinal_position && ordinal_position.to_i,
           :data_type => data_type,
           :in_out => in_out,
           :type_owner => type_owner,
@@ -546,6 +551,8 @@ module PLSQL
             argument_metadata[:fields] = {}
           end
           previous_level_argument_metadata[data_level] = argument_metadata
+        else
+          argument_metadata[:position] = (bind_position += 1)
         end
 
         # if function has return value
