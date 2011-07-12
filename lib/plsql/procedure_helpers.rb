@@ -297,7 +297,7 @@ module PLSQL
             THEN upper(attributes.attribute_udt_name)
             ELSE upper(attributes.data_type)
           END typename,
-          attributes.ordinal_position AS pos
+          attributes.ordinal_position - 1 AS pos
           FROM information_schema.attributes
           WHERE upper(attributes.udt_name) = typename
           AND upper(attributes.udt_schema) = schema
@@ -308,7 +308,7 @@ module PLSQL
             THEN upper(columns.udt_name)
             ELSE upper(columns.data_type)
           END typename,
-          columns.ordinal_position AS pos
+          columns.ordinal_position - 1 AS pos
           FROM information_schema.columns
           WHERE upper(columns.table_name) = typename
           AND upper(columns.table_schema) = schema
@@ -350,6 +350,7 @@ module PLSQL
           IN funcname character varying,
           IN schema character varying,
           OUT overload integer,
+          OUT isreturn boolean,
           OUT datalevel integer,
           OUT pos integer,
           OUT direction character varying,
@@ -358,7 +359,7 @@ module PLSQL
           OUT typeowner character varying,
           OUT typename character varying)
         RETURNS SETOF record AS $$
-
+        
         DECLARE
           procids oid[];
           rettype character varying;
@@ -366,15 +367,16 @@ module PLSQL
           allargtypes oid[];
           argmodes "char"[];
           argnames text[];
-
+          
           typeid oid;
+          tmp_pos integer;
           tmp_typename character varying;
           subtype_info record;
-
+          
           argidx integer;
           mini integer;
           maxi integer;
-
+          
         BEGIN
           
           /* get all function ids with the same name */
@@ -386,15 +388,15 @@ module PLSQL
           AND upper(pg_proc.proname) = funcname
           AND upper(pg_namespace.nspname) = schema
           ORDER BY pg_proc.oid) INTO procids;
-
+          
           /* exit if function not found */
           IF array_dims(procids) IS NULL THEN
             RETURN;
           END IF;
-
+          
           /* for each function definition with the same name do */
           FOR i IN array_lower(procids, 1) .. array_upper(procids, 1) LOOP
-          
+            
             /* select argument type information into arrays */
             SELECT INTO rettype, argtypes, allargtypes, argmodes, argnames
             CASE WHEN pg_proc.proretset THEN 'SETOF ' || pg_catalog.format_type(pg_proc.prorettype, NULL)
@@ -408,64 +410,29 @@ module PLSQL
             AND (pg_proc.proargtypes[0] IS NULL OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
             AND NOT pg_proc.proisagg
             AND pg_proc.oid  = procids[i];
-
+            
             IF array_upper(procids, 1) > 1 THEN
               overload := i;
             END IF;
-
+            
             pos := -1;
-
+            
             /* return a row for the return value if there are no OUT parameters */
             IF allargtypes IS NULL THEN
+              isreturn := TRUE;
               pos := 0;
               datalevel := 0;
               direction := 'OUT';
               argname := NULL;
-              datatype := upper(rettype);
-              typename := NULL;
-              RETURN NEXT;
-            END IF;
-
-            /* allargtypes is NULL if there are no OUT parameters */
-            IF allargtypes IS NULL THEN
-              mini = array_lower(argtypes, 1);
-              maxi = array_upper(argtypes, 1);
-            ELSE
-              mini = array_lower(allargtypes, 1);
-              maxi = array_upper(allargtypes, 1);
-            END IF;
-            IF maxi < mini THEN RETURN; END IF;
-
-            /* for each argument do */
-            FOR j IN mini .. maxi LOOP
-              pos = pos + 1;
-              argidx = j - mini + 1;
-
-              IF argnames IS NULL THEN
-                argname = NULL;
-              ELSE
-                argname = argnames[argidx];
-              END IF;
-
-              IF allargtypes IS NULL THEN
-                direction = 'IN';
-                typeid = argtypes[j];
-              ELSE
-                direction = CASE WHEN argmodes[j] = 'i' THEN 'IN'
-                  WHEN argmodes[j] = 'o' THEN 'OUT'
-                  WHEN argmodes[j] = 'b' THEN 'IN/OUT' END;
-                typeid = allargtypes[j];
-              END IF;
-
-              datalevel := 0;
-              tmp_typename := upper(pg_catalog.format_type(typeid, NULL));
+              
+              tmp_typename := upper(rettype);
               datatype := datatype(tmp_typename, schema);
               typename := NULL;
-
+              
               /* if argument datatype is complex type */
               IF datatype IS NOT NULL THEN
                 typename := tmp_typename;
-
+                
                 RETURN NEXT;
                 
                 /* loop over all subtypes and return record for each */
@@ -477,16 +444,81 @@ module PLSQL
                   typename := subtype_info.subtype_typename;
                   RETURN NEXT;
                 END LOOP;
-
+                
+                /* reset pos variable */
+                pos := 0;
+                
               ELSE
                 datatype := tmp_typename;
                 RETURN NEXT;
               END IF;
-
+              
+            END IF;
+            
+            /* allargtypes is NULL if there are no OUT parameters */
+            IF allargtypes IS NULL THEN
+              mini = array_lower(argtypes, 1);
+              maxi = array_upper(argtypes, 1);
+            ELSE
+              mini = array_lower(allargtypes, 1);
+              maxi = array_upper(allargtypes, 1);
+            END IF;
+            IF maxi < mini THEN RETURN; END IF;
+            
+            /* for each argument do */
+            FOR j IN mini .. maxi LOOP
+              isreturn := FALSE;
+              pos = pos + 1;
+              argidx = j - mini + 1;
+              
+              IF argnames IS NULL THEN
+                argname = NULL;
+              ELSE
+                argname = argnames[argidx];
+              END IF;
+              
+              IF allargtypes IS NULL THEN
+                direction = 'IN';
+                typeid = argtypes[j];
+              ELSE
+                direction = CASE WHEN argmodes[j] = 'i' THEN 'IN'
+                  WHEN argmodes[j] = 'o' THEN 'OUT'
+                  WHEN argmodes[j] = 'b' THEN 'IN/OUT' END;
+                typeid = allargtypes[j];
+              END IF;
+              
+              datalevel := 0;
+              tmp_typename := upper(pg_catalog.format_type(typeid, NULL));
+              datatype := datatype(tmp_typename, schema);
+              typename := NULL;
+              
+              /* if argument datatype is complex type */
+              IF datatype IS NOT NULL THEN
+                typename := tmp_typename;
+                
+                RETURN NEXT;
+                
+                tmp_pos := pos;
+                /* loop over all subtypes and return record for each */
+                FOR subtype_info IN SELECT * from subtypes(typename, schema, 1) LOOP
+                  datalevel := subtype_info.datalevel;
+                  pos := subtype_info.pos;
+                  argname := subtype_info.subtype_name;
+                  datatype := subtype_info.subtype_datatype;
+                  typename := subtype_info.subtype_typename;
+                  RETURN NEXT;
+                END LOOP;
+                pos := tmp_pos;
+                
+              ELSE
+                datatype := tmp_typename;
+                RETURN NEXT;
+              END IF;
+              
             END LOOP;
-
+            
           END LOOP;
-
+          
           RETURN;
         END;$$ LANGUAGE 'plpgsql' STABLE STRICT SECURITY INVOKER;
 
@@ -494,6 +526,7 @@ module PLSQL
         IS $$For a function identifier and schema, this procedure selects for each
         argument the following data:
         - the overload-identifier if the function is overloaded (NULL if it isn't)
+        - indicates if the argument is a return value of the specified function
         - datalevel nested level of subtype (0 if top-level type)
         - position in the argument list (0 for the return value)
         - direction 'IN', 'OUT', or 'IN/OUT'
@@ -521,7 +554,7 @@ module PLSQL
       
       @schema.select_all("SELECT (function_args('#{@procedure}', '#{@schema_name}')).*") do |r|
       
-        overload, data_level, ordinal_position, in_out, argument_name, data_type, type_owner, type_name = r
+        overload, is_return, data_level, ordinal_position, in_out, argument_name, data_type, type_owner, type_name = r
         
         data_level ||= 0
         
@@ -529,6 +562,7 @@ module PLSQL
         
         # if not overloaded then store arguments at key 0
         overload ||= 0
+        # reset bind_position when switching between overloaded functions
         bind_position = -1 unless @arguments.has_key?(overload)
         @arguments[overload] ||= {}
         @return[overload] ||= nil
@@ -552,19 +586,20 @@ module PLSQL
           end
           previous_level_argument_metadata[data_level] = argument_metadata
         else
-          argument_metadata[:position] = (bind_position += 1)
+          # if argument is not a nested return argument, use bind_position
+          unless is_return && data_level > 0
+            argument_metadata[:position] = (bind_position += 1)
+          end
         end
 
         # if function has return value
         if argument_name.nil? && data_level == 0 && in_out == 'OUT'
           @return[overload] = argument_metadata
-          # if parameter
+        # if parameter
         else
           # top level parameter
           if data_level == 0
-            # sometime there are empty IN arguments in all_arguments view for procedures without arguments (e.g. for DBMS_OUTPUT.DISABLE)
             @arguments[overload][argument_name.downcase.to_sym] = argument_metadata if argument_name
-            # or lower level part of composite type
           else
             case previous_level_argument_metadata[data_level - 1][:data_type]
             when 'RECORD'

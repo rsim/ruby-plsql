@@ -500,8 +500,10 @@ module PLSQL
       
       if return_metadata
         add_return
-        @call_sql << '?= ' if defined?(JRuby)
-        @params += ['$1::void'] unless defined?(JRuby)
+        unless return_metadata[:data_type] == 'RECORD'
+          @call_sql << '?= ' if defined?(JRuby)
+          @params += ['$1::void'] unless defined?(JRuby)
+        end
       end
       
       @call_sql << (defined?(JRuby)? 'call ': 'SELECT * FROM ')
@@ -569,8 +571,19 @@ module PLSQL
     end
     
     def add_return_variable(argument, argument_metadata, is_return_value = false)
-      @return_vars << argument
-      @return_vars_metadata[argument] = argument_metadata
+      case argument_metadata[:data_type]
+      when 'RECORD'
+        argument_metadata[:fields].each do |field, metadata|
+          bind_variable = :"#{argument}_o#{metadata[:position]}"
+          @return_vars << bind_variable
+          @return_vars_metadata[bind_variable] = metadata
+        end
+      else
+        if is_return_value
+          @return_vars << argument
+          @return_vars_metadata[argument] = argument_metadata
+        end
+      end
     end
     
     def return_variable_value(argument, argument_metadata)

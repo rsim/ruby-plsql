@@ -120,6 +120,8 @@ module PLSQL
       java.sql.Types::CHAR        => String,
       java.sql.Types::VARCHAR     => String,
       java.sql.Types::LONGVARCHAR => String,
+      java.sql.Types::BOOLEAN     => java.lang.Boolean,
+      java.sql.Types::BIT         => java.lang.Boolean,
       java.sql.Types::DOUBLE      => BigDecimal,
       java.sql.Types::NUMERIC     => BigDecimal,
       java.sql.Types::INTEGER     => Fixnum,
