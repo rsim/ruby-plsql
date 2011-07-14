@@ -57,30 +57,31 @@ module PLSQL
       #raw_connection.setDefaultRowPrefetch(value)
     end
     
-    def create_callable_stmt(conn, sql)
-      CallableStatement.new(conn, sql)
+    def create_callable_stmt(conn, sql, params = {})
+      CallableStatement.new(conn, sql, params)
     end
     
     class CallableStatement #:nodoc:
 
-      def initialize(conn, sql)
+      def initialize(conn, sql, params = {})
         @sql = sql
         @connection = conn
+        @params = params
         @out_types = {}
         @out_index = {}
         @statement = @connection.prepare_call(sql)
       end
 
-      def bind_param(idx, value, metadata)
+      def bind_param(arg, value, metadata)
         type, length = @connection.plsql_to_ruby_data_type(metadata)
         db_value = @connection.ruby_value_to_db_value(value, type, metadata)
         if metadata[:in_out] =~ /IN/
-          @connection.set_bind_variable(@statement, idx + 1, db_value, type, length, metadata)
+          @connection.set_bind_variable(@statement, bind_param_index(arg), db_value, type, length, metadata)
         end
         if metadata[:in_out] =~ /OUT/
-          @out_types[idx] = type || db_value.class
-          @out_index[idx] = idx + 1
-          @statement.registerOutParameter(@out_index[idx], @connection.get_java_sql_type(db_value, type))
+          @out_types[arg] = type || db_value.class
+          @out_index[arg] = bind_param_index(arg)
+          @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(db_value, type))
         end
       end
       
@@ -94,6 +95,13 @@ module PLSQL
 
       def close
         @statement.close
+      end
+      
+      private
+      
+      def bind_param_index(key)
+        return key + 1 if key.kind_of? Integer
+        @params[key] + 1
       end
     end
     
@@ -166,7 +174,7 @@ module PLSQL
       when :'Java::JavaSql::Array'
         stmt.send("setArray#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::Struct'
-        stmt.send("setStruct#{key && "AtName"}", key || i, value)
+        stmt.send("setObject#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::ResultSet'
         stmt.send("setCursor#{key && "AtName"}", key || i, value)
       else
@@ -198,7 +206,7 @@ module PLSQL
       when :'Java::JavaSql::Array'
         stmt.getArray(i)
       when :'Java::JavaSql::Struct'
-        stmt.getStruct(i)
+        stmt.getObject(i)
       when :'Java::JavaSql::ResultSet'
         stmt.getCursor(i)
       end
@@ -281,11 +289,6 @@ module PLSQL
         value
       when :'Java::JavaSql::Blob'
         value
-        if value
-        end
-      when :'Java::JavaSql::Struct'
-        if value
-        end
       when :'Java::JavaSql::ResultSet'
         if value
           value.result_set
@@ -322,13 +325,14 @@ module PLSQL
           String.from_java_bytes(value.getBytes(1, value.length))
         end
       when Java::JavaSql::Array
-        value.getArray.map{|e| db_value_to_ruby_value(e)}
-      when Java::JavaSql::Struct
-        descriptor = value.getDescriptor
-        struct_metadata = descriptor.getMetaData
-        field_names = (1..descriptor.getLength).map {|i| struct_metadata.getColumnName(i).downcase.to_sym}
-        field_values = value.getAttributes.map{|e| db_value_to_ruby_value(e)}
-        ArrayHelpers::to_hash(field_names, field_values)
+        begin
+          value.getArray.map{|e| db_value_to_ruby_value(e)}
+        # If simple array conversion fails, then we are dealing with an array of complex types.
+        # This means we have to perform the type-conversion ourselves.
+        rescue NativeException
+          # Return PGObject-array to be handled externally.
+          Cursor.new(self, value.result_set).fetch_all.map {|obj| obj[1]}
+        end
       when Java::java.sql.ResultSet
         Cursor.new(self, value)
       else

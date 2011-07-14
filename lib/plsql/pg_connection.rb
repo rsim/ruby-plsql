@@ -55,15 +55,16 @@ module PLSQL
       
       attr_reader :stmt_name
 
-      def initialize(conn, sql)
+      def initialize(conn, sql, params = {})
         @connection = conn
         @sql = sql
+        @params = params
         @bindvars = []
         @@open_cursors.push self
       end
 
-      def self.new_from_parse(conn, sql)
-        self.new(conn, sql)
+      def self.new_from_parse(conn, sql, params = {})
+        self.new(conn, sql, params)
       end
 
       def self.new_from_query(conn, sql, bindvars=[])
@@ -73,8 +74,8 @@ module PLSQL
       end
 
       def bind_param(arg, value, metadata)
-        type, length = @connection.plsql_to_ruby_data_type(metadata)
-        @bindvars[arg] = @connection.ruby_value_to_db_value(value, type)
+        type, * = @connection.plsql_to_ruby_data_type(metadata)
+        @bindvars[bind_param_index(arg)] = @connection.ruby_value_to_db_value(value, type)
       end
       
       def exec(*bindvars)
@@ -107,11 +108,18 @@ module PLSQL
         end
         close_raw_cursor
       end
+      
+      private
+      
+      def bind_param_index(key)
+        return key if key.kind_of? Integer
+        @params[key]
+      end
 
     end
     
-    def parse(sql)
-      Cursor.new_from_parse(self, sql)
+    def parse(sql, params = {})
+      Cursor.new_from_parse(self, sql, params)
     end
 
     def cursor_from_query(sql, bindvars=[], *)

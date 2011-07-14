@@ -604,6 +604,109 @@ describe "Parameter type mapping /" do
   
   describe "Function with array parameter" do
     
+    before(:all) do
+      # Array of numbers
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_sum(p_numbers numeric[])
+          RETURNS numeric
+        AS $$
+        DECLARE
+          l_sum numeric := 0;
+        BEGIN
+          IF array_dims(p_numbers) IS NOT NULL THEN
+            FOR i IN array_lower(p_numbers, 1) .. array_upper(p_numbers, 1) LOOP
+              l_sum := l_sum + p_numbers[i];
+            END LOOP;
+            RETURN l_sum;
+          ELSE
+            RETURN NULL;
+          END IF;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_increment(p_numbers numeric[], p_increment_by numeric DEFAULT 1)
+          RETURNS numeric[]
+        AS $$
+        DECLARE
+          l_numbers numeric[];
+        BEGIN
+          FOR i IN array_lower(p_numbers, 1) .. array_upper(p_numbers, 1) LOOP
+            l_numbers[i] := p_numbers[i] + p_increment_by;
+          END LOOP;
+          RETURN l_numbers;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    
+      # Array of strings
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_copy_strings(p_strings character varying[], OUT x_strings character varying[])
+        AS $$
+        BEGIN
+          FOR i IN array_lower(p_strings, 1) .. array_upper(p_strings, 1) LOOP
+            x_strings[i] := p_strings[i];
+          END LOOP;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+
+      # Array of objects
+      plsql(:pg).execute "DROP TYPE t_phone" rescue nil
+      plsql(:pg).execute <<-SQL
+        CREATE TYPE t_phone AS (
+          type            varchar,
+          phone_number    varchar
+        )
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_copy_objects(p_phones t_phone[], OUT x_phones t_phone[])
+        AS $$
+        BEGIN
+          x_phones := p_phones;
+          RETURN;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+    end
+
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_sum(numeric[])"
+      plsql(:pg).execute "DROP FUNCTION test_increment(numeric[], numeric)"
+      plsql(:pg).execute "DROP FUNCTION test_copy_strings(character varying[])"
+      plsql(:pg).execute "DROP FUNCTION test_copy_objects(t_phone[])"
+      plsql(:pg).execute "DROP TYPE t_phone"
+    end
+
+    it "should find existing function" do
+      PLSQL::Procedure.find(plsql(:pg), :test_sum).should_not be_nil
+    end
+
+    it "should execute function with number array parameter" do
+      plsql(:pg).test_sum([1,2,3,4]).should == 10
+    end
+
+    it "should return number array return value" do
+      plsql(:pg).test_increment([1,2,3,4], 1).should == [2,3,4,5]
+    end
+
+    it "should execute function with string array and return string array output parameter" do
+      strings = ['1','2','3','4']
+      plsql(:pg).test_copy_strings(strings).should == {:x_strings => strings}
+    end
+
+    it "should execute function with object array and return object array output parameter" do
+      phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+      plsql(:pg).test_copy_objects(phones).should == {:x_phones => phones}
+    end
+
+    it "should execute function with empty object array" do
+      phones = []
+      plsql(:pg).test_copy_objects(phones).should == {:x_phones => phones}
+    end
+    
   end
   
   describe "Function with cursor return value or parameter" do

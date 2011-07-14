@@ -101,7 +101,7 @@ module PLSQL
       # Named arguments
       # there should be just one Hash argument with symbol keys
       if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
-          # do not use named arguments if procedure has just one PL/SQL record PL/SQL table or object type argument -
+        # do not use named arguments if procedure has just one PL/SQL record PL/SQL table or object type argument -
         # in that case passed Hash should be used as value for this PL/SQL record argument
         # (which will be processed in sequential arguments bracnh)
         !(argument_list.size == 1 &&
@@ -469,14 +469,22 @@ module PLSQL
     end
     
     def exec
-      @cursor = @schema.connection.parse(@sql)
+      params = Hash[@return_vars_metadata.map do |var, metadata|
+        [var.to_s, metadata[:position]]
+      end]
+    
+      params.merge!(Hash[@bind_metadata.keys.each_with_index.map do |var, idx|
+          [var.to_s, idx + (@return_vars_metadata.size == 1? 1: 0)]
+      end])
+  
+      @cursor = @schema.connection.parse(@sql, params)
 
       @bind_values.each do |arg, value|
-        @cursor.bind_param(@bind_metadata[arg][:position], value, @bind_metadata[arg])
+        @cursor.bind_param(arg.to_s, value, @bind_metadata[arg])
       end
 
       @return_vars.each do |var|
-        @cursor.bind_param(@return_vars_metadata[var][:position], nil, @return_vars_metadata[var])
+        @cursor.bind_param(var.to_s, nil, @return_vars_metadata[var])
       end
 
       @cursor.exec
@@ -498,13 +506,7 @@ module PLSQL
       @return_vars_metadata = {}
       @params = []
       
-      if return_metadata
-        add_return
-        unless return_metadata[:data_type] == 'RECORD'
-          @call_sql << '?= ' if defined?(JRuby)
-          @params += ['$1::void'] unless defined?(JRuby)
-        end
-      end
+      add_return if return_metadata
       
       @call_sql << (defined?(JRuby)? 'call ': 'SELECT * FROM ')
       @call_sql << "#{schema_name}." if schema_name
@@ -513,7 +515,7 @@ module PLSQL
       
       @bind_values = {}
       @bind_metadata = {}
-
+      
       if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all?{|k| k.is_a?(Symbol)} &&
           !(argument_list.size == 1 && (arguments[(only_argument = argument_list[0])][:data_type]) == 'RECORD' && args[0].keys != [only_argument])
         arguments.each do |arg, metadata|
@@ -551,30 +553,44 @@ module PLSQL
       case argument_metadata[:data_type]
       when 'RECORD'
         add_record(argument, value, argument_metadata)
+      when 'ARRAY'
+        add_array(argument, value, argument_metadata)
       else
         @bind_values[argument] = value
         @bind_metadata[argument] = argument_metadata
-        sql = defined?(JRuby)? '?': "$#{argument_metadata[:position] + 1}"
+        sql = defined?(JRuby)? '?': "$#{@return_vars.size + @bind_metadata.keys.size}"
         sql << '::' << (argument_metadata[:in_out] == 'OUT'? 'void': (argument_metadata[:data_type]))
       end
     end
     
     def add_record(argument, record_value, argument_metadata)
-      sql = 'ROW(' << (record_value||{}).map do |key, value|
+      'ROW(' << (record_value||{}).map do |key, value|
         field = key.is_a?(Symbol) ? key : key.to_s.downcase.to_sym
         metadata = argument_metadata[:fields][field]
         raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
         bind_variable = :"#{argument}_f#{metadata[:position]}"
         add_argument(bind_variable, value, metadata)
-      end.join(', ')
-      sql << ')'
+      end.join(', ') << ')'
+    end
+    
+    def add_array(argument, array_value, argument_metadata)
+      if argument_metadata[:in_out] == 'OUT'
+        @bind_values[argument] = array_value
+        @bind_metadata[argument] = argument_metadata
+        (defined?(JRuby)? '?': "$#{argument_metadata[:position] + 1}") << '::void'
+      else
+        'ARRAY[' << (array_value || []).each_with_index.map do |value, idx|
+          metadata = argument_metadata[:element].merge(:position => idx)
+          bind_variable = :"#{argument}_e#{metadata[:position]}"
+          add_argument(bind_variable, value, metadata)
+        end.join(', ') << "]::#{argument_metadata[:type_name]}[]"
+      end
     end
     
     def add_return_variable(argument, argument_metadata, is_return_value = false)
-      case argument_metadata[:data_type]
-      when 'RECORD'
+      if argument_metadata[:data_type] == 'RECORD' && defined?(JRuby)
         argument_metadata[:fields].each do |field, metadata|
-          bind_variable = :"#{argument}_o#{metadata[:position]}"
+          bind_variable = :"#{argument}_f#{metadata[:position]}"
           @return_vars << bind_variable
           @return_vars_metadata[bind_variable] = metadata
         end
@@ -582,6 +598,11 @@ module PLSQL
         if is_return_value
           @return_vars << argument
           @return_vars_metadata[argument] = argument_metadata
+          if defined?(JRuby)
+            @call_sql << '?= '
+          else
+            @params += ['$1::void']
+          end
         end
       end
     end
@@ -591,11 +612,68 @@ module PLSQL
       when 'RECORD'
         return_value = {}
         argument_metadata[:fields].each do |field, metadata|
-          return_value[field] = defined?(JRuby)? @cursor[metadata[:position]]: @cursor[field.to_s]
+          if defined?(JRuby)
+          return_value[field] = @cursor["#{argument}_f#{metadata[:position]}"]
+          else
+            return_value[field] = @cursor[field.to_s]
+          end
         end
         return_value
+      when 'ARRAY'
+        if defined?(JRuby)
+          # If type is complex-array we have to parse strings to extract return values.
+          if complex_array?(argument_metadata)
+            parse_complex_array(@cursor[argument.to_s], argument_metadata[:element])
+          else
+            @cursor[argument.to_s]
+          end
+        else
+          # Native Postgres driver returns array as string of comma-separated values.
+          parse_array(@cursor[argument.to_s], argument_metadata[:element])
+        end
       else
-        defined?(JRuby)? @cursor[argument_metadata[:position]]: @cursor[argument.to_s]
+        @cursor[argument.to_s]
+      end
+    end
+    
+    private
+    
+    def complex_array?(argument_metadata)
+      argument_metadata.has_key?(:element) && argument_metadata[:element][:data_type] == 'RECORD'
+    end
+    
+    # TODO: This needs to be refactored.
+    def parse_array(array_str, element_metadata)
+      components = array_str.scan(/\{(.*)\}/).last.first.split(',')
+      components.map do |component|
+        case element_metadata[:data_type].downcase.to_sym
+          when :integer
+            Integer(component)
+          when :numeric
+            Float(component)
+          else
+            component
+        end
+      end
+    end
+    
+    # TODO: This needs to be refactored.
+    def parse_complex_array(array_value, argument_metadata)
+      array_value.map do |pg_object|
+        raise "Error type mismatch in complex-array conversion." unless argument_metadata[:type_name] == pg_object.type.upcase
+        components = pg_object.value.scan(/\((.*)\)/).last.first.split(',')
+        Hash[argument_metadata[:fields].map do |field, metadata|
+          component = components[metadata[:position]]
+          value = case metadata[:data_type].downcase.to_sym
+          when :integer
+            Integer(component)
+          when :numeric
+            Float(component)
+          else
+            component
+          end
+          [field, value]
+        end]
       end
     end
     

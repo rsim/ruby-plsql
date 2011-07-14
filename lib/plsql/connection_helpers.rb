@@ -94,8 +94,8 @@ module PLSQL
       cs.close rescue nil
     end
     
-    def parse(sql)
-      create_callable_stmt(self, sql)
+    def parse(sql, params = {})
+      create_callable_stmt(self, sql, params)
     end
 
     def cursor_from_query(sql, bindvars=[], options={})
