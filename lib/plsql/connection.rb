@@ -86,6 +86,11 @@ module PLSQL
     def autocommit=(value)
       raise NoMethodError, "Not implemented for this raw driver"
     end
+    
+    # Get number of rows to be prefetched.
+    def prefetch_rows
+      raise NoMethodError, "Not implemented for this raw driver"
+    end
 
     # Set number of rows to be prefetched. This can reduce the number of network round trips when fetching many rows.
     # The default value is one. (If ActiveRecord oracle_enhanced connection is used then default is 100)

@@ -137,8 +137,13 @@ module PLSQL
 
       def self.new_from_query(conn, sql, bindvars=[], options={})
         stmt = conn.prepare_statement(sql, *bindvars)
-        if prefetch_rows = options[:prefetch_rows]
-          stmt.setRowPrefetch(prefetch_rows) rescue nil
+        if prefetch_rows = (options[:prefetch_rows] || conn.prefetch_rows)
+          case conn.dialect
+          when :oracle
+            stmt.setRowPrefetch(prefetch_rows)
+          when :postgres
+            stmt.setFetchSize(prefetch_rows)
+          end
         end
         cursor = Cursor.new(conn, stmt.executeQuery)
         cursor.statement = stmt

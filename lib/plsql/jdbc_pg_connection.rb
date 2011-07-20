@@ -38,11 +38,11 @@ module PLSQL
     end
     
     def commit
-      #raw_connection.commit
+      raw_connection.commit
     end
 
     def rollback
-      #raw_connection.rollback
+      raw_connection.rollback rescue nil
     end
     
     def autocommit?
@@ -53,8 +53,12 @@ module PLSQL
       raw_connection.setAutoCommit(value)
     end
     
+    def prefetch_rows
+      @fetch_size
+    end
+    
     def prefetch_rows=(value)
-      #raw_connection.setDefaultRowPrefetch(value)
+      @fetch_size = value
     end
     
     def create_callable_stmt(conn, sql, params = {})
@@ -70,6 +74,7 @@ module PLSQL
         @out_types = {}
         @out_index = {}
         @statement = @connection.prepare_call(sql)
+        @statement.setFetchSize(conn.prefetch_rows || 0)
       end
 
       def bind_param(arg, value, metadata)

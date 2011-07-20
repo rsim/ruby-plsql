@@ -4,7 +4,6 @@ describe "Postgres Sequence" do
   
   before(:all) do
     plsql(:pg).connection = PLSQL::Connection.create(get_connection(:dialect => :postgres), :dialect => :postgres)
-    #plsql(:pg).connection.autocommit = false
     plsql(:pg).execute "CREATE SEQUENCE test_employees_seq"
   end
 
@@ -29,18 +28,6 @@ describe "Postgres Sequence" do
 
     it "should find existing sequence in schema" do
       plsql(:pg).test_employees_seq.should be_a(PLSQL::Sequence)
-    end
-
-  end
-
-  describe "synonym" do
-
-    it "should find synonym to sequence" do
-      pending "synonyms not supported in Postgres"
-    end
-
-    it "should find sequence using synonym in schema" do
-      pending "synonyms not supported in Postgres"
     end
 
   end

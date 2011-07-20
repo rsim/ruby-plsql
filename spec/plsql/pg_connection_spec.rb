@@ -20,7 +20,7 @@ describe "Postgres Connection" do
   
   describe "create and destroy" do
     
-    before (:each) do
+    before(:each) do
       @conn = PLSQL::Connection.create(@raw_conn, :dialect => :postgres)
       @conn.set_time_zone
     end
@@ -301,33 +301,58 @@ describe "Postgres Connection" do
     end
   end
 
-  describe "prefetch rows" do
-    it "should set prefetch rows for connection" do
-      pending "can't prefetch using Postgres native driver"
-    end
+  # Row pre-fetching only works with JDBC driver.
+  if defined?(JRuby)
+    describe "prefetch rows" do
+      before(:all) do
+        sql = <<-SQL
+        CREATE OR REPLACE FUNCTION get_zero()
+          RETURNS integer
+        AS $$
+        BEGIN
+          RETURN 0;
+        END;
+        $$ LANGUAGE plpgsql;
+        SQL
+        @conn.exec(sql)
+        @conn.autocommit = false
+      end
     
-    it "should fetch just one row when using select_first" do
-      pending "can't prefetch using Postgres native driver"
-    end
-  end
-  
-  describe "describe synonym" do
-    it "should describe local synonym" do
-      pending "synonyms not supported in Postgres"
-    end
+      after(:all) do
+        @conn.exec('DROP FUNCTION get_zero()')
+        @conn.commit
+        # set back to default
+        @conn.autocommit = true
+        @conn.prefetch_rows = 0
+      end
     
-    it "should return nil on non-existing synonym" do
-      pending "synonyms not supported in Postgres"
-    end
+      it "should set prefetch rows for connection" do
+        sql = "SELECT 1 UNION ALL SELECT 1/get_zero()"
+        @conn.prefetch_rows = 2
+        lambda {
+          @conn.cursor_from_query(sql)
+        }.should raise_error(/division by zero/)
+        @conn.prefetch_rows = 1
+        @conn.rollback
+        lambda {
+          @conn.cursor_from_query(sql)
+        }.should_not raise_error
+      end
+
+      it "should fetch just one row when using select_first" do
+        sql = "SELECT 1 UNION ALL SELECT 1/get_zero()"
+        @conn.prefetch_rows = 2
+        lambda {
+          @conn.select_first(sql)
+        }.should_not raise_error
+      end
     
-    it "should describe public synonym" do
-      pending "synonyms not supported in Postgres"
     end
   end
   
   describe "session information" do
     it "should get database version" do
-      # using Postgres version 9.0.3 for unit tests
+      # using Postgres version 9.0.4 for unit tests
       @conn.database_version.should == PG_DATABASE_VERSION.split('.').map{|n| n.to_i}
     end
 
