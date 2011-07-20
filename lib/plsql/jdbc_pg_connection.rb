@@ -111,22 +111,23 @@ module PLSQL
     end
     
     RUBY_CLASS_TO_SQL_TYPE = {
-      Fixnum            => java.sql.Types::INTEGER,
-      Bignum            => java.sql.Types::BIGINT,
-      Integer           => java.sql.Types::INTEGER,
-      Float             => java.sql.Types::FLOAT,
-      BigDecimal        => java.sql.Types::NUMERIC,
-      String            => java.sql.Types::VARCHAR,
-      java.lang.Boolean => java.sql.Types::BOOLEAN,
-      java.sql.Clob     => java.sql.Types::CLOB,
-      java.sql.Blob     => java.sql.Types::BLOB,
-      Date              => java.sql.Types::DATE,
-      Time              => java.sql.Types::TIMESTAMP,
-      DateTime          => java.sql.Types::TIMESTAMP,
-      java.sql.Array    => java.sql.Types::ARRAY,
-      Array             => java.sql.Types::ARRAY,
-      java.sql.Struct   => java.sql.Types::STRUCT,
-      Hash              => java.sql.Types::STRUCT
+      Fixnum             => java.sql.Types::INTEGER,
+      Bignum             => java.sql.Types::BIGINT,
+      Integer            => java.sql.Types::INTEGER,
+      Float              => java.sql.Types::FLOAT,
+      BigDecimal         => java.sql.Types::NUMERIC,
+      String             => java.sql.Types::VARCHAR,
+      java.lang.Boolean  => java.sql.Types::BOOLEAN,
+      java.sql.Clob      => java.sql.Types::CLOB,
+      java.sql.Blob      => java.sql.Types::BLOB,
+      Date               => java.sql.Types::DATE,
+      Time               => java.sql.Types::TIMESTAMP,
+      DateTime           => java.sql.Types::TIMESTAMP,
+      java.sql.Array     => java.sql.Types::ARRAY,
+      Array              => java.sql.Types::ARRAY,
+      java.sql.Struct    => java.sql.Types::STRUCT,
+      Hash               => java.sql.Types::STRUCT,
+      java.sql.ResultSet => java.sql.Types::OTHER
     }
 
     SQL_TYPE_TO_RUBY_CLASS = {
@@ -181,7 +182,7 @@ module PLSQL
       when :'Java::JavaSql::Struct'
         stmt.send("setObject#{key && "AtName"}", key || i, value)
       when :'Java::JavaSql::ResultSet'
-        stmt.send("setCursor#{key && "AtName"}", key || i, value)
+        stmt.send("setObject#{key && "AtName"}", key || i, value)
       else
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
       end
@@ -210,10 +211,8 @@ module PLSQL
         stmt.getTimestamp(i)
       when :'Java::JavaSql::Array'
         stmt.getArray(i)
-      when :'Java::JavaSql::Struct'
+      when :'Java::JavaSql::Struct', :'Java::JavaSql::ResultSet'
         stmt.getObject(i)
-      when :'Java::JavaSql::ResultSet'
-        stmt.getCursor(i)
       end
       variable unless stmt.wasNull()
     end
@@ -251,7 +250,7 @@ module PLSQL
         [Java::JavaSql::Array, nil]
       when "RECORD"
         [Java::JavaSql::Struct, nil]
-      when "CURSOR"
+      when "REFCURSOR"
         [java.sql.ResultSet, nil]
       else
         [String, nil]

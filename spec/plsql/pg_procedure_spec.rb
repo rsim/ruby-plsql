@@ -711,6 +711,153 @@ describe "Parameter type mapping /" do
   
   describe "Function with cursor return value or parameter" do
     
+    before(:all) do
+      plsql(:pg).execute "DROP TABLE test_employees" rescue nil
+      plsql(:pg).execute <<-SQL
+        CREATE TABLE test_employees (
+          employee_id   integer,
+          first_name    varchar,
+          last_name     varchar,
+          hire_date     timestamp with time zone
+        )
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_insert_employee(p_employee test_employees)
+          RETURNS void
+        AS $$
+        BEGIN
+          INSERT INTO test_employees VALUES(p_employee.*);
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_cursor()
+          RETURNS refcursor
+        AS $$
+        DECLARE
+          l_cursor refcursor;
+        BEGIN
+          OPEN l_cursor FOR
+          SELECT * FROM test_employees ORDER BY employee_id;
+          RETURN l_cursor;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_cursor_out(OUT x_cursor refcursor)
+        AS $$
+        BEGIN
+          OPEN x_cursor FOR
+          SELECT * FROM test_employees ORDER BY employee_id;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      plsql(:pg).execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_cursor_fetch(p_cursor refcursor)
+          RETURNS test_employees
+        AS $$
+        DECLARE
+          l_record test_employees%ROWTYPE;
+        BEGIN
+          FETCH p_cursor INTO l_record;
+          RETURN l_record;
+        END;
+        $$ LANGUAGE 'plpgsql';
+      SQL
+      @fields = [:employee_id, :first_name, :last_name, :hire_date]
+      @employees = (1..10).map do |i|
+        {
+          :employee_id => i,
+          :first_name => "First #{i}",
+          :last_name => "Last #{i}",
+          :hire_date => Time.local(2000, 01, i)
+        }
+      end
+      @employees.each do |e|
+        plsql(:pg).test_insert_employee(e)
+      end
+      plsql(:pg).connection.autocommit = false
+    end
+
+    after(:all) do
+      plsql(:pg).execute "DROP FUNCTION test_cursor()"
+      plsql(:pg).execute "DROP FUNCTION test_cursor_out()"
+      plsql(:pg).execute "DROP FUNCTION test_insert_employee(test_employees)"
+      plsql(:pg).execute "DROP FUNCTION test_cursor_fetch(refcursor)"
+      plsql(:pg).execute "DROP TABLE test_employees"
+      plsql(:pg).connection.commit
+      plsql(:pg).connection.autocommit = true
+    end
+
+    it "should find existing function" do
+      PLSQL::Procedure.find(plsql(:pg), :test_cursor).should_not be_nil
+    end
+
+    it "should return cursor and fetch first row" do
+      plsql(:pg).test_cursor do |cursor|
+        cursor.fetch.should == @fields.map{|f| @employees[0][f]}
+      end.should be_nil
+    end
+
+    it "should close all returned cursors after block is executed" do
+      cursor2 = nil
+      plsql(:pg).test_cursor do |cursor|
+        cursor2 = cursor
+      end.should be_nil
+      lambda { cursor2.fetch }.should raise_error
+    end
+
+    it "should not raise error if cursor is closed inside block" do
+      lambda do
+        plsql(:pg).test_cursor do |cursor|
+          cursor.close
+        end
+      end.should_not raise_error
+    end
+
+    it "should fetch hash from returned cursor" do
+      plsql(:pg).test_cursor do |cursor|
+        cursor.fetch_hash.should == @employees[0]
+      end
+    end
+
+    it "should fetch all rows from returned cursor" do
+      plsql(:pg).test_cursor do |cursor|
+        cursor.fetch_all.should == @employees.map{|e| @fields.map{|f| e[f]}}
+      end
+    end
+
+    it "should fetch all rows as hash from returned cursor" do
+      plsql(:pg).test_cursor do |cursor|
+        cursor.fetch_hash_all.should == @employees
+      end
+    end
+
+    it "should get field names from returned cursor" do
+      plsql(:pg).test_cursor do |cursor|
+        cursor.fields.should == @fields
+      end
+    end
+
+    it "should return output parameter with cursor and fetch first row" do
+      plsql(:pg).test_cursor_out do |result|
+        result[:x_cursor].fetch.should == @fields.map{|f| @employees[0][f]}
+      end.should be_nil
+    end
+
+    it "should return output parameter with cursor and fetch all rows as hash" do
+      plsql(:pg).test_cursor_out do |result|
+        result[:x_cursor].fetch_hash_all.should == @employees
+      end.should be_nil
+    end
+
+    it "should execute function with cursor parameter and return record" do
+      pending "not possible from JDBC" if defined?(JRUBY_VERSION)
+      plsql(:pg).test_cursor do |cursor|
+        plsql(:pg).test_cursor_fetch(cursor).should == @employees[0]
+      end
+    end
+    
   end
   
 end

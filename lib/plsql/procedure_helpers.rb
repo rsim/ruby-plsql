@@ -491,7 +491,7 @@ module PLSQL
             END IF;
             
             /* return a row for the return value if there are no OUT parameters */
-            IF allargtypes IS NULL THEN
+            IF allargtypes IS NULL AND rettype != 'void' THEN
 
               direction := 'OUT';
               
@@ -630,6 +630,9 @@ module PLSQL
           end
         end
       end
+      
+      #p @return
+      #p @arguments
       
       construct_argument_list_for_overloads
     end
