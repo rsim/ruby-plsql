@@ -15,10 +15,30 @@ module PLSQL
   
   module ORASchemaHelper
     
-    # Current Oracle schema name
+    # Current Oracle schema name.
     def schema_name
       return nil unless connection
       @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
+    end
+
+    # Specify IO stream where to log DBMS_OUTPUT from PL/SQL procedures. Example:
+    # 
+    #   plsql.dbms_output_stream = STDOUT
+    # 
+    def dbms_output_stream=(stream)
+      @dbms_output_stream = stream
+      if @dbms_output_stream.nil? && @connection
+        sys.dbms_output.disable
+      end
+    end
+
+    # IO stream where to log DBMS_OUTPUT from PL/SQL procedures.
+    def dbms_output_stream
+      if @original_schema
+        @original_schema.dbms_output_stream
+      else
+        @dbms_output_stream
+      end
     end
   
     def find_database_object(name, override_schema_name = nil)
@@ -90,10 +110,27 @@ module PLSQL
   
   module PGSchemaHelper
     
-    # Current Postgres schema name
+    # Current Postgres schema name.
     def schema_name
       return nil unless connection
       @schema_name ||= select_first("SELECT UPPER(current_schema);")[0]
+    end
+    
+    # Specify IO stream where to log DBMS_OUTPUT from PL/SQL procedures. Example:
+    # 
+    #   plsql.dbms_output_stream = STDOUT
+    # 
+    def dbms_output_stream=(stream)
+      @dbms_output_stream = stream
+    end
+
+    # IO stream where to log DBMS_OUTPUT from PL/SQL procedures.
+    def dbms_output_stream
+      if @original_schema
+        @original_schema.dbms_output_stream
+      else
+        @dbms_output_stream
+      end
     end
     
     def find_database_object(name, override_schema_name = nil)

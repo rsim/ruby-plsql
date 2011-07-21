@@ -80,7 +80,9 @@ module PLSQL
       
       def exec(*bindvars)
         params = @bindvars + (bindvars.inject([]) {|r, v| r << @connection.ruby_value_to_db_value(v)})
+        prev_block = @connection.raw_connection.set_notice_receiver{|notice|(@warnings||=[]) << notice.result_error_message}
         @table = @connection.raw_connection.exec(@sql, params)
+        @connection.raw_connection.set_notice_receiver(&prev_block)
         @row_idx = 0
       end
 
@@ -96,6 +98,10 @@ module PLSQL
 
       def fields
         @fields ||= @table.fields.map{|c| c.downcase.to_sym}
+      end
+      
+      def warnings
+        @warnings
       end
 
       def close_raw_cursor

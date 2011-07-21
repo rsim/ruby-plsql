@@ -148,19 +148,12 @@ module PLSQL
     #   plsql.dbms_output_stream = STDOUT
     # 
     def dbms_output_stream=(stream)
-      @dbms_output_stream = stream
-      if @dbms_output_stream.nil? && @connection
-        sys.dbms_output.disable
-      end
+      raise NoMethodError, "Not implemented for this raw driver"
     end
 
     # IO stream where to log DBMS_OUTPUT from PL/SQL procedures.
     def dbms_output_stream
-      if @original_schema
-        @original_schema.dbms_output_stream
-      else
-        @dbms_output_stream
-      end
+      raise NoMethodError, "Not implemented for this raw driver"
     end
 
     private

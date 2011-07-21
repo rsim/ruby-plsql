@@ -488,6 +488,8 @@ module PLSQL
       end
 
       @cursor.exec
+      
+      dbms_output_log
 
       if block_given?
         yield get_return_value
@@ -674,6 +676,15 @@ module PLSQL
           end
           [field, value]
         end]
+      end
+    end
+    
+    def dbms_output_log
+      if @dbms_output_stream
+        @cursor.warnings.each do |warning|
+          @dbms_output_stream.puts warning
+        end
+        @dbms_output_stream.flush
       end
     end
     

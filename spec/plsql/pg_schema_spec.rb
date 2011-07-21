@@ -210,119 +210,136 @@ end if defined?(ActiveRecord) && !defined?(JRuby)
 describe "Postgres Output logging" do
 
   before(:all) do
-    #plsql.connection = PLSQL::Connection.create(get_connection(:dialect => :postgres), :dialect => :postgres)
-    #plsql.execute <<-SQL
-    #  CREATE OR REPLACE FUNCTION test_dbms_output(p_string varchar)
-    #    RETURNS VOID
-    #  AS $$
-    #  BEGIN
-    #    RAISE NOTICE '%', $1;
-    #  END;
-    #  $$ LANGUAGE 'plpgsql';
-    #SQL
-    #plsql.execute <<-SQL
-    #  CREATE OR REPLACE FUNCTION test_dbms_output_large(p_string varchar, p_times integer)
-    #  RETURNS VOID
-    #  AS $$
-    #  BEGIN
-    #    FOR i IN 1..$2 LOOP
-    #      RAISE NOTICE '%', $1;
-    #    END LOOP;
-    #  END;
-    #  $$ LANGUAGE 'plpgsql';
-    #SQL
-    #@buffer = StringIO.new
+    plsql(:pg).connection = PLSQL::Connection.create(get_connection(:dialect => :postgres), :dialect => :postgres)
+    plsql(:pg).execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_dbms_output(p_string varchar)
+        RETURNS VOID
+      AS $$
+      BEGIN
+        RAISE NOTICE '%', $1;
+      END;
+      $$ LANGUAGE 'plpgsql';
+    SQL
+    plsql(:pg).execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_dbms_output_large(p_string varchar, p_times integer)
+        RETURNS VOID
+      AS $$
+      BEGIN
+        FOR i IN 1..$2 LOOP
+          RAISE NOTICE '%', $1;
+        END LOOP;
+      END;
+      $$ LANGUAGE 'plpgsql';
+    SQL
+    @buffer = StringIO.new
   end
 
   before(:each) do
-    #@buffer.rewind
-    #@buffer.reopen
+    @buffer.rewind
+    @buffer.reopen
   end
 
   after(:all) do
-    #plsql.dbms_output_stream = nil
-    #plsql.execute "DROP FUNCTION test_dbms_output(varchar);"
-    #plsql.execute "DROP FUNCTION test_dbms_output_large(varchar, integer);"
-    #plsql.logoff
+    plsql(:pg).dbms_output_stream=nil
+    plsql(:pg).execute "DROP FUNCTION test_dbms_output(varchar)"
+    plsql(:pg).execute "DROP FUNCTION test_dbms_output_large(varchar, integer)"
+    plsql(:pg).logoff
   end
 
   describe "with standard connection" do
     before(:all) do
-      #plsql.dbms_output_stream = @buffer
+      plsql(:pg).dbms_output_stream = @buffer
     end
 
     before(:each) do
-      #plsql.dbms_output_buffer_size = nil
+      plsql(:pg).dbms_output_buffer_size = nil
     end
 
     it "should log output to specified stream" do
-      pending "need to implement this"
-      #plsql.test_dbms_output("test_dbms_output")
-      #@buffer.string.should == "NOTICE: test_dbms_output\n"
+      plsql(:pg).test_dbms_output("test_dbms_output")
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: test_dbms_output\n"
+      else
+        @buffer.string.should == "NOTICE:  test_dbms_output\n"
+      end
     end
 
     it "should not log output to stream when output is disabled" do
-      pending "need to implement this"
-      #plsql.test_dbms_output("enabled")
-      #plsql.dbms_output_stream = nil
-      #plsql.test_dbms_output("disabled")
-      #plsql.dbms_output_stream = @buffer
-      #plsql.test_dbms_output("enabled again")
-      #@buffer.string.should == "NOTICE: enabled\nDBMS_OUTPUT: enabled again\n"
+      plsql(:pg).test_dbms_output("enabled")
+      plsql(:pg).dbms_output_stream = nil
+      plsql(:pg).test_dbms_output("disabled")
+      plsql(:pg).dbms_output_stream = @buffer
+      plsql(:pg).test_dbms_output("enabled again")
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: enabled\nNOTICE: enabled again\n"
+      else
+        @buffer.string.should == "NOTICE:  enabled\nNOTICE:  enabled again\n"
+      end
     end
 
     it "should log 20_000 character output with default buffer size" do
-      pending "need to implement this"
-      #times = 2_000
-      #plsql.test_dbms_output_large("1234567890", times)
-      #@buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
+      times = 2_000
+      plsql(:pg).test_dbms_output_large("1234567890", times)
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: 1234567890\n" * times
+      else
+        @buffer.string.should == "NOTICE:  1234567890\n" * times
+      end
     end
 
     it "should log 100_000 character output with specified buffer size" do
-      pending "need to implement this"
-      #times = 10_000
-      #plsql.dbms_output_buffer_size = 10 * times
-      #plsql.test_dbms_output_large("1234567890", times)
-      #@buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
+      times = 10_000
+      plsql(:pg).dbms_output_buffer_size = 10 * times
+      plsql(:pg).test_dbms_output_large("1234567890", times)
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: 1234567890\n" * times
+      else
+        @buffer.string.should == "NOTICE:  1234567890\n" * times
+      end
     end
 
     it "should log output when database version is less than 10.2" do
-      pending "need to implement this"
-      #plsql.connection.stub!(:database_version).and_return([9, 2, 0, 0])
-      #times = 2_000
-      #plsql.test_dbms_output_large("1234567890", times)
-      #@buffer.string.should == "DBMS_OUTPUT: 1234567890\n" * times
+      plsql(:pg).connection.stub!(:database_version).and_return([9, 2, 0, 0])
+      times = 2_000
+      plsql(:pg).test_dbms_output_large("1234567890", times)
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: 1234567890\n" * times
+      else
+        @buffer.string.should == "NOTICE:  1234567890\n" * times
+      end
     end
 
     it "should log output when calling procedure with schema prefix" do
-      pending "need to implement this"
-      #plsql.hr.test_dbms_output("test_dbms_output")
-      #@buffer.string.should == "DBMS_OUTPUT: test_dbms_output\n"
+      plsql(:pg).hr.test_dbms_output("test_dbms_output")
+      if defined?(JRuby)
+        @buffer.string.should == "NOTICE: test_dbms_output\n"
+      else
+        @buffer.string.should == "NOTICE:  test_dbms_output\n"
+      end
     end
 
   end
 
   describe "with Activerecord connection" do
-
+    
     before(:all) do
-      #ActiveRecord::Base.establish_connection(ORA_CONNECTION_PARAMS)
-      #plsql(:ar).activerecord_class = ActiveRecord::Base
-      #plsql(:ar).dbms_output_stream = @buffer
+      ActiveRecord::Base.establish_connection(PG_CONNECTION_PARAMS)
+      plsql(:pg_ar).activerecord_class = ActiveRecord::Base
+      plsql(:pg_ar).connection = PLSQL::Connection.create(nil, :ar_class => ActiveRecord::Base, :dialect => :postgres)
+      plsql(:pg_ar).dbms_output_stream = @buffer
     end
 
     it "should log output to specified stream" do
-      pending "need to implement this"
-      #plsql(:ar).test_dbms_output("test_dbms_output")
-      #@buffer.string.should == "DBMS_OUTPUT: test_dbms_output\n"
+      plsql(:pg_ar).test_dbms_output("test_dbms_output")
+      @buffer.string.should == "NOTICE:  test_dbms_output\n"
     end
 
     it "should log output after reconnection" do
-      pending "need to implement this"
-      #ActiveRecord::Base.connection.reconnect!
-      #plsql(:ar).test_dbms_output("after reconnection")
-      #@buffer.string.should == "DBMS_OUTPUT: after reconnection\n"
+      ActiveRecord::Base.connection.reconnect!
+      plsql(:pg_ar).test_dbms_output("after reconnection")
+      @buffer.string.should == "NOTICE:  after reconnection\n"
     end
 
-  end if defined?(ActiveRecord)
+  end if defined?(ActiveRecord) && !defined?(JRuby)
 
 end

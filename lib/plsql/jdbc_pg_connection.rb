@@ -97,6 +97,10 @@ module PLSQL
       def [](key)
         @connection.db_value_to_ruby_value(@connection.get_bind_variable(@statement, @out_index[key], @out_types[key]))
       end
+      
+      def warnings
+        @statement.getWarnings.map {|warning| warning.toString}
+      end
 
       def close
         @statement.close
