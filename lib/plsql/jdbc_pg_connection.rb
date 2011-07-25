@@ -158,35 +158,34 @@ module PLSQL
     end
     
     def set_bind_variable(stmt, i, value, type=nil, length=nil, metadata={})
-      key = i.kind_of?(Integer) ? nil : i.to_s
       type_symbol = (!value.nil? && type ? type : value.class).to_s.to_sym
       case type_symbol
       when :Fixnum, :Bignum, :Integer
-        stmt.send("setInt#{key && "AtName"}", key || i, value)
+        stmt.send('setInt', i, value)
       when :Float
-        stmt.send("setFloat#{key && "AtName"}", key || i, value)
+        stmt.send('setFloat', i, value)
       when :BigDecimal, :'Java::JavaMath::BigDecimal'
-        stmt.send("setBigDecimal#{key && "AtName"}", key || i, value)
+        stmt.send('setBigDecimal', i, value)
       when :String
-        stmt.send("setString#{key && "AtName"}", key || i, value)
+        stmt.send('setString', i, value)
       when :'Java::JavaLang::Boolean'
-        stmt.send("setBoolean#{key && "AtName"}", key || i, value)
+        stmt.send('setBoolean', i, value)
       when :'Java::JavaSql::Clob'
-        stmt.send("setClob#{key && "AtName"}", key || i, value)
+        stmt.send('setClob', i, value)
       when :'Java::JavaSql::Blob'
-        stmt.send("setBlob#{key && "AtName"}", key || i, value)
+        stmt.send('setBlob', i, value)
       when :Date, :'Java::JavaSql::Date'
-        stmt.send("setDate#{key && "AtName"}", key || i, value)
+        stmt.send('setDate', i, value)
       when :DateTime, :Time, :'Java::JavaSql::Timestamp'
-        stmt.send("setTimestamp#{key && "AtName"}", key || i, value)
+        stmt.send('setTimestamp', i, value)
       when :NilClass
-        stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type))
+        stmt.send('setNull', i, get_java_sql_type(value, type))
       when :'Java::JavaSql::Array'
-        stmt.send("setArray#{key && "AtName"}", key || i, value)
+        stmt.send('setArray', i, value)
       when :'Java::JavaSql::Struct'
-        stmt.send("setObject#{key && "AtName"}", key || i, value)
+        stmt.send('setObject', i, value)
       when :'Java::JavaSql::ResultSet'
-        stmt.send("setObject#{key && "AtName"}", key || i, value)
+        stmt.send('setObject', i, value)
       else
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
       end
