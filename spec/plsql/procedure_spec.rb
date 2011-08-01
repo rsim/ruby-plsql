@@ -587,8 +587,14 @@ describe "Parameter type mapping /" do
             last_name     VARCHAR2(50),
             hire_date     DATE
           );
-          FUNCTION test_full_name (p_employee t_employee)
+
+          TYPE table_of_records IS TABLE OF t_employee;
+
+          FUNCTION test_full_name(p_employee t_employee)
             RETURN VARCHAR2;
+
+          FUNCTION test_empty_records
+            RETURN table_of_records;
         END;
       SQL
       plsql.execute <<-SQL
@@ -598,6 +604,26 @@ describe "Parameter type mapping /" do
           IS
           BEGIN
             RETURN p_employee.first_name || ' ' || p_employee.last_name;
+          END;
+
+          FUNCTION test_empty_records
+            RETURN table_of_records
+          IS
+            CURSOR employees_cur
+            IS
+              SELECT 
+                null employee_id,
+                null first_name,
+                null last_name,
+                null hire_date
+              FROM dual
+              WHERE 1 = 2;
+            employees_tab table_of_records;
+          BEGIN
+            OPEN employees_cur;
+            FETCH employees_cur BULK COLLECT INTO employees_tab;
+            CLOSE employees_cur;
+            RETURN employees_tab;
           END;
         END;
       SQL
@@ -663,6 +689,10 @@ describe "Parameter type mapping /" do
       lambda do
         plsql.test_full_name(@p_employee.merge :xxx => 'xxx').should == 'Second Last'
       end.should raise_error(ArgumentError)
+    end
+    
+    it "should return empty table of records" do
+      plsql.test_record.test_empty_records().should == []
     end
 
     it "should return record return value" do
@@ -867,7 +897,7 @@ describe "Parameter type mapping /" do
           END IF;
         END;
       SQL
-
+      
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_increment(p_numbers IN t_numbers, p_increment_by IN NUMBER DEFAULT 1)
           RETURN t_numbers
@@ -1070,7 +1100,7 @@ describe "Parameter type mapping /" do
     it "should execute function with number array parameter" do
       plsql.test_sum([1,2,3,4]).should == 10
     end
-
+    
     it "should return number array return value" do
       plsql.test_increment([1,2,3,4], 1).should == [2,3,4,5]
     end
@@ -1219,13 +1249,13 @@ describe "Parameter type mapping /" do
       @numbers = Hash[*(1..4).map{|i|[-i,i]}.flatten]
       # test with reversed PL/SQL table indexes
       @employees = Hash[*(1..10).map do |i|
-        [11-i, {
-          :employee_id => i,
-          :first_name => "First #{i}",
-          :last_name => "Last #{i}",
-          :hire_date => Time.local(2000,01,i)
-        }]
-      end.flatten]
+          [11-i, {
+              :employee_id => i,
+              :first_name => "First #{i}",
+              :last_name => "Last #{i}",
+              :hire_date => Time.local(2000,01,i)
+            }]
+        end.flatten]
     end
 
     after(:all) do

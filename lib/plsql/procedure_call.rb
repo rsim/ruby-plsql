@@ -401,7 +401,7 @@ module PLSQL
       @return_sql << if is_index_by_table
         "i__ := l_#{argument}.FIRST;\nLOOP\nEXIT WHEN i__ IS NULL;\n"
       else
-        "FOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
+        "IF l_#{argument}.COUNT > 0 THEN\nFOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
       end
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
@@ -415,6 +415,7 @@ module PLSQL
       end
       @return_sql << "i__ := l_#{argument}.NEXT(i__);\n" if is_index_by_table
       @return_sql << "END LOOP;\n"
+      @return_sql << "END IF;\n" unless is_index_by_table
       @return_sql << "OPEN :#{argument} FOR SELECT #{return_fields_string} FROM #{argument_metadata[:tmp_table_name]} ORDER BY i__;\n"
       @return_sql << "DELETE FROM #{argument_metadata[:tmp_table_name]};\n"
       "l_#{argument} := " if is_return_value
