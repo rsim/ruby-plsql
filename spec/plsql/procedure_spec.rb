@@ -466,10 +466,34 @@ describe "Parameter type mapping /" do
           RETURN p_clob;
         END test_clob;
       SQL
+      plsql.execute "CREATE TABLE test_clob_table (clob_col CLOB)"
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_clob_insert
+          ( p_clob CLOB )
+          RETURN CLOB
+        IS
+          CURSOR clob_cur IS
+          SELECT clob_col
+          FROM test_clob_table;
+          
+          v_dummy  CLOB;
+        BEGIN
+          DELETE FROM test_clob_table;
+          INSERT INTO test_clob_table (clob_col) VALUES (p_clob);
+
+          OPEN clob_cur;
+          FETCH clob_cur INTO v_dummy;
+          CLOSE clob_cur;
+          
+          RETURN v_dummy;
+        END test_clob_insert;
+      SQL
     end
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_clob"
+      plsql.execute "DROP FUNCTION test_clob_insert"
+      plsql.execute "DROP TABLE test_clob_table"
     end
   
     it "should find existing procedure" do
@@ -487,6 +511,11 @@ describe "Parameter type mapping /" do
         text = ''
         plsql.test_clob(text).should be_nil
       end
+
+      it "should execute function which inserts the CLOB parameter into a table with empty string and return nil" do
+        text = ''
+        plsql.test_clob_insert(text).should be_nil
+      end
     
     else
 
@@ -501,6 +530,10 @@ describe "Parameter type mapping /" do
       plsql.test_clob(nil).should be_nil
     end
 
+    it "should execute function which inserts the CLOB parameter into a table with nil and return nil" do
+      plsql.test_clob_insert(nil).should be_nil
+    end
+    
   end
 
   describe "Procedrue with CLOB parameter and return value" do
