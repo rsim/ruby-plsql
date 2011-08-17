@@ -910,6 +910,8 @@ describe "Parameter type mapping /" do
           TYPE t_numbers IS TABLE OF NUMBER(15);
           FUNCTION test_sum (p_numbers IN t_numbers)
             RETURN NUMBER;
+          FUNCTION test_function_failure (p_numbers IN t_numbers, p_force_failure IN VARCHAR2 DEFAULT 'N')
+            RETURN NUMBER;
           FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
             RETURN t_numbers;
           TYPE t_employee IS RECORD(
@@ -965,6 +967,15 @@ describe "Parameter type mapping /" do
             ELSE
               RETURN NULL;
             END IF;
+          END;
+          FUNCTION test_function_failure (p_numbers IN t_numbers, p_force_failure IN VARCHAR2 DEFAULT 'N')
+          RETURN NUMBER
+          IS
+          BEGIN
+            IF p_force_failure = 'Y' THEN
+              raise_application_error(-20000, 'Simulate business error to test clearing of temp table.');
+            END IF;
+            RETURN p_numbers.COUNT;
           END;
           FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
           RETURN t_numbers
@@ -1084,6 +1095,15 @@ describe "Parameter type mapping /" do
       plsql.test_collections.test_sum([1,2,3,4]).should == 10
     end
 
+    it "should clear temporary tables after executing function with table of numbers type even if an error occurs in the package" do
+      # this should work fine
+      plsql.test_collections.test_function_failure([1,2,3,4], 'N').should == 4
+      # we will force a package error here to see if things get cleaned up before the next call
+      lambda { plsql.test_collections.test_function_failure([1,2,3,4], 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      # after the error in the first call temporary tables should be cleared
+      plsql.test_collections.test_function_failure([5,6,7], 'N').should == 3
+    end
+
     it "should return table of numbers type (defined inside package)" do
       plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
     end
@@ -1154,6 +1174,8 @@ describe "Parameter type mapping /" do
             INDEX BY BINARY_INTEGER;
           FUNCTION test_sum (p_numbers IN t_numbers)
             RETURN NUMBER;
+          FUNCTION test_function_failure (p_numbers IN t_numbers, p_force_failure IN VARCHAR2 DEFAULT 'N')
+            RETURN NUMBER;
           FUNCTION test_numbers (p_numbers IN t_numbers, x_numbers OUT t_numbers)
             RETURN t_numbers;
           TYPE t_employee IS RECORD(
@@ -1178,6 +1200,27 @@ describe "Parameter type mapping /" do
             l_sum   NUMBER(15) := 0;
             i BINARY_INTEGER;
           BEGIN
+            IF p_numbers.COUNT > 0 THEN
+              i := p_numbers.FIRST;
+              LOOP
+                EXIT WHEN i IS NULL;
+                l_sum := l_sum + p_numbers(i);
+                i := p_numbers.NEXT(i);
+              END LOOP;
+              RETURN l_sum;
+            ELSE
+              RETURN NULL;
+            END IF;
+          END;
+          FUNCTION test_function_failure (p_numbers IN t_numbers, p_force_failure IN VARCHAR2 DEFAULT 'N')
+          RETURN NUMBER
+          IS
+            l_sum   NUMBER(15) := 0;
+            i BINARY_INTEGER;
+          BEGIN
+            IF p_force_failure = 'Y' THEN
+              raise_application_error(-20000, 'Simulate business error to test clearing of temp table.');
+            END IF;
             IF p_numbers.COUNT > 0 THEN
               i := p_numbers.FIRST;
               LOOP
@@ -1217,6 +1260,7 @@ describe "Parameter type mapping /" do
       SQL
       # test with negative PL/SQL table indexes
       @numbers = Hash[*(1..4).map{|i|[-i,i]}.flatten]
+      @numbers2 = Hash[*(5..7).map{|i|[-i,i]}.flatten]
       # test with reversed PL/SQL table indexes
       @employees = Hash[*(1..10).map do |i|
         [11-i, {
@@ -1232,6 +1276,15 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP PACKAGE test_collections"
       plsql.execute "DROP TABLE test_employees"
       plsql.connection.drop_session_ruby_temporary_tables
+    end
+
+    it "should clear temporary tables after executing function with index-by table of numbers type even if an error occurs in the package" do
+      # this should work fine
+      plsql.test_collections.test_function_failure(@numbers, 'N').should == 10
+      # we will force a package error here to see if things get cleaned up before the next call
+      lambda { plsql.test_collections.test_function_failure(@numbers, 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      # after the error in the first call temporary tables should be cleared
+      plsql.test_collections.test_function_failure(@numbers2, 'N').should == 18
     end
 
     it "should execute function with index-by table of numbers type (defined inside package) parameter" do
@@ -1314,7 +1367,7 @@ describe "Parameter type mapping /" do
           END IF;
         END;
       SQL
-    
+
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_increment(p_numbers IN t_numbers_array, p_increment_by IN NUMBER DEFAULT 1)
           RETURN t_numbers_array
@@ -1328,7 +1381,7 @@ describe "Parameter type mapping /" do
           RETURN l_numbers;
         END;
       SQL
-    
+
       # Array of strings
       plsql.execute <<-SQL
         CREATE OR REPLACE TYPE t_strings_array AS VARRAY(100) OF VARCHAR2(4000)
@@ -1406,6 +1459,144 @@ describe "Parameter type mapping /" do
       phones = []
       plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
     end
+
+  end
+
+  describe "Function in package with VARRAY parameter" do
+
+    before(:all) do
+      plsql.execute <<-SQL
+        CREATE OR REPLACE TYPE t_phone AS OBJECT (
+          type            VARCHAR2(10),
+          phone_number    VARCHAR2(50)
+        )
+      SQL
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_collections IS
+          TYPE t_numbers_array IS VARRAY(100) OF NUMBER(15);
+          TYPE t_strings_array IS VARRAY(100) OF VARCHAR2(4000);
+          TYPE t_phones_array IS ARRAY(100) OF T_PHONE;
+          FUNCTION test_sum (p_numbers IN t_numbers_array)
+            RETURN NUMBER;
+          FUNCTION test_function_failure (p_numbers IN t_numbers_array, p_force_failure IN VARCHAR2 DEFAULT 'N')
+            RETURN NUMBER;
+          FUNCTION test_increment(p_numbers IN t_numbers_array, p_increment_by IN NUMBER DEFAULT 1)
+            RETURN t_numbers_array;
+          FUNCTION test_copy_strings(p_strings IN t_strings_array, x_strings OUT t_strings_array)
+            RETURN t_strings_array;
+          FUNCTION test_copy_objects(p_phones IN t_phones_array, x_phones OUT t_phones_array)
+            RETURN t_phones_array;
+        END;
+      SQL
+
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_collections IS
+          FUNCTION test_sum (p_numbers IN t_numbers_array)
+            RETURN NUMBER
+          IS
+            l_sum   NUMBER(15) := 0;
+          BEGIN
+            IF p_numbers.COUNT > 0 THEN
+              FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+                l_sum := l_sum + p_numbers(i);
+              END LOOP;
+              RETURN l_sum;
+            ELSE
+              RETURN NULL;
+            END IF;
+          END;
+
+          FUNCTION test_function_failure (p_numbers IN t_numbers_array, p_force_failure IN VARCHAR2 DEFAULT 'N')
+            RETURN NUMBER
+          IS
+            l_sum   NUMBER(15) := 0;
+          BEGIN
+            IF p_force_failure = 'Y' THEN
+              raise_application_error(-20000, 'Simulate business error to test clearing of temp table.');
+            END IF;
+            IF p_numbers.COUNT > 0 THEN
+              FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+                l_sum := l_sum + p_numbers(i);
+              END LOOP;
+              RETURN l_sum;
+            ELSE
+              RETURN NULL;
+            END IF;
+          END;
+
+          FUNCTION test_increment(p_numbers IN t_numbers_array, p_increment_by IN NUMBER DEFAULT 1)
+            RETURN t_numbers_array
+          IS
+            l_numbers t_numbers_array := t_numbers_array();
+          BEGIN
+            FOR i IN p_numbers.FIRST..p_numbers.LAST LOOP
+              l_numbers.EXTEND;
+              l_numbers(i) := p_numbers(i) + p_increment_by;
+            END LOOP;
+            RETURN l_numbers;
+          END;
+
+          FUNCTION test_copy_strings(p_strings IN t_strings_array, x_strings OUT t_strings_array)
+            RETURN t_strings_array
+          IS
+          BEGIN
+            x_strings := t_strings_array();
+            FOR i IN p_strings.FIRST..p_strings.LAST LOOP
+              x_strings.EXTEND;
+              x_strings(i) := p_strings(i);
+            END LOOP;
+            RETURN x_strings;
+          END;
+
+          FUNCTION test_copy_objects(p_phones IN t_phones_array, x_phones OUT t_phones_array)
+            RETURN t_phones_array
+          IS
+          BEGIN
+            x_phones := p_phones;
+            RETURN x_phones;
+          END;
+        END;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_collections"
+      plsql.execute "DROP TYPE t_phone" rescue nil
+    end
+
+    it "should execute function with number array parameter" do
+      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+    end
+
+    it "should clear temporary tables after executing function with varray of numbers type even if an error occurs in the package" do
+      # this should work fine
+      plsql.test_collections.test_function_failure([1,2,3,4], 'N').should == 10
+      # we will force a package error here to see if things get cleaned up before the next call
+      lambda { plsql.test_collections.test_function_failure([5,6,7], 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      # after the error in the first call temporary tables should be cleared
+      plsql.test_collections.test_function_failure([3,4,5,6], 'N').should == 18
+    end
+
+    it "should return number array return value" do
+      plsql.test_collections.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+    end
+
+    it "should execute function with string array and return string array output parameter" do
+      strings = ['1','2','3','4']
+      plsql.test_collections.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+    end
+
+    it "should execute function with object array and return object array output parameter" do
+      phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+      plsql.test_collections.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+    end
+
+    # This test fails without wcmatthysen's "Procedure-call Fix." pull request.
+    # it "should execute function with empty object array" do
+    #   phones = []
+    #   plsql.test_collections.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+    # end
 
   end
 
