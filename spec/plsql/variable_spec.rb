@@ -56,16 +56,26 @@ describe "Package variables /" do
     end
 
     it "should set and get VARCHAR2(n CHAR) variable" do
+      if OCI8.properties.has_key?(:length_semantics)
+        original_length_semantics = OCI8.properties[:length_semantics]
+        OCI8.properties[:length_semantics] = :char
+      end
       plsql.test_package.varchar2_3_char = 'āčē'
       plsql.test_package.varchar2_3_char.should == 'āčē'
       lambda { plsql.test_package.varchar2_3_char = 'aceg' }.should raise_error(/buffer too small/)
+      OCI8.properties[:length_semantics] = original_length_semantics if OCI8.properties.has_key?(:length_semantics)
     end
 
     it "should set and get VARCHAR2(n BYTE) variable" do
+      if OCI8.properties.has_key?(:length_semantics)
+        original_length_semantics = OCI8.properties[:length_semantics]
+        OCI8.properties[:length_semantics] = :char
+      end
       plsql.test_package.varchar2_3_byte = 'ace'
       plsql.test_package.varchar2_3_byte.should == 'ace'
       lambda { plsql.test_package.varchar2_3_byte = 'āce' }.should raise_error(/buffer too small/)
       lambda { plsql.test_package.varchar2_3_byte = 'aceg' }.should raise_error(/buffer too small/)
+      OCI8.properties[:length_semantics] = original_length_semantics if OCI8.properties.has_key?(:length_semantics)
     end
 
     it "should set and get CHAR variable" do
