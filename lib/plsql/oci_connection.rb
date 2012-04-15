@@ -194,8 +194,7 @@ module PLSQL
         end
       when :"OCI8::CLOB", :"OCI8::BLOB"
         # ruby-oci8 cannot create CLOB/BLOB from ''
-        value = nil if value == ''
-        type.new(raw_oci_connection, value)
+        value.to_s.length > 0 ? type.new(raw_oci_connection, value) : nil
       when :"OCI8::Cursor"
         value && value.raw_cursor
       else
