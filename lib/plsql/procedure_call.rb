@@ -290,6 +290,7 @@ module PLSQL
       # insert values without autocommit
       old_autocommit = @schema.connection.autocommit?
       @schema.connection.autocommit = false if old_autocommit
+      tmp_table.delete
       case argument_metadata[:element][:data_type]
       when 'PL/SQL RECORD'
         values_with_index = []
