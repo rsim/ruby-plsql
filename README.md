@@ -1,0 +1,182 @@
+ruby-plsql
+==========
+
+Ruby API for calling Oracle PL/SQL procedures.
+
+DESCRIPTION
+-----------
+
+ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. It could be used both for accessing Oracle PL/SQL API procedures in legacy applications as well as it could be used to create PL/SQL unit tests using Ruby testing libraries.
+
+NUMBER, BINARY_INTEGER, PLS_INTEGER, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
+
+ruby-plsql supports Ruby 1.8.7, 1.9.3 and JRuby 1.6.7 implementations.
+
+USAGE
+-----
+
+### Calling PL/SQL functions and procedures:
+
+```ruby
+require "rubygems"
+require "ruby-plsql"
+
+plsql.connection = OCI8.new("hr","hr","xe")
+
+plsql.test_uppercase('xxx')               # => "XXX"
+plsql.test_uppercase(:p_string => 'xxx')  # => "XXX"
+plsql.test_copy("abc", nil, nil)          # => { :p_to => "abc", :p_to_double => "abcabc" }
+plsql.test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil)
+                                          # => { :p_to => "abc", :p_to_double => "abcabc" }
+plsql.hr.test_uppercase('xxx')            # => "XXX"
+plsql.test_package.test_uppercase('xxx')  # => 'XXX'
+
+# PL/SQL records or object type parameters should be passed as Hash
+p_employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
+plsql.test_full_name(p_employee)
+
+# TABLE or VARRAY parameters should be passed as Array
+plsql.test_sum([1,2,3,4])
+
+# Nested objects or arrays are also supported
+p_employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31),
+  :address => {:street => 'Street', :city => 'City', :country => 'Country'},
+  :phones => [{:type => 'mobile', :phone_number => '123456'}, {:type => 'fixed', :phone_number => '654321'}]}
+plsql.test_store_employee(p_employee)
+
+# Returned cursor can be fetched
+plsql.test_cursor do |cursor|
+  cursor.fetch                            # => one row from cursor
+  cursor.fetch_all                        # => all rows from cursor
+end
+
+plsql.connection.autocommit = false
+plsql.commit
+plsql.rollback
+
+plsql.logoff
+```
+
+Look at RSpec tests under spec directory for more usage examples.
+
+
+### Table operations:
+
+ruby-plsql also provides simple API for select/insert/update/delete table operations (with Sequel-like syntax). This could be useful if ruby-plsql is used without ActiveRecord (e.g. for writing PL/SQL unit tests):
+
+```ruby
+# insert record in table
+employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
+plsql.employees.insert employee           # INSERT INTO employees VALUES (1, 'First', 'Last', ...)
+
+# insert many records 
+employees = [employee1, employee2, ... ]  # array of many Hashes
+plsql.employees.insert employees
+
+# insert many records as list of values
+plsql.employees.insert_values [:employee_id, :first_name, :last_name],
+  [1, 'First 1', 'Last 1'],
+  [2, 'First 2', 'Last 2']
+
+# select one record
+plsql.employees.first                     # SELECT * FROM employees
+                                          # fetch first row => {:employee_id => ..., :first_name => '...', ...}
+plsql.employees.first(:employee_id => 1)  # SELECT * FROM employees WHERE employee_id = 1
+plsql.employees.first("WHERE employee_id = 1")
+plsql.employees.first("WHERE employee_id = :employee_id", 1)
+
+# select many records
+plsql.employees.all                       # => [{...}, {...}, ...]
+plsql.employees.all(:order_by => :employee_id)
+plsql.employees.all("WHERE employee_id > :employee_id", 5)
+
+# count records
+plsql.employees.count                     # SELECT COUNT(*) FROM employees
+plsql.employees.count("WHERE employee_id > :employee_id", 5)
+
+# update records
+plsql.employees.update(:first_name => 'Second', :where => {:employee_id => 1})
+                                          # UPDATE employees SET first_name = 'Second' WHERE employee_id = 1
+
+# delete records
+plsql.employees.delete(:employee_id => 1) # DELETE FROM employees WHERE employee_id = 1
+
+# select from sequences
+plsql.employees_seq.nextval               # SELECT employees_seq.NEXTVAL FROM dual
+plsql.employees_seq.currval               # SELECT employees_seq.CURRVAL FROM dual
+
+
+### Usage with Rails:
+
+If using with Rails then include in initializer file:
+
+```ruby
+plsql.activerecord_class = ActiveRecord::Base
+```
+
+and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
+
+INSTALLATION
+------------
+
+Install as gem with
+
+    gem install ruby-plsql
+
+or include gem in Gemfile if using bundler.
+
+In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver to $JRUBY_HOME/lib (for JRuby).
+
+If you are using MRI 1.8 or 1.9 Ruby implementation then you need to install ruby-oci8 gem (version 2.0.x or 2.1.x)
+as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
+
+If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc6.jar for Java 6 or ojdbc5.jar for Java 5. And copy this file to one of these locations:
+
+* in `./lib` directory of Rails application and require it manually
+* in some directory which is in `PATH`
+* in `JRUBY_HOME/lib` directory
+* or include path to JDBC driver jar file in Java `CLASSPATH`
+
+
+LINKS
+-----
+
+* Source code: http://github.com/rsim/ruby-plsql
+* Bug reports / Feature requests: http://github.com/rsim/ruby-plsql/issues
+* Discuss at oracle_enhanced adapter group: http://groups.google.com/group/oracle-enhanced
+
+CONTRIBUTORS
+------------
+
+* Raimonds Simanovskis
+* Edgars Beigarts
+* Oleh Mykytyuk
+* Wiehann Matthysen
+* Dayle Larson
+* Yasuo Honda
+
+LICENSE
+-------
+
+(The MIT License)
+
+Copyright (c) 2008-2012 Raimonds Simanovskis
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
