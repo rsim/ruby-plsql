@@ -4,16 +4,9 @@ require 'spec_helper'
 
 describe "Package variables /" do
 
-  before(:all) do
-    plsql.connect! CONNECTION_PARAMS
-  end
-
-  after(:all) do
-    plsql.logoff
-  end
-
   describe "String" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           varchar2_variable VARCHAR2(50);
@@ -37,6 +30,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should set and get VARCHAR2 variable" do
@@ -97,6 +91,7 @@ describe "Package variables /" do
 
   describe "Numeric" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           integer_variable INTEGER;
@@ -117,6 +112,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should set and get INTEGER variable" do
@@ -162,6 +158,7 @@ describe "Package variables /" do
 
   describe "Date and Time" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           date_variable DATE;
@@ -181,6 +178,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should set and get DATE variable" do
@@ -215,6 +213,7 @@ describe "Package variables /" do
 
   describe "LOB" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           clob_variable CLOB;
@@ -232,6 +231,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should set and get CLOB variable" do
@@ -257,6 +257,7 @@ describe "Package variables /" do
 
   describe "table column type" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE TABLE test_employees (
           employee_id NUMBER(15),
@@ -283,6 +284,7 @@ describe "Package variables /" do
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
       plsql.execute "DROP TABLE test_employees"
+      plsql.logoff
     end
 
     it "should set and get NUMBER variable" do
@@ -305,6 +307,7 @@ describe "Package variables /" do
 
   describe "constants" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           integer_constant CONSTANT NUMBER(1) := 1;
@@ -320,6 +323,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should get NUMBER constant" do
@@ -340,6 +344,7 @@ describe "Package variables /" do
 
   describe "object type" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute "DROP TYPE t_employee" rescue nil
       plsql.execute "DROP TYPE t_phones" rescue nil
       plsql.execute <<-SQL
@@ -398,6 +403,7 @@ describe "Package variables /" do
       plsql.execute "DROP TYPE t_address"
       plsql.execute "DROP TYPE t_phones"
       plsql.execute "DROP TYPE t_phone"
+      plsql.logoff
     end
 
     it "should set and get object type variable" do
@@ -419,6 +425,7 @@ describe "Package variables /" do
 
   describe "table row type" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE TABLE test_employees (
           employee_id NUMBER(15),
@@ -449,6 +456,7 @@ describe "Package variables /" do
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
       plsql.execute "DROP TABLE test_employees"
+      plsql.logoff
     end
 
     it "should set and get table ROWTYPE variable" do
@@ -460,6 +468,7 @@ describe "Package variables /" do
 
   describe "booleans" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
           boolean_variable BOOLEAN;
@@ -474,6 +483,7 @@ describe "Package variables /" do
 
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
+      plsql.logoff
     end
 
     it "should set and get BOOLEAN variable" do

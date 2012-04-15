@@ -3,17 +3,9 @@
 require 'spec_helper'
 
 describe "Parameter type mapping /" do
-  before(:all) do
-    plsql.connect! CONNECTION_PARAMS
-  end
-
-  after(:all) do
-    plsql.logoff
-  end
-
   describe "Function with string parameters" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_uppercase
           ( p_string VARCHAR2 )
@@ -27,6 +19,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_uppercase"
+      plsql.logoff
     end
   
     it "should find existing procedure" do
@@ -64,8 +57,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with numeric parameters" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_sum
           ( p_num1 NUMBER, p_num2 NUMBER )
@@ -107,6 +100,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP FUNCTION test_sum"
       plsql.execute "DROP FUNCTION test_number_1"
       plsql.execute "DROP PROCEDURE test_integers"
+      plsql.logoff
     end
   
     it "should process integer parameters" do
@@ -145,6 +139,7 @@ describe "Parameter type mapping /" do
   describe "Function with date parameters" do
   
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_date
           ( p_date DATE )
@@ -162,6 +157,7 @@ describe "Parameter type mapping /" do
 
     after(:all) do
       plsql.execute "DROP FUNCTION test_date"
+      plsql.logoff
     end
   
     it "should process Time parameters" do
@@ -210,8 +206,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with timestamp parameters" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_timestamp
           ( p_time TIMESTAMP )
@@ -225,6 +221,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_timestamp"
+      plsql.logoff
     end
   
     it "should process timestamp parameters" do
@@ -237,6 +234,7 @@ describe "Parameter type mapping /" do
 
   describe "Procedure with output parameters" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PROCEDURE test_copy
           ( p_from VARCHAR2, p_to OUT VARCHAR2, p_to_double OUT VARCHAR2 )
@@ -250,6 +248,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP PROCEDURE test_copy"
+      plsql.logoff
     end
   
     it "should return hash with output parameters" do
@@ -272,6 +271,7 @@ describe "Parameter type mapping /" do
 
   describe "Package with procedures with same name but different argument lists" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package2 IS
           FUNCTION test_procedure ( p_string VARCHAR2 )
@@ -331,6 +331,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP PACKAGE test_package2"
+      plsql.logoff
     end
     
     it "should find existing package" do
@@ -380,6 +381,7 @@ describe "Parameter type mapping /" do
 
   describe "Function with output parameters" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_copy_function
           ( p_from VARCHAR2, p_to OUT VARCHAR2, p_to_double OUT VARCHAR2 )
@@ -395,6 +397,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_copy_function"
+      plsql.logoff
     end
   
     it "should return array with return value and hash of output parameters" do
@@ -414,6 +417,7 @@ describe "Parameter type mapping /" do
 
   describe "Function or procedure without parameters" do
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_no_params
           RETURN VARCHAR2
@@ -434,6 +438,7 @@ describe "Parameter type mapping /" do
     after(:all) do
       plsql.execute "DROP FUNCTION test_no_params"
       plsql.execute "DROP PROCEDURE test_proc_no_params"
+      plsql.logoff
     end
 
     it "should find function" do
@@ -455,8 +460,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with CLOB parameter and return value" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_clob
           ( p_clob CLOB )
@@ -494,6 +499,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP FUNCTION test_clob"
       plsql.execute "DROP FUNCTION test_clob_insert"
       plsql.execute "DROP TABLE test_clob_table"
+      plsql.logoff
     end
   
     it "should find existing procedure" do
@@ -537,8 +543,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Procedrue with CLOB parameter and return value" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PROCEDURE test_clob_proc
           ( p_clob CLOB,
@@ -552,6 +558,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP PROCEDURE test_clob_proc"
+      plsql.logoff
     end
   
     it "should find existing procedure" do
@@ -565,8 +572,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Procedrue with BLOB parameter and return value" do
-  
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PROCEDURE test_blob_proc
           ( p_blob BLOB,
@@ -580,6 +587,7 @@ describe "Parameter type mapping /" do
   
     after(:all) do
       plsql.execute "DROP PROCEDURE test_blob_proc"
+      plsql.logoff
     end
   
     it "should find existing procedure" do
@@ -593,8 +601,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with record parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute "DROP TABLE test_employees" rescue nil
       plsql.execute <<-SQL
         CREATE TABLE test_employees (
@@ -700,6 +708,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP FUNCTION test_employee_record"
       plsql.execute "DROP FUNCTION test_employee_record2"
       plsql.execute "DROP TABLE test_employees"
+      plsql.logoff
     end
 
     it "should find existing function" do
@@ -743,8 +752,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with boolean parameters" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_boolean
           ( p_boolean BOOLEAN )
@@ -767,6 +776,7 @@ describe "Parameter type mapping /" do
     after(:all) do
       plsql.execute "DROP FUNCTION test_boolean"
       plsql.execute "DROP PROCEDURE test_boolean2"
+      plsql.logoff
     end
 
     it "should accept true value and return true value" do
@@ -796,8 +806,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with object type parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute "DROP TYPE t_employee" rescue nil
       plsql.execute "DROP TYPE t_phones" rescue nil
       plsql.execute <<-SQL
@@ -869,6 +879,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP TYPE t_address"
       plsql.execute "DROP TYPE t_phones"
       plsql.execute "DROP TYPE t_phone"
+      plsql.logoff
     end
 
     it "should find existing function" do
@@ -906,8 +917,8 @@ describe "Parameter type mapping /" do
 
 
   describe "Function with table parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       # Array of numbers
       plsql.execute <<-SQL
         CREATE OR REPLACE TYPE t_numbers AS TABLE OF NUMBER(15)
@@ -1135,6 +1146,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP TYPE t_phones"
       plsql.execute "DROP TYPE t_phone"
       plsql.connection.drop_session_ruby_temporary_tables
+      plsql.logoff
     end
 
     it "should find existing function" do
@@ -1220,8 +1232,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with table indexed by bynary integer parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE TABLE test_employees (
           employee_id   NUMBER(15),
@@ -1339,6 +1351,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP PACKAGE test_collections"
       plsql.execute "DROP TABLE test_employees"
       plsql.connection.drop_session_ruby_temporary_tables
+      plsql.logoff
     end
 
     it "should clear temporary tables after executing function with index-by table of numbers type even if an error occurs in the package" do
@@ -1408,8 +1421,8 @@ describe "Parameter type mapping /" do
 
 
   describe "Function with VARRAY parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       # Array of numbers
       plsql.execute <<-SQL
         CREATE OR REPLACE TYPE t_numbers_array AS VARRAY(100) OF NUMBER(15)
@@ -1494,6 +1507,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP TYPE t_strings_array"
       plsql.execute "DROP TYPE t_phones_array"
       plsql.execute "DROP TYPE t_phone"
+      plsql.logoff
     end
 
     it "should find existing function" do
@@ -1526,8 +1540,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function in package with VARRAY parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE TYPE t_phone AS OBJECT (
           type            VARCHAR2(10),
@@ -1626,6 +1640,7 @@ describe "Parameter type mapping /" do
     after(:all) do
       plsql.execute "DROP PACKAGE test_collections"
       plsql.execute "DROP TYPE t_phone" rescue nil
+      plsql.logoff
     end
 
     it "should execute function with number array parameter" do
@@ -1664,8 +1679,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with cursor return value or parameter" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute "DROP TABLE test_employees" rescue nil
       plsql.execute <<-SQL
         CREATE TABLE test_employees (
@@ -1733,6 +1748,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP PROCEDURE test_insert_employee"
       plsql.execute "DROP FUNCTION test_cursor_fetch"
       plsql.execute "DROP TABLE test_employees"
+      plsql.logoff
     end
 
     it "should find existing function" do
@@ -1808,8 +1824,8 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with typed ref cursor return value" do
-
     before(:all) do
+      plsql.connect! CONNECTION_PARAMS
       plsql.execute "DROP TABLE typed_ref_cursor_table" rescue nil
 
       plsql.execute <<-SQL
@@ -1847,6 +1863,7 @@ describe "Parameter type mapping /" do
     after(:all) do
       plsql.execute "DROP PACKAGE typed_ref_cursor_test"
       plsql.execute "DROP TABLE typed_ref_cursor_table"
+      plsql.logoff
     end
 
     it "should return cursor and fetch first row" do
@@ -1872,7 +1889,6 @@ describe "Parameter type mapping /" do
 end
 
 describe "Synonyms /" do
-
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
   end

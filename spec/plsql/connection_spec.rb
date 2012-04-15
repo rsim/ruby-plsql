@@ -19,29 +19,33 @@ describe "Connection" do
   end
 
   describe "create and destroy" do
+    before(:all) do
+      @raw_conn1 = get_connection
+    end
+
     before(:each) do
-      @conn = PLSQL::Connection.create( @raw_conn )
-      @conn.set_time_zone
+      @conn1 = PLSQL::Connection.create( @raw_conn1 )
+      @conn1.set_time_zone
     end
 
     it "should create connection" do
-      @conn.raw_connection.should == @raw_conn
+      @conn1.raw_connection.should == @raw_conn1
     end
 
     unless defined?(JRuby)
       it "should be oci connection" do
-        @conn.should be_oci
-        @conn.raw_driver.should == :oci
+        @conn1.should be_oci
+        @conn1.raw_driver.should == :oci
       end
     else
       it "should be jdbc connection" do
-        @conn.should be_jdbc
-        @conn.raw_driver.should == :jdbc
+        @conn1.should be_jdbc
+        @conn1.raw_driver.should == :jdbc
       end
     end
 
     it "should logoff connection" do
-      @conn.logoff.should be_true
+      @conn1.logoff.should be_true
     end
 
   end
