@@ -159,10 +159,9 @@ describe "Connection" do
         ora_value.freeTemporary
       end
 
-      it "should translate Ruby nil value to empty Java::OracleSql::CLOB when Java::OracleSql::CLOB type specified" do
+      it "should translate Ruby nil value to nil when Java::OracleSql::CLOB type specified" do
         ora_value = @conn.ruby_value_to_ora_value(nil, Java::OracleSql::CLOB)
-        ora_value.class.should == Java::OracleSql::CLOB
-        ora_value.isEmptyLob.should be_true
+        ora_value.should be_nil
       end
 
       it "should translate Oracle BigDecimal integer value to Fixnum" do
