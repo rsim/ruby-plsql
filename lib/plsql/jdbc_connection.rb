@@ -395,7 +395,7 @@ module PLSQL
           clob.setString(1, value)
           clob
         else
-          Java::OracleSql::CLOB.getEmptyCLOB
+          nil
         end
       when :'Java::OracleSql::BLOB'
         if value
@@ -403,7 +403,7 @@ module PLSQL
           blob.setBytes(1, value.to_java_bytes)
           blob
         else
-          Java::OracleSql::BLOB.getEmptyBLOB
+          nil
         end
       when :'Java::OracleSql::ARRAY'
         if value
