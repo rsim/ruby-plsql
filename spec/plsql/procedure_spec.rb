@@ -1009,7 +1009,7 @@ describe "Parameter type mapping /" do
           TYPE t_employees2 IS TABLE OF t_employee2;
           FUNCTION test_employees2 (p_employees IN OUT t_employees2)
             RETURN t_employees2;
-            
+
           TYPE t_nstring IS RECORD(
             ch_10bytes    CHAR(10 BYTE),
             ch_10chars    CHAR(10 CHAR),
@@ -1201,7 +1201,7 @@ describe "Parameter type mapping /" do
     it "should execute function with table of records type (defined inside package) parameter" do
       plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
     end
-    
+
     it "should execute function with table of records type (defined inside package and includes NVARCHAR columns) parameter" do
       plsql.test_collections.test_nstring(@nstrings).should == [(1..5).map{|i| "NCh #{i}NStr #{i},"}.join, {:p_out => @nstrings}]
     end
