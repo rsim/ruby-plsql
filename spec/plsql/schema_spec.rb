@@ -178,6 +178,11 @@ end
 describe "ActiveRecord connection" do
   before(:all) do
     ActiveRecord::Base.establish_connection(CONNECTION_PARAMS)
+    class TestBaseModel < ActiveRecord::Base
+      self.abstract_class = true
+    end
+    class TestModel < TestBaseModel
+    end
   end
 
   before(:each) do
@@ -203,6 +208,16 @@ describe "ActiveRecord connection" do
 
   it "should have the same connection as default schema" do
     plsql.hr.connection.should == plsql.connection
+  end
+
+  it "should accept inherited ActiveRecord class" do
+    plsql.activerecord_class = TestBaseModel
+    plsql.schema_name.should == 'HR'
+  end
+
+  it "should accept subclass of inherited ActiveRecord class" do
+    plsql.activerecord_class = TestModel
+    plsql.schema_name.should == 'HR'
   end
 end if defined?(ActiveRecord)
 
