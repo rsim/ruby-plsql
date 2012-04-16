@@ -1,3 +1,17 @@
+== 0.5.0 2012-04-16
+
+* Improvements
+  * Support for ruby-oci8 2.1.0 and ActiveRecord 3.2
+  * Tested with Ruby 1.9.3
+  * Tests migrated to RSpec 2
+  * Use ojdbc6.jar or ojdbc5.jar JDBC drivers when using JRuby
+* Bug fixes
+  * Fixed clearing of global temp tables before procedure calls
+  * Fixed passing NULL value for CLOB type arguments
+  * Fixed procedure call that returns array of records
+  * Fixed support for NCHAR and NVARCHAR argument types
+  * Accept any ActiveRecord inherited model class for activerecord_class= method
+
 == 0.4.4 2010-10-06
 
 * Improvements

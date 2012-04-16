@@ -22,8 +22,7 @@ EOS
   gem.email = "raimonds.simanovskis@gmail.com"
   gem.homepage = "http://github.com/rsim/ruby-plsql"
   gem.authors = ["Raimonds Simanovskis"]
-  gem.add_development_dependency "rspec", "~> 1.3.0"
-  gem.extra_rdoc_files = ['README.rdoc']
+  gem.extra_rdoc_files = ['README.md']
 end
 Jeweler::RubygemsDotOrgTasks.new
 

@@ -5,13 +5,16 @@
 
 Gem::Specification.new do |s|
   s.name = "ruby-plsql"
-  s.version = "0.5.0.beta1"
+  s.version = "0.5.0"
 
-  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Raimonds Simanovskis"]
   s.date = "2012-04-16"
   s.description = "ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures.\nIt could be used both for accessing Oracle PL/SQL API procedures in legacy applications\nas well as it could be used to create PL/SQL unit tests using Ruby testing libraries.\n"
   s.email = "raimonds.simanovskis@gmail.com"
+  s.extra_rdoc_files = [
+    "README.md"
+  ]
   s.files = [
     "Gemfile",
     "History.txt",
@@ -66,14 +69,12 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<activerecord>, ["~> 3.2.3"])
       s.add_development_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
       s.add_development_dependency(%q<ruby-oci8>, [">= 0"])
-      s.add_development_dependency(%q<rspec>, ["~> 1.3.0"])
     else
       s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
       s.add_dependency(%q<rspec>, ["~> 2.9"])
       s.add_dependency(%q<activerecord>, ["~> 3.2.3"])
       s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
       s.add_dependency(%q<ruby-oci8>, [">= 0"])
-      s.add_dependency(%q<rspec>, ["~> 1.3.0"])
     end
   else
     s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
@@ -81,7 +82,6 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<activerecord>, ["~> 3.2.3"])
     s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
     s.add_dependency(%q<ruby-oci8>, [">= 0"])
-    s.add_dependency(%q<rspec>, ["~> 1.3.0"])
   end
 end
 
