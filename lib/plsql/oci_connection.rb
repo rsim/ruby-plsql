@@ -2,7 +2,16 @@ begin
   require "oci8"
 rescue LoadError
   # OCI8 driver is unavailable.
-  raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. Please install ruby-oci8 gem."
+  msg = $!.to_s
+  if /-- oci8$/ =~ msg
+    # ruby-oci8 is not installed.
+    # MRI <= 1.9.2, Rubinius, JRuby:
+    #   no such file to load -- oci8
+    # MRI >= 1.9.3:
+    #   cannot load such file -- oci8
+    msg = "Please install ruby-oci8 gem."
+  end
+  raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. #{msg}"
 end
 
 require "plsql/oci8_patches"
