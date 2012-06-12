@@ -3,15 +3,40 @@ require 'spec_helper'
 describe "Package" do
   before(:all) do
     plsql.connection = get_connection
+    # Not use ROWTYPE definition due to Oracle bug (see http://arjudba.blogspot.com/2011/12/ora-00600-internal-error-code-arguments.html)
     plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE test_package IS
+        TYPE object_record IS RECORD(
+          owner        ALL_OBJECTS.OWNER%TYPE,
+          object_name  ALL_OBJECTS.OBJECT_NAME%TYPE,
+          object_id    ALL_OBJECTS.OBJECT_ID%TYPE,
+          object_type  ALL_OBJECTS.OBJECT_TYPE%TYPE);
+        TYPE objects_list IS TABLE OF object_record;
+
+        FUNCTION find_objects_by_name ( p_name ALL_OBJECTS.OBJECT_NAME%TYPE )
+          RETURN objects_list PIPELINED;
+
         test_variable NUMBER;
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2;
-      END;
+      END test_package;
     SQL
     plsql.execute <<-SQL
       CREATE OR REPLACE PACKAGE BODY test_package IS
+        FUNCTION find_objects_by_name ( p_name ALL_OBJECTS.OBJECT_NAME%TYPE )
+          RETURN objects_list PIPELINED
+        IS
+        BEGIN
+          FOR l_object IN (
+            SELECT OWNER, OBJECT_NAME, OBJECT_ID, OBJECT_TYPE
+            FROM   ALL_OBJECTS
+            WHERE  OBJECT_NAME = UPPER(p_name)
+            AND    ROWNUM < 11)
+          LOOP
+            PIPE ROW(l_object);
+          END LOOP;
+        END find_objects_by_name;
+
         FUNCTION test_procedure ( p_string VARCHAR2 )
           RETURN VARCHAR2
         IS
@@ -20,11 +45,27 @@ describe "Package" do
         END test_procedure;
       END;
     SQL
-
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE test_find_package IS
+        FUNCTION find ( p_string VARCHAR2 )
+          RETURN VARCHAR2;
+      END test_find_package;
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_find_package IS
+        FUNCTION find ( p_string VARCHAR2 )
+          RETURN VARCHAR2
+        IS
+        BEGIN
+          RETURN p_string;
+        END find;
+      END test_find_package;
+    SQL
   end
   
   after(:all) do
     plsql.execute "DROP PACKAGE test_package"
+    plsql.execute "DROP PACKAGE test_find_package"
     plsql.logoff
   end
   
@@ -41,6 +82,19 @@ describe "Package" do
 
   it "should find existing package in schema" do
     plsql.test_package.class.should == PLSQL::Package
+  end
+
+  it "should search objects via find" do
+    PLSQL::Package.find(plsql, :test_package).find('test_procedure').should be_a PLSQL::Procedure
+    PLSQL::Package.find(plsql, :test_package).find('test_variable').should be_a PLSQL::Variable
+
+    PLSQL::Package.find(plsql, :test_find_package).find('test_variable').should == 'test_variable'
+    PLSQL::Package.find(plsql, :test_find_package).__find__('find').should be_a PLSQL::Procedure
+  end
+
+  it "should tell ordinary function from pipelined" do
+    PLSQL::Package.find(plsql, :test_package).find('test_procedure').should be_a PLSQL::Procedure
+    PLSQL::Package.find(plsql, :test_package).find('find_objects_by_name').should be_a PLSQL::PipelinedFunction
   end
 
   it "should execute package function and return correct value" do
