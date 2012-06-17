@@ -193,24 +193,48 @@ module PLSQL
     def find_database_object(name, override_schema_name = nil)
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
-      if row = select_first(
-          "SELECT o.object_type, o.object_id, o.status,
-          (CASE WHEN o.object_type = 'PACKAGE'
-          THEN (SELECT ob.status FROM all_objects ob
-          WHERE ob.owner = o.owner AND ob.object_name = o.object_name AND ob.object_type = 'PACKAGE BODY')
-          ELSE NULL END) body_status
-          FROM all_objects o
-          WHERE owner = :owner AND object_name = :object_name
-          AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
-          object_schema_name, object_name)
-        object_type, object_id, status, body_status = row
+      if (row = select_first(<<-SQL, object_schema_name, object_name))
+          SELECT o.object_type,
+                 o.object_id,
+                 o.status,
+                (CASE
+                 WHEN o.object_type = 'PACKAGE' THEN
+                  (SELECT ob.status
+                   FROM   all_objects ob
+                   WHERE  ob.owner = o.owner
+                   AND    ob.object_name = o.object_name
+                   AND    ob.object_type = 'PACKAGE BODY')
+                 ELSE NULL
+                 END) body_status,
+                (CASE
+                 WHEN o.object_type = 'FUNCTION' THEN
+                  (SELECT p.pipelined
+                   FROM   all_procedures p
+                   WHERE  p.owner = o.owner
+                   AND    p.object_name = o.object_name
+                   AND    p.object_type = 'FUNCTION')
+                 ELSE NULL
+                 END) pipelined
+          FROM   all_objects o
+          WHERE  owner = :owner
+          AND    object_name = :object_name
+          AND    object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')
+        SQL
+
+        object_type, object_id, status, body_status, pipelined = row
         raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n#{
           _errors(object_schema_name, object_name, object_type)}" if status == 'INVALID'
         raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n#{
           _errors(object_schema_name, object_name, 'PACKAGE BODY')}" if body_status == 'INVALID'
         case object_type
-        when 'PROCEDURE', 'FUNCTION'
+        when 'PROCEDURE'
           Procedure.new(self, name, nil, override_schema_name, object_id)
+        when 'FUNCTION'
+          if pipelined == 'NO'
+            Procedure.new(self, name, nil, override_schema_name, object_id)
+          else
+            PipelinedFunction.new(self, name, nil, override_schema_name, object_id)
+          end
         when 'PACKAGE'
           Package.new(self, name, override_schema_name)
         when 'TABLE'

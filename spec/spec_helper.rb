@@ -15,8 +15,15 @@ end
 require 'ruby-plsql'
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
-DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
-DATABASE_PORT = ENV['DATABASE_PORT'] || 1521
+
+if ENV['DATABASE_USE_TNS_NAMES']
+  DATABASE_HOST = nil
+  DATABASE_PORT = nil
+else
+  DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
+  DATABASE_PORT = ENV['DATABASE_PORT'] || 1521
+end
+
 DATABASE_USERS_AND_PASSWORDS = [
   [ENV['DATABASE_USER'] || 'hr', ENV['DATABASE_PASSWORD'] || 'hr'],
   [ENV['DATABASE_USER2'] || 'arunit', ENV['DATABASE_PASSWORD2'] || 'arunit']
@@ -26,15 +33,7 @@ DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 
 def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
-  unless defined?(JRUBY_VERSION)
-    begin
-      OCI8.new(database_user, database_password, DATABASE_NAME)
-    # if connection fails then sleep 5 seconds and retry
-    rescue OCIError
-      sleep 5
-      OCI8.new(database_user, database_password, DATABASE_NAME)
-    end
-  else
+  if defined?(JRUBY_VERSION)
     begin
       java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
         database_user, database_password)
@@ -43,6 +42,14 @@ def get_connection(user_number = 0)
       sleep 5
       java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
         database_user, database_password)
+    end
+  else
+    begin
+      OCI8.new(database_user, database_password, DATABASE_NAME)
+    # if connection fails then sleep 5 seconds and retry
+    rescue OCIError
+      sleep 5
+      OCI8.new(database_user, database_password, DATABASE_NAME)
     end
   end
 end
