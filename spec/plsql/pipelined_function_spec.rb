@@ -64,13 +64,13 @@ describe "PipelinedFunction" do
   end
 
   it "should identify arguments" do
-    arguments = plsql.test_package.find('find_objects_by_name').arguments
+    arguments = plsql.test_package['find_objects_by_name'].arguments
     arguments.should be_an Enumerable
     arguments.size.should == 1
   end
 
   it "should identify returning table type" do
-    return_type = plsql.test_package.find('find_objects_by_name').return
+    return_type = plsql.test_package['find_objects_by_name'].return
     return_type[:data_type].should == 'TABLE'
   end
 

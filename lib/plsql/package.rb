@@ -43,24 +43,14 @@ module PLSQL
       @override_schema_name = override_schema_name
       @package = package.to_s.upcase
       @package_objects = {}
-
-      # if package contains object with name "find" then replace it with method_missing call
-      # but __find__ still active
-      if __find__('find')
-        def self.find(*args, &block)
-          method_missing('find', *args, &block)
-        end
-      end
     end
 
-    def find(object_name)
+    def [](object_name)
       object_name = object_name.to_s
       @package_objects[object_name] ||= [Procedure, Variable, PipelinedFunction].inject(nil) do |res, object_type|
         res || object_type.find(@schema, object_name, @package, @override_schema_name)
       end
     end
-
-    alias __find__ find
 
     private
     
@@ -68,7 +58,7 @@ module PLSQL
       method = method.to_s
       method.chop! if (assignment = method[/=$/])
 
-      case (object = __find__(method))
+      case (object = self[method])
       when Procedure, PipelinedFunction
         raise ArgumentError, "Cannot assign value to package procedure '#{method.upcase}'" if assignment
         object.exec(*args, &block)

@@ -45,27 +45,10 @@ describe "Package" do
         END test_procedure;
       END;
     SQL
-    plsql.execute <<-SQL
-      CREATE OR REPLACE PACKAGE test_find_package IS
-        FUNCTION find ( p_string VARCHAR2 )
-          RETURN VARCHAR2;
-      END test_find_package;
-    SQL
-    plsql.execute <<-SQL
-      CREATE OR REPLACE PACKAGE BODY test_find_package IS
-        FUNCTION find ( p_string VARCHAR2 )
-          RETURN VARCHAR2
-        IS
-        BEGIN
-          RETURN p_string;
-        END find;
-      END test_find_package;
-    SQL
   end
   
   after(:all) do
     plsql.execute "DROP PACKAGE test_package"
-    plsql.execute "DROP PACKAGE test_find_package"
     plsql.logoff
   end
   
@@ -84,17 +67,14 @@ describe "Package" do
     plsql.test_package.class.should == PLSQL::Package
   end
 
-  it "should search objects via find" do
-    PLSQL::Package.find(plsql, :test_package).find('test_procedure').should be_a PLSQL::Procedure
-    PLSQL::Package.find(plsql, :test_package).find('test_variable').should be_a PLSQL::Variable
-
-    PLSQL::Package.find(plsql, :test_find_package).find('test_variable').should == 'test_variable'
-    PLSQL::Package.find(plsql, :test_find_package).__find__('find').should be_a PLSQL::Procedure
+  it "should search objects via []" do
+    PLSQL::Package.find(plsql, :test_package)['test_procedure'].should be_a PLSQL::Procedure
+    PLSQL::Package.find(plsql, :test_package)['test_variable'].should be_a PLSQL::Variable
   end
 
   it "should tell ordinary function from pipelined" do
-    PLSQL::Package.find(plsql, :test_package).find('test_procedure').should be_a PLSQL::Procedure
-    PLSQL::Package.find(plsql, :test_package).find('find_objects_by_name').should be_a PLSQL::PipelinedFunction
+    PLSQL::Package.find(plsql, :test_package)['test_procedure'].should be_a PLSQL::Procedure
+    PLSQL::Package.find(plsql, :test_package)['find_objects_by_name'].should be_a PLSQL::PipelinedFunction
   end
 
   it "should execute package function and return correct value" do
