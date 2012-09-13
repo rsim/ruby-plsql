@@ -202,7 +202,7 @@ module PLSQL
             fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
             sql << fields_sorted_by_position.map do |field|
               metadata = fields_metadata[field]
-              "#{field} #{ProcedureCommon.type_to_sql(metadata)}"
+              "\"#{field}\" #{ProcedureCommon.type_to_sql(metadata)}"
             end.join(",\n")
           else
             sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}"
