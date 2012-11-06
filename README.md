@@ -137,6 +137,28 @@ If you are using JRuby then you need to download latest [Oracle JDBC driver](htt
 * in `JRUBY_HOME/lib` directory
 * or include path to JDBC driver jar file in Java `CLASSPATH`
 
+TESTS
+-----
+
+* Create Oracle database schema for test purposes. Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
+
+        SQL> CREATE USER hr IDENTIFIED BY hr;
+        SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
+
+        SQL> CREATE USER arunit IDENTIFIED BY arunit;
+        SQL> GRANT create session TO arunit;
+
+* Install bundler with
+
+        gem install bundler
+
+* Install necessary gems with
+
+        bundle install
+
+* Run tests with
+
+        rake spec
 
 LINKS
 -----
