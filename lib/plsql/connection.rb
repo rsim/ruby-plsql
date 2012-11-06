@@ -7,6 +7,7 @@ module PLSQL
       @raw_driver = self.class.driver_type
       @raw_connection = raw_conn
       @activerecord_class = ar_class
+      ObjectSpace.define_finalizer(self, proc{logoff})
     end
 
     def self.create(raw_conn, ar_class = nil) #:nodoc:
