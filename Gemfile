@@ -9,6 +9,5 @@ group :development do
     gem 'activerecord-oracle_enhanced-adapter', '~> 1.4.1'
   end
 
-  # gem 'ruby-oci8', '~> 2.1.0'
-  gem 'ruby-oci8', :git => 'git://github.com/kubo/ruby-oci8.git', :platforms => :mri
+  gem 'ruby-oci8', '~> 2.1.2'
 end
