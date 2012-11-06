@@ -9,5 +9,7 @@ group :development do
     gem 'activerecord-oracle_enhanced-adapter', '~> 1.4.1'
   end
 
-  gem 'ruby-oci8', '~> 2.1.2'
+  platforms :ruby do
+    gem 'ruby-oci8', '~> 2.1.2'
+  end
 end
