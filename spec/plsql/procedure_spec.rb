@@ -1814,7 +1814,6 @@ describe "Parameter type mapping /" do
 
     it "should execute function with cursor parameter and return record" do
       pending "not possible from JDBC" if defined?(JRUBY_VERSION)
-      pending "fails with core dump with ruby-oci8 2.1.0" if OCI8::VERSION >= "2.1.0"
       plsql.test_cursor do |cursor|
         plsql.test_cursor_fetch(cursor).should == @employees[0]
       end
