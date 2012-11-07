@@ -69,13 +69,14 @@ module PLSQL
       include Connection::CursorCommon
 
       # stack of open cursors
-      @@open_cursors = []
+      @@open_cursors = {}
       attr_reader :raw_cursor
 
       def initialize(conn, raw_cursor)
         @connection = conn
         @raw_cursor = raw_cursor
-        @@open_cursors.push self
+        @@open_cursors["#{Thread.current.__id__}"] ||= []
+        @@open_cursors["#{Thread.current.__id__}"].push self
       end
 
       def self.new_from_parse(conn, sql)
@@ -125,7 +126,7 @@ module PLSQL
 
       def close
         # close all cursors that were created after this one
-        while (open_cursor = @@open_cursors.pop) && !open_cursor.equal?(self)
+        while (open_cursor = @@open_cursors["#{Thread.current.__id__}"].pop) && !open_cursor.equal?(self)
           open_cursor.close_raw_cursor
         end
         close_raw_cursor
