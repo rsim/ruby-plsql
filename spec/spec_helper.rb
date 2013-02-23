@@ -16,7 +16,7 @@ require 'ruby-plsql'
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
-DATABASE_PORT = ENV['DATABASE_PORT'].to_i || 1521
+DATABASE_PORT = ( ENV['DATABASE_PORT'] || 1521 ).to_i
 DATABASE_USERS_AND_PASSWORDS = [
   [ENV['DATABASE_USER'] || 'hr', ENV['DATABASE_PASSWORD'] || 'hr'],
   [ENV['DATABASE_USER2'] || 'arunit', ENV['DATABASE_PASSWORD2'] || 'arunit']
@@ -28,11 +28,11 @@ def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
   unless defined?(JRUBY_VERSION)
     begin
-      OCI8.new(database_user, database_password, DATABASE_NAME)
+      OCI8.new(database_user, database_password, "//#{DATABASE_HOST}:#{DATABASE_PORT}/#{DATABASE_NAME}")
     # if connection fails then sleep 5 seconds and retry
     rescue OCIError
       sleep 5
-      OCI8.new(database_user, database_password, DATABASE_NAME)
+      OCI8.new(database_user, database_password, "//#{DATABASE_HOST}:#{DATABASE_PORT}/#{DATABASE_NAME}")
     end
   else
     begin
