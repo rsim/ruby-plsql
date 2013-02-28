@@ -219,6 +219,15 @@ describe "ActiveRecord connection" do
     plsql.activerecord_class = TestModel
     plsql.schema_name.should == 'HR'
   end
+
+  it "should safely close cursors in threaded environment" do
+    unless defined?(JRuby)
+      t1 = Thread.new {plsql.dbms_lock.sleep(1)}.tap {|t| t.abort_on_exception = true}
+      t2 = Thread.new {plsql.dbms_lock.sleep(2)}.tap {|t| t.abort_on_exception = true}
+      t2.join
+    end
+  end
+
 end if defined?(ActiveRecord)
 
 describe "DBMS_OUTPUT logging" do
