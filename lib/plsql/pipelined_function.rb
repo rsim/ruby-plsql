@@ -71,5 +71,7 @@ module PLSQL
       call = PipelinedFunctionCall.new(self, args)
       call.exec(&block)
     end
+
+    private :ensure_tmp_tables_created
   end
 end
