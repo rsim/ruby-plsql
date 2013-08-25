@@ -340,9 +340,16 @@ module PLSQL
         metadata = argument_metadata[:fields][field]
         raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
         bind_variable = :"#{argument}_f#{metadata[:position]}"
-        sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
-        bind_values[bind_variable] = value
-        bind_metadata[bind_variable] = metadata
+        case metadata[:data_type]
+        when 'PL/SQL BOOLEAN'
+          sql << "l_#{argument}.#{field} := (:#{bind_variable} = 1);\n"
+          bind_values[bind_variable] = value.nil? ? nil : (value ? 1 : 0)
+          bind_metadata[bind_variable] = metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        else
+          sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
+          bind_values[bind_variable] = value
+          bind_metadata[bind_variable] = metadata
+        end
       end
       [sql, bind_values, bind_metadata]
     end
