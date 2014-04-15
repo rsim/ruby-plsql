@@ -47,6 +47,14 @@ describe "Package" do
     expect(plsql.test_package.test_procedure('xxx')).to eq('XXX')
   end
 
+  it "should report an existing procedure as existing" do
+    plsql.test_package.procedure_defined?(:test_procedure).should == true
+  end
+
+  it "should report an inexistent procedure as not existing" do
+    plsql.test_package.procedure_defined?(:inexistent_procedure).should == false
+  end
+
   describe "variables" do
     it "should set and get package variable value" do
       plsql.test_package.test_variable = 1
