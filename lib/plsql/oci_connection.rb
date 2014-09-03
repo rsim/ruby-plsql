@@ -126,8 +126,11 @@ module PLSQL
       def close
         # close all cursors that were created after this one
         while (open_cursor = @@open_cursors.pop) && !open_cursor.equal?(self)
+          puts "Closing an open cursor not self: #{open_cursor}" # XXX
           open_cursor.close_raw_cursor
         end
+
+        puts "Closing self cursor: #{self} / #{open_cursor}" # XXX
         close_raw_cursor
       end
 
