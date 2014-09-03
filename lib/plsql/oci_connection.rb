@@ -68,14 +68,12 @@ module PLSQL
     class Cursor #:nodoc:
       include Connection::CursorCommon
 
-      # stack of open cursors
-      @@open_cursors = []
       attr_reader :raw_cursor
 
       def initialize(conn, raw_cursor)
         @connection = conn
         @raw_cursor = raw_cursor
-        @@open_cursors.push self
+        open_cursors.push self
       end
 
       def self.new_from_parse(conn, sql)
@@ -125,12 +123,20 @@ module PLSQL
 
       def close
         # close all cursors that were created after this one
-        while (open_cursor = @@open_cursors.pop) && !open_cursor.equal?(self)
+        while (open_cursor = open_cursors.pop) && !open_cursor.equal?(self)
           open_cursor.close_raw_cursor
         end
+
         close_raw_cursor
+
+        Thread.current[:__ruby_plsql_open_cursors] = nil if open_cursors.empty?
       end
 
+      # Returns the (modifiable) list of open cursors in the current thread.
+      def open_cursors
+        Thread.current[:__ruby_plsql_open_cursors] ||= []
+        Thread.current[:__ruby_plsql_open_cursors]
+      end
     end
 
     def parse(sql)
