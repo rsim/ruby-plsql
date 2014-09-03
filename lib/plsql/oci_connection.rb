@@ -77,6 +77,7 @@ module PLSQL
       end
 
       def self.new_from_parse(conn, sql)
+        puts "Thread #{Thread.current} parsing #{sql} for #{conn}" # XXX
         raw_cursor = conn.raw_connection.parse(sql)
         self.new(conn, raw_cursor)
       end
@@ -134,7 +135,7 @@ module PLSQL
 
       # Returns the (modifiable) list of open cursors in the current thread.
       def open_cursors
-        puts "Open cursors accessor on #{Thread.current}"
+        puts "Open cursors accessor on #{Thread.current}" # XXX
         Thread.current[:__ruby_plsql_open_cursors] ||= []
         Thread.current[:__ruby_plsql_open_cursors]
       end
