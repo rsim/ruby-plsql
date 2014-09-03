@@ -102,6 +102,7 @@ module PLSQL
       end
       
       def exec(*bindvars)
+        puts "Executing cursor #{self} on thread #{Thread.current}" # XXX
         @raw_cursor.exec(*bindvars)
       end
 
@@ -125,17 +126,17 @@ module PLSQL
       def close
         # close all cursors that were created after this one
         while (open_cursor = open_cursors.pop) && !open_cursor.equal?(self)
-          puts "Closing an open cursor not self on #{Thread.current}: #{open_cursor}" # XXX
+          puts "Closing an open cursor not self for #{self} on #{Thread.current}: #{open_cursor}" # XXX
           open_cursor.close_raw_cursor
         end
 
-        puts "Closing self cursor on #{Thread.current}: #{self} / #{open_cursor}" # XXX
+        puts "Closing self cursor for #{self} on #{Thread.current}: #{self} / #{open_cursor}" # XXX
         close_raw_cursor
       end
 
       # Returns the (modifiable) list of open cursors in the current thread.
       def open_cursors
-        puts "Open cursors accessor on #{Thread.current}" # XXX
+        puts "Open cursors accessor for #{self} on #{Thread.current}" # XXX
         Thread.current[:__ruby_plsql_open_cursors] ||= []
         Thread.current[:__ruby_plsql_open_cursors]
       end
