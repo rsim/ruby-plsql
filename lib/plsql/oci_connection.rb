@@ -128,6 +128,8 @@ module PLSQL
         end
 
         close_raw_cursor
+
+        Thread.current[:__ruby_plsql_open_cursors] = nil if open_cursors.empty?
       end
 
       # Returns the (modifiable) list of open cursors in the current thread.
