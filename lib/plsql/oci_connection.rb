@@ -77,7 +77,6 @@ module PLSQL
       end
 
       def self.new_from_parse(conn, sql)
-        puts "Thread #{Thread.current} parsing #{sql} for #{conn}" # XXX
         raw_cursor = conn.raw_connection.parse(sql)
         self.new(conn, raw_cursor)
       end
@@ -102,7 +101,6 @@ module PLSQL
       end
       
       def exec(*bindvars)
-        puts "Executing cursor #{self} on thread #{Thread.current}" # XXX
         @raw_cursor.exec(*bindvars)
       end
 
@@ -126,17 +124,14 @@ module PLSQL
       def close
         # close all cursors that were created after this one
         while (open_cursor = open_cursors.pop) && !open_cursor.equal?(self)
-          puts "Closing an open cursor not self for #{self} on #{Thread.current}: #{open_cursor}" # XXX
           open_cursor.close_raw_cursor
         end
 
-        puts "Closing self cursor for #{self} on #{Thread.current}: #{self} / #{open_cursor}" # XXX
         close_raw_cursor
       end
 
       # Returns the (modifiable) list of open cursors in the current thread.
       def open_cursors
-        puts "Open cursors accessor for #{self} on #{Thread.current}" # XXX
         Thread.current[:__ruby_plsql_open_cursors] ||= []
         Thread.current[:__ruby_plsql_open_cursors]
       end
