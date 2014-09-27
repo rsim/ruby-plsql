@@ -32,25 +32,25 @@ describe "Package" do
   end
   
   it "should find existing package" do
-    PLSQL::Package.find(plsql, :test_package).should_not be_nil
+    expect(PLSQL::Package.find(plsql, :test_package)).not_to be_nil
   end
 
   it "should not find nonexisting package" do
-    PLSQL::Package.find(plsql, :qwerty123456).should be_nil
+    expect(PLSQL::Package.find(plsql, :qwerty123456)).to be_nil
   end
 
   it "should find existing package in schema" do
-    plsql.test_package.class.should == PLSQL::Package
+    expect(plsql.test_package.class).to eq(PLSQL::Package)
   end
 
   it "should execute package function and return correct value" do
-    plsql.test_package.test_procedure('xxx').should == 'XXX'
+    expect(plsql.test_package.test_procedure('xxx')).to eq('XXX')
   end
 
   describe "variables" do
     it "should set and get package variable value" do
       plsql.test_package.test_variable = 1
-      plsql.test_package.test_variable.should == 1
+      expect(plsql.test_package.test_variable).to eq(1)
     end
   end
 
@@ -85,11 +85,11 @@ describe "Synonym to package" do
   end
   
   it "should find synonym to package" do
-    PLSQL::Package.find(plsql, :test_pkg_synonym).should_not be_nil
+    expect(PLSQL::Package.find(plsql, :test_pkg_synonym)).not_to be_nil
   end
 
   it "should execute package function using synonym and return correct value" do
-    plsql.test_pkg_synonym.test_procedure('xxx').should == 'XXX'
+    expect(plsql.test_pkg_synonym.test_procedure('xxx')).to eq('XXX')
   end
 
 end
@@ -105,11 +105,11 @@ describe "Public synonym to package" do
   end
   
   it "should find public synonym to package" do
-    PLSQL::Package.find(plsql, :utl_encode).should_not be_nil
+    expect(PLSQL::Package.find(plsql, :utl_encode)).not_to be_nil
   end
 
   it "should execute package function using public synonym and return correct value" do
-    plsql.utl_encode.base64_encode('abc').should == '4372773D'
+    expect(plsql.utl_encode.base64_encode('abc')).to eq('4372773D')
   end
 
 end
