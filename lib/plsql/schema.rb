@@ -210,6 +210,15 @@ module PLSQL
           _errors(object_schema_name, object_name, 'PACKAGE BODY')}" if body_status == 'INVALID'
         case object_type
         when 'PROCEDURE', 'FUNCTION'
+          if (connection.database_version <=> [11, 1, 0, 0]) >= 0
+            row = select_first(
+              "SELECT p.object_id FROM all_procedures p
+               WHERE p.owner = :owner
+                 AND p.object_name = :object_name
+                 AND p.object_type = :object_type",
+               object_schema_name, object_name, object_type)
+            object_id = row[0]
+          end
           Procedure.new(self, name, nil, override_schema_name, object_id)
         when 'PACKAGE'
           Package.new(self, name, override_schema_name)
