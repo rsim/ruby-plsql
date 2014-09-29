@@ -15,6 +15,7 @@ end
 require 'ruby-plsql'
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+DATABASE_SERVICE_NAME = ENV['DATABASE_SERVICE_NAME'] || DATABASE_NAME
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
 DATABASE_PORT = (ENV['DATABASE_PORT'] || 1521).to_i
 DATABASE_USERS_AND_PASSWORDS = [
@@ -49,7 +50,7 @@ end
 
 CONNECTION_PARAMS = {
   :adapter => "oracle_enhanced",
-  :database => DATABASE_NAME,
+  :database => DATABASE_SERVICE_NAME,
   :host => DATABASE_HOST,
   :port => DATABASE_PORT,
   :username => DATABASE_USERS_AND_PASSWORDS[0][0],

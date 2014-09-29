@@ -55,6 +55,7 @@ describe "Connection with connect!" do
   before(:all) do
     @username, @password = DATABASE_USERS_AND_PASSWORDS[0]
     @database = DATABASE_NAME
+    @database_service = DATABASE_SERVICE_NAME
     @host = DATABASE_HOST
     @port = DATABASE_PORT
   end
@@ -70,14 +71,14 @@ describe "Connection with connect!" do
   end
 
   it "should connect with username, password, host, port and database name" do
-    plsql.connect! @username, @password, :host => @host, :port => @port, :database => @database
+    plsql.connect! @username, @password, :host => @host, :port => @port, :database => @database_service
     plsql.connection.should_not be_nil
     plsql.schema_name.should == @username.upcase
   end
 
   it "should connect with username, password, host, database name and default port" do
     pending "Non-default port used for test database" unless @port == 1521
-    plsql.connect! @username, @password, :host => @host, :database => @database
+    plsql.connect! @username, @password, :host => @host, :database => @database_service
     plsql.connection.should_not be_nil
     plsql.schema_name.should == @username.upcase
   end
