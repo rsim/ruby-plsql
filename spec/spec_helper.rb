@@ -28,23 +28,24 @@ DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
   unless defined?(JRUBY_VERSION)
-    begin
-      OCI8.new(database_user, database_password, DATABASE_NAME)
-    # if connection fails then sleep 5 seconds and retry
-    rescue OCIError
-      sleep 5
+    try_to_connect(OCIError) do
       OCI8.new(database_user, database_password, DATABASE_NAME)
     end
   else
-    begin
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
-        database_user, database_password)
-    # if connection fails then sleep 5 seconds and retry
-    rescue NativeException
-      sleep 5
+    try_to_connect(NativeException) do
       java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
         database_user, database_password)
     end
+  end
+end
+
+def try_to_connect(exception)
+  begin
+    yield
+  # if connection fails then sleep 5 seconds and retry
+  rescue exception
+    sleep 5
+    yield
   end
 end
 
