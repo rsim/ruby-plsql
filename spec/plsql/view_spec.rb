@@ -44,15 +44,15 @@ describe "View" do
   describe "find" do
 
     it "should find existing view" do
-      PLSQL::View.find(plsql, :test_employees_v).should_not be_nil
+      expect(PLSQL::View.find(plsql, :test_employees_v)).not_to be_nil
     end
 
     it "should not find nonexisting view" do
-      PLSQL::View.find(plsql, :qwerty123456).should be_nil
+      expect(PLSQL::View.find(plsql, :qwerty123456)).to be_nil
     end
 
     it "should find existing view in schema" do
-      plsql.test_employees_v.should be_instance_of(PLSQL::View)
+      expect(plsql.test_employees_v).to be_instance_of(PLSQL::View)
     end
 
   end
@@ -68,11 +68,11 @@ describe "View" do
     end
 
     it "should find synonym to view" do
-      PLSQL::View.find(plsql, :test_employees_v_synonym).should_not be_nil
+      expect(PLSQL::View.find(plsql, :test_employees_v_synonym)).not_to be_nil
     end
 
     it "should find view using synonym in schema" do
-      plsql.test_employees_v_synonym.should be_instance_of(PLSQL::View)
+      expect(plsql.test_employees_v_synonym).to be_instance_of(PLSQL::View)
     end
 
   end
@@ -80,11 +80,11 @@ describe "View" do
   describe "public synonym" do
 
     it "should find public synonym to view" do
-      PLSQL::View.find(plsql, :user_tables).should_not be_nil
+      expect(PLSQL::View.find(plsql, :user_tables)).not_to be_nil
     end
 
     it "should find view using public synonym in schema" do
-      plsql.user_tables.should be_instance_of(PLSQL::View)
+      expect(plsql.user_tables).to be_instance_of(PLSQL::View)
     end
 
   end
@@ -92,11 +92,11 @@ describe "View" do
   describe "columns" do
 
     it "should get column names for view" do
-      plsql.test_employees_v.column_names.should == [:employee_id, :first_name, :last_name, :hire_date, :status]
+      expect(plsql.test_employees_v.column_names).to eq([:employee_id, :first_name, :last_name, :hire_date, :status])
     end
 
     it "should get columns metadata for view" do
-      plsql.test_employees_v.columns.should == {
+      expect(plsql.test_employees_v.columns).to eq({
         :employee_id => {
           :position=>1, :data_type=>"NUMBER", :data_length=>22, :data_precision=>15, :data_scale=>0, :char_used=>nil,
           :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => false, :data_default => nil},
@@ -112,7 +112,7 @@ describe "View" do
         :status => {
           :position=>5, :data_type=>"VARCHAR2", :data_length=>1, :data_precision=>nil, :data_scale=>nil, :char_used=>"B",
           :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil, :nullable => true, :data_default => nil}
-      }
+      })
     end
 
   end
@@ -120,22 +120,22 @@ describe "View" do
   describe "insert" do
     it "should insert a record in view" do
       plsql.test_employees_v.insert @employees.first
-      plsql.test_employees_v.all.should == [@employees.first]
+      expect(plsql.test_employees_v.all).to eq([@employees.first])
     end
 
     it "should insert a record in view using partial list of columns" do
       plsql.test_employees_v.insert @employees.first.except(:hire_date)
-      plsql.test_employees_v.all.should == [@employees.first.merge(:hire_date => nil)]
+      expect(plsql.test_employees_v.all).to eq([@employees.first.merge(:hire_date => nil)])
     end
 
     it "should insert default value from table definition if value not provided" do
       plsql.test_employees_v.insert @employees.first.except(:status)
-      plsql.test_employees_v.all.should == [@employees.first.merge(:status => 'N')]
+      expect(plsql.test_employees_v.all).to eq([@employees.first.merge(:status => 'N')])
     end
 
     it "should insert array of records in view" do
       plsql.test_employees_v.insert @employees
-      plsql.test_employees_v.all("ORDER BY employee_id").should == @employees
+      expect(plsql.test_employees_v.all("ORDER BY employee_id")).to eq(@employees)
     end
 
   end
@@ -143,32 +143,32 @@ describe "View" do
   describe "insert values" do
     it "should insert a record with array of values" do
       plsql.test_employees_v.insert_values @employees_all_values.first
-      plsql.test_employees_v.all.should == [@employees.first]
+      expect(plsql.test_employees_v.all).to eq([@employees.first])
     end
 
     it "should insert a record with list of all fields and array of values" do
       plsql.test_employees_v.insert_values @employees_all_fields, @employees_all_values.first
-      plsql.test_employees_v.all.should == [@employees.first]
+      expect(plsql.test_employees_v.all).to eq([@employees.first])
     end
 
     it "should insert a record with list of some fields and array of values" do
       plsql.test_employees_v.insert_values @employees_some_fields, @employees_some_values.first
-      plsql.test_employees_v.all.should == [@employees.first.merge(@employee_default_values)]
+      expect(plsql.test_employees_v.all).to eq([@employees.first.merge(@employee_default_values)])
     end
 
     it "should insert many records with array of values" do
       plsql.test_employees_v.insert_values *@employees_all_values
-      plsql.test_employees_v.all.should == @employees
+      expect(plsql.test_employees_v.all).to eq(@employees)
     end
 
     it "should insert many records with list of all fields and array of values" do
       plsql.test_employees_v.insert_values @employees_all_fields, *@employees_all_values
-      plsql.test_employees_v.all.should == @employees
+      expect(plsql.test_employees_v.all).to eq(@employees)
     end
 
     it "should insert many records with list of some fields and array of values" do
       plsql.test_employees_v.insert_values @employees_some_fields, *@employees_some_values
-      plsql.test_employees_v.all.should == @employees.map{|e| e.merge(@employee_default_values)}
+      expect(plsql.test_employees_v.all).to eq(@employees.map{|e| e.merge(@employee_default_values)})
     end
 
   end
@@ -179,20 +179,20 @@ describe "View" do
     end
 
     it "should select first record in view" do
-      plsql.test_employees_v.select(:first, "ORDER BY employee_id").should == @employees.first
-      plsql.test_employees_v.first("ORDER BY employee_id").should == @employees.first
+      expect(plsql.test_employees_v.select(:first, "ORDER BY employee_id")).to eq(@employees.first)
+      expect(plsql.test_employees_v.first("ORDER BY employee_id")).to eq(@employees.first)
     end
 
     it "should select all records in view" do
-      plsql.test_employees_v.select(:all, "ORDER BY employee_id").should == @employees
-      plsql.test_employees_v.all("ORDER BY employee_id").should == @employees
-      plsql.test_employees_v.all(:order_by => :employee_id).should == @employees
+      expect(plsql.test_employees_v.select(:all, "ORDER BY employee_id")).to eq(@employees)
+      expect(plsql.test_employees_v.all("ORDER BY employee_id")).to eq(@employees)
+      expect(plsql.test_employees_v.all(:order_by => :employee_id)).to eq(@employees)
     end
 
     it "should select record in view using WHERE condition" do
-      plsql.test_employees_v.select(:first, "WHERE employee_id = :1", @employees.first[:employee_id]).should == @employees.first
-      plsql.test_employees_v.first("WHERE employee_id = :1", @employees.first[:employee_id]).should == @employees.first
-      plsql.test_employees_v.first(:employee_id => @employees.first[:employee_id]).should == @employees.first
+      expect(plsql.test_employees_v.select(:first, "WHERE employee_id = :1", @employees.first[:employee_id])).to eq(@employees.first)
+      expect(plsql.test_employees_v.first("WHERE employee_id = :1", @employees.first[:employee_id])).to eq(@employees.first)
+      expect(plsql.test_employees_v.first(:employee_id => @employees.first[:employee_id])).to eq(@employees.first)
     end
 
     it "should select record in view using :column => nil condition" do
@@ -200,18 +200,18 @@ describe "View" do
       employee[:employee_id] = employee[:employee_id] + 1
       employee[:hire_date] = nil
       plsql.test_employees_v.insert employee
-      plsql.test_employees_v.first("WHERE hire_date IS NULL").should == employee
-      plsql.test_employees_v.first(:hire_date => nil).should == employee
+      expect(plsql.test_employees_v.first("WHERE hire_date IS NULL")).to eq(employee)
+      expect(plsql.test_employees_v.first(:hire_date => nil)).to eq(employee)
     end
 
     it "should count records in view" do
-      plsql.test_employees_v.select(:count).should == @employees.size
-      plsql.test_employees_v.count.should == @employees.size
+      expect(plsql.test_employees_v.select(:count)).to eq(@employees.size)
+      expect(plsql.test_employees_v.count).to eq(@employees.size)
     end
 
     it "should count records in view using condition" do
-      plsql.test_employees_v.select(:count, "WHERE employee_id <= :1", @employees[2][:employee_id]).should == 3
-      plsql.test_employees_v.count("WHERE employee_id <= :1", @employees[2][:employee_id]).should == 3
+      expect(plsql.test_employees_v.select(:count, "WHERE employee_id <= :1", @employees[2][:employee_id])).to eq(3)
+      expect(plsql.test_employees_v.count("WHERE employee_id <= :1", @employees[2][:employee_id])).to eq(3)
     end
 
   end
@@ -221,17 +221,17 @@ describe "View" do
       employee_id = @employees.first[:employee_id]
       plsql.test_employees_v.insert @employees.first
       plsql.test_employees_v.update :first_name => 'Test', :where => {:employee_id => employee_id}
-      plsql.test_employees_v.first(:employee_id => employee_id)[:first_name].should == 'Test'
+      expect(plsql.test_employees_v.first(:employee_id => employee_id)[:first_name]).to eq('Test')
     end
 
     it "should update a record in view using String WHERE condition" do
       employee_id = @employees.first[:employee_id]
       plsql.test_employees_v.insert @employees
       plsql.test_employees_v.update :first_name => 'Test', :where => "employee_id = #{employee_id}"
-      plsql.test_employees_v.first(:employee_id => employee_id)[:first_name].should == 'Test'
+      expect(plsql.test_employees_v.first(:employee_id => employee_id)[:first_name]).to eq('Test')
       # all other records should not be changed
       plsql.test_employees_v.all("WHERE employee_id > :1", employee_id) do |employee|
-        employee[:first_name].should_not == 'Test'
+        expect(employee[:first_name]).not_to eq('Test')
       end
     end
 
@@ -239,7 +239,7 @@ describe "View" do
       plsql.test_employees_v.insert @employees
       plsql.test_employees_v.update :first_name => 'Test'
       plsql.test_employees_v.all do |employee|
-        employee[:first_name].should == 'Test'
+        expect(employee[:first_name]).to eq('Test')
       end
     end
 
@@ -250,14 +250,14 @@ describe "View" do
       employee_id = @employees.first[:employee_id]
       plsql.test_employees_v.insert @employees
       plsql.test_employees_v.delete :employee_id => employee_id
-      plsql.test_employees_v.first(:employee_id => employee_id).should be_nil
-      plsql.test_employees_v.all(:order_by => :employee_id).should == @employees[1, @employees.size-1]
+      expect(plsql.test_employees_v.first(:employee_id => employee_id)).to be_nil
+      expect(plsql.test_employees_v.all(:order_by => :employee_id)).to eq(@employees[1, @employees.size-1])
     end
 
     it "should delete all records from view" do
       plsql.test_employees_v.insert @employees
       plsql.test_employees_v.delete
-      plsql.test_employees_v.all.should be_empty
+      expect(plsql.test_employees_v.all).to be_empty
     end
   end
 

@@ -23,35 +23,35 @@ describe "Parameter type mapping /" do
     end
   
     it "should find existing procedure" do
-      PLSQL::Procedure.find(plsql, :test_uppercase).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_uppercase)).not_to be_nil
     end
 
     it "should not find nonexisting procedure" do
-      PLSQL::Procedure.find(plsql, :qwerty123456).should be_nil
+      expect(PLSQL::Procedure.find(plsql, :qwerty123456)).to be_nil
     end
 
     it "should execute function and return correct value" do
-      plsql.test_uppercase('xxx').should == 'XXX'
+      expect(plsql.test_uppercase('xxx')).to eq('XXX')
     end
 
     it "should execute function with named parameters and return correct value" do
-      plsql.test_uppercase(:p_string => 'xxx').should == 'XXX'
+      expect(plsql.test_uppercase(:p_string => 'xxx')).to eq('XXX')
     end
 
     it "should raise error if wrong number of arguments is passed" do
-      lambda { plsql.test_uppercase('xxx','yyy') }.should raise_error(ArgumentError)
+      expect { plsql.test_uppercase('xxx','yyy') }.to raise_error(ArgumentError)
     end
 
     it "should raise error if wrong named argument is passed" do
-      lambda { plsql.test_uppercase(:p_string2 => 'xxx') }.should raise_error(ArgumentError)
+      expect { plsql.test_uppercase(:p_string2 => 'xxx') }.to raise_error(ArgumentError)
     end
   
     it "should execute function with schema name specified" do
-      plsql.hr.test_uppercase('xxx').should == 'XXX'
+      expect(plsql.hr.test_uppercase('xxx')).to eq('XXX')
     end
 
     it "should process nil parameter as NULL" do
-      plsql.test_uppercase(nil).should be_nil
+      expect(plsql.test_uppercase(nil)).to be_nil
     end
 
   end
@@ -104,35 +104,35 @@ describe "Parameter type mapping /" do
     end
   
     it "should process integer parameters" do
-      plsql.test_sum(123,456).should == 579
+      expect(plsql.test_sum(123,456)).to eq(579)
     end
 
     it "should process big integer parameters" do
-      plsql.test_sum(123123123123,456456456456).should == 579579579579
+      expect(plsql.test_sum(123123123123,456456456456)).to eq(579579579579)
     end
 
     it "should process float parameters and return BigDecimal" do
-      plsql.test_sum(123.123,456.456).should == BigDecimal("579.579")
+      expect(plsql.test_sum(123.123,456.456)).to eq(BigDecimal("579.579"))
     end
 
     it "should process BigDecimal parameters and return BigDecimal" do
-      plsql.test_sum(:p_num1 => BigDecimal("123.123"), :p_num2 => BigDecimal("456.456")).should == BigDecimal("579.579")
+      expect(plsql.test_sum(:p_num1 => BigDecimal("123.123"), :p_num2 => BigDecimal("456.456"))).to eq(BigDecimal("579.579"))
     end
 
     it "should process nil parameter as NULL" do
-      plsql.test_sum(123,nil).should be_nil
+      expect(plsql.test_sum(123,nil)).to be_nil
     end
 
     it "should convert true value to 1 for NUMBER parameter" do
-      plsql.test_number_1(true).should == 'Y'
+      expect(plsql.test_number_1(true)).to eq('Y')
     end
 
     it "should convert false value to 0 for NUMBER parameter" do
-      plsql.test_number_1(false).should == 'N'
+      expect(plsql.test_number_1(false)).to eq('N')
     end
 
     it "should process binary integer parameters" do
-      plsql.test_integers(123, 456).should == {:x_pls_int => 123, :x_bin_int => 456}
+      expect(plsql.test_integers(123, 456)).to eq({:x_pls_int => 123, :x_bin_int => 456})
     end
   end
 
@@ -162,45 +162,45 @@ describe "Parameter type mapping /" do
   
     it "should process Time parameters" do
       now = Time.local(2008,8,12,14,28,0)
-      plsql.test_date(now).should == now + 60*60*24
+      expect(plsql.test_date(now)).to eq(now + 60*60*24)
     end
 
     it "should process UTC Time parameters" do
       plsql.default_timezone = :utc
       now = Time.utc(2008,8,12,14,28,0)
-      plsql.test_date(now).should == now + 60*60*24
+      expect(plsql.test_date(now)).to eq(now + 60*60*24)
     end
 
     it "should process DateTime parameters" do
       now = DateTime.parse(Time.local(2008,8,12,14,28,0).iso8601)
       result = plsql.test_date(now)
-      result.class.should == Time
-      result.should == Time.parse((now + 1).strftime("%c"))
+      expect(result.class).to eq(Time)
+      expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
   
     it "should process old DateTime parameters" do
       now = DateTime.civil(1901,1,1,12,0,0,plsql.local_timezone_offset)
       result = plsql.test_date(now)
-      result.class.should == Time
-      result.should == Time.parse((now + 1).strftime("%c"))
+      expect(result.class).to eq(Time)
+      expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
 
     it "should process Date parameters" do
       now = Date.new(2008,8,12)
       result = plsql.test_date(now)
-      result.class.should == Time    
-      result.should == Time.parse((now + 1).strftime("%c"))
+      expect(result.class).to eq(Time)
+      expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
   
     it "should process old Date parameters" do
       now = Date.new(1901,1,1)
       result = plsql.test_date(now)
-      result.class.should == Time
-      result.should == Time.parse((now + 1).strftime("%c"))
+      expect(result.class).to eq(Time)
+      expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
   
     it "should process nil date parameter as NULL" do
-      plsql.test_date(nil).should be_nil
+      expect(plsql.test_date(nil)).to be_nil
     end
 
   end
@@ -227,7 +227,7 @@ describe "Parameter type mapping /" do
     it "should process timestamp parameters" do
       # now = Time.now
       now = Time.local(2008,8,12,14,28,0)
-      plsql.test_timestamp(now).should == now + 60*60*24
+      expect(plsql.test_timestamp(now)).to eq(now + 60*60*24)
     end
 
   end
@@ -252,19 +252,19 @@ describe "Parameter type mapping /" do
     end
   
     it "should return hash with output parameters" do
-      plsql.test_copy("abc", nil, nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
+      expect(plsql.test_copy("abc", nil, nil)).to eq({ :p_to => "abc", :p_to_double => "abcabc" })
     end
 
     it "should return hash with output parameters when called with named parameters" do
-      plsql.test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == { :p_to => "abc", :p_to_double => "abcabc" }
+      expect(plsql.test_copy(:p_from => "abc", :p_to => nil, :p_to_double => nil)).to eq({ :p_to => "abc", :p_to_double => "abcabc" })
     end
 
     it "should substitute output parameters with nil if they are not specified" do
-      plsql.test_copy("abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
+      expect(plsql.test_copy("abc")).to eq({ :p_to => "abc", :p_to_double => "abcabc" })
     end
 
     it "should substitute named output parameters with nil if they are not specified" do
-      plsql.test_copy(:p_from => "abc").should == { :p_to => "abc", :p_to_double => "abcabc" }
+      expect(plsql.test_copy(:p_from => "abc")).to eq({ :p_to => "abc", :p_to_double => "abcabc" })
     end
 
   end
@@ -335,46 +335,46 @@ describe "Parameter type mapping /" do
     end
     
     it "should find existing package" do
-      PLSQL::Package.find(plsql, :test_package2).should_not be_nil
+      expect(PLSQL::Package.find(plsql, :test_package2)).not_to be_nil
     end
 
     it "should identify overloaded procedure definition" do
       @procedure = PLSQL::Procedure.find(plsql, :test_procedure, "TEST_PACKAGE2")
-      @procedure.should_not be_nil
-      @procedure.should be_overloaded
+      expect(@procedure).not_to be_nil
+      expect(@procedure).to be_overloaded
     end
 
     it "should identify non-overloaded procedure definition" do
       @procedure = PLSQL::Procedure.find(plsql, :test_procedure2, "TEST_PACKAGE2")
-      @procedure.should_not be_nil
-      @procedure.should_not be_overloaded
+      expect(@procedure).not_to be_nil
+      expect(@procedure).not_to be_overloaded
     end
 
     it "should execute correct procedures based on number of arguments and return correct value" do
-      plsql.test_package2.test_procedure('xxx').should == 'XXX'
-      plsql.test_package2.test_procedure('xxx', nil).should == {:p_result => 'XXX'}
+      expect(plsql.test_package2.test_procedure('xxx')).to eq('XXX')
+      expect(plsql.test_package2.test_procedure('xxx', nil)).to eq({:p_result => 'XXX'})
     end
 
     it "should execute correct procedures based on number of named arguments and return correct value" do
-      plsql.test_package2.test_procedure(:p_string => 'xxx').should == 'XXX'
-      plsql.test_package2.test_procedure(:p_string => 'xxx', :p_result => nil).should == {:p_result => 'XXX'}
+      expect(plsql.test_package2.test_procedure(:p_string => 'xxx')).to eq('XXX')
+      expect(plsql.test_package2.test_procedure(:p_string => 'xxx', :p_result => nil)).to eq({:p_result => 'XXX'})
     end
 
     it "should raise exception if procedure cannot be found based on number of arguments" do
-      lambda { plsql.test_package2.test_procedure() }.should raise_error(/wrong number or types of arguments/i)
+      expect { plsql.test_package2.test_procedure() }.to raise_error(/wrong number or types of arguments/i)
     end
   
     it "should find procedure based on types of arguments" do
-      plsql.test_package2.test_procedure(111, nil).should == {:p_result => '111'}
+      expect(plsql.test_package2.test_procedure(111, nil)).to eq({:p_result => '111'})
     end
 
     it "should find procedure based on names of named arguments" do
-      plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil).should == {:p_result => '111'}
+      expect(plsql.test_package2.test_procedure(:p_number => 111, :p_result => nil)).to eq({:p_result => '111'})
     end
 
     it "should find matching procedure based on partial list of named arguments" do
-      plsql.test_package2.test_function(:p_string => 'xxx').should == 'xxx '
-      plsql.test_package2.test_function(:p_number => 1).should == 2
+      expect(plsql.test_package2.test_function(:p_string => 'xxx')).to eq('xxx ')
+      expect(plsql.test_package2.test_function(:p_number => 1)).to eq(2)
     end
 
   end
@@ -401,16 +401,17 @@ describe "Parameter type mapping /" do
     end
   
     it "should return array with return value and hash of output parameters" do
-      plsql.test_copy_function("abc", nil, nil).should == [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+      expect(plsql.test_copy_function("abc", nil, nil)).to eq([3, { :p_to => "abc", :p_to_double => "abcabc" }])
     end
 
     it "should return array with return value and hash of output parameters when called with named parameters" do
-      plsql.test_copy_function(:p_from => "abc", :p_to => nil, :p_to_double => nil).should == 
+      expect(plsql.test_copy_function(:p_from => "abc", :p_to => nil, :p_to_double => nil)).to eq(
         [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+      )
     end
 
     it "should substitute output parameters with nil if they are not specified" do
-      plsql.test_copy_function("abc").should == [3, { :p_to => "abc", :p_to_double => "abcabc" }]
+      expect(plsql.test_copy_function("abc")).to eq([3, { :p_to => "abc", :p_to_double => "abcabc" }])
     end
 
   end
@@ -442,19 +443,19 @@ describe "Parameter type mapping /" do
     end
 
     it "should find function" do
-      PLSQL::Procedure.find(plsql, :test_no_params).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_no_params)).not_to be_nil
     end
 
     it "should return function value" do
-      plsql.test_no_params.should == "dummy"
+      expect(plsql.test_no_params).to eq("dummy")
     end
 
     it "should find procedure" do
-      PLSQL::Procedure.find(plsql, :test_proc_no_params).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_proc_no_params)).not_to be_nil
     end
 
     it "should execute procedure" do
-      plsql.test_proc_no_params.should be_nil
+      expect(plsql.test_proc_no_params).to be_nil
     end
 
   end
@@ -503,41 +504,41 @@ describe "Parameter type mapping /" do
     end
   
     it "should find existing procedure" do
-      PLSQL::Procedure.find(plsql, :test_clob).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_clob)).not_to be_nil
     end
 
     it "should execute function and return correct value" do
       large_text = 'ābčdēfghij' * 10_000
-      plsql.test_clob(large_text).should == large_text
+      expect(plsql.test_clob(large_text)).to eq(large_text)
     end
 
     unless defined?(JRUBY_VERSION)
 
       it "should execute function with empty string and return nil (oci8 cannot pass empty CLOB parameter)" do
         text = ''
-        plsql.test_clob(text).should be_nil
+        expect(plsql.test_clob(text)).to be_nil
       end
 
       it "should execute function which inserts the CLOB parameter into a table with empty string and return nil" do
         text = ''
-        plsql.test_clob_insert(text).should be_nil
+        expect(plsql.test_clob_insert(text)).to be_nil
       end
     
     else
 
       it "should execute function with empty string and return empty string" do
         text = ''
-        plsql.test_clob(text).should == text
+        expect(plsql.test_clob(text)).to eq(text)
       end
     
     end
 
     it "should execute function with nil and return nil" do
-      plsql.test_clob(nil).should be_nil
+      expect(plsql.test_clob(nil)).to be_nil
     end
 
     it "should execute function which inserts the CLOB parameter into a table with nil and return nil" do
-      plsql.test_clob_insert(nil).should be_nil
+      expect(plsql.test_clob_insert(nil)).to be_nil
     end
     
   end
@@ -562,12 +563,12 @@ describe "Parameter type mapping /" do
     end
   
     it "should find existing procedure" do
-      PLSQL::Procedure.find(plsql, :test_clob_proc).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_clob_proc)).not_to be_nil
     end
 
     it "should execute function and return correct value" do
       large_text = 'ābčdēfghij' * 10_000
-      plsql.test_clob_proc(large_text)[:p_return].should == large_text
+      expect(plsql.test_clob_proc(large_text)[:p_return]).to eq(large_text)
     end
   end
 
@@ -591,12 +592,12 @@ describe "Parameter type mapping /" do
     end
   
     it "should find existing procedure" do
-      PLSQL::Procedure.find(plsql, :test_blob_proc).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_blob_proc)).not_to be_nil
     end
 
     it "should execute function and return correct value" do
       large_binary = '\000\001\002\003\004\005\006\007\010\011' * 10_000
-      plsql.test_blob_proc(large_binary)[:p_return].should == large_binary
+      expect(plsql.test_blob_proc(large_binary)[:p_return]).to eq(large_binary)
     end
   end
 
@@ -712,41 +713,41 @@ describe "Parameter type mapping /" do
     end
 
     it "should find existing function" do
-      PLSQL::Procedure.find(plsql, :test_full_name).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_full_name)).not_to be_nil
     end
 
     it "should execute function with named parameter and return correct value" do
-      plsql.test_full_name(:p_employee => @p_employee).should == 'First Last'
+      expect(plsql.test_full_name(:p_employee => @p_employee)).to eq('First Last')
     end
 
     it "should execute function with sequential parameter and return correct value" do
-      plsql.test_full_name(@p_employee).should == 'First Last'
+      expect(plsql.test_full_name(@p_employee)).to eq('First Last')
     end
 
     it "should execute function with Hash parameter using strings as keys" do
-      plsql.test_full_name(@p_employee2).should == 'Second Last'
+      expect(plsql.test_full_name(@p_employee2)).to eq('Second Last')
     end
 
     it "should raise error if wrong field name is passed for record parameter" do
-      lambda do
-        plsql.test_full_name(@p_employee.merge :xxx => 'xxx').should == 'Second Last'
-      end.should raise_error(ArgumentError)
+      expect do
+        expect(plsql.test_full_name(@p_employee.merge :xxx => 'xxx')).to eq('Second Last')
+      end.to raise_error(ArgumentError)
     end
     
     it "should return empty table of records" do
-      plsql.test_record.test_empty_records().should == []
+      expect(plsql.test_record.test_empty_records()).to eq([])
     end
 
     it "should return record return value" do
-      plsql.test_employee_record(@p_employee).should == @p_employee
+      expect(plsql.test_employee_record(@p_employee)).to eq(@p_employee)
     end
 
     it "should return record return value and output record parameter value" do
-      plsql.test_employee_record2(@p_employee, @p_employee2).should == [@p_employee, {:x_employee => @p_employee}]
+      expect(plsql.test_employee_record2(@p_employee, @p_employee2)).to eq([@p_employee, {:x_employee => @p_employee}])
     end
 
     it "should execute package function with parameter with record type defined in package" do
-      plsql.test_record.test_full_name(@p_employee).should == 'First Last'
+      expect(plsql.test_record.test_full_name(@p_employee)).to eq('First Last')
     end
 
   end
@@ -780,27 +781,27 @@ describe "Parameter type mapping /" do
     end
 
     it "should accept true value and return true value" do
-      plsql.test_boolean(true).should == true
+      expect(plsql.test_boolean(true)).to eq(true)
     end
 
     it "should accept false value and return false value" do
-      plsql.test_boolean(false).should == false
+      expect(plsql.test_boolean(false)).to eq(false)
     end
 
     it "should accept nil value and return nil value" do
-      plsql.test_boolean(nil).should be_nil
+      expect(plsql.test_boolean(nil)).to be_nil
     end
 
     it "should accept true value and assign true value to output parameter" do
-      plsql.test_boolean2(true, nil).should == {:x_boolean => true}
+      expect(plsql.test_boolean2(true, nil)).to eq({:x_boolean => true})
     end
 
     it "should accept false value and assign false value to output parameter" do
-      plsql.test_boolean2(false, nil).should == {:x_boolean => false}
+      expect(plsql.test_boolean2(false, nil)).to eq({:x_boolean => false})
     end
 
     it "should accept nil value and assign nil value to output parameter" do
-      plsql.test_boolean2(nil, nil).should == {:x_boolean => nil}
+      expect(plsql.test_boolean2(nil, nil)).to eq({:x_boolean => nil})
     end
 
   end
@@ -883,33 +884,33 @@ describe "Parameter type mapping /" do
     end
 
     it "should find existing function" do
-      PLSQL::Procedure.find(plsql, :test_full_name).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_full_name)).not_to be_nil
     end
 
     it "should execute function with named parameter and return correct value" do
-      plsql.test_full_name(:p_employee => @p_employee).should == 'First Last'
+      expect(plsql.test_full_name(:p_employee => @p_employee)).to eq('First Last')
     end
 
     it "should execute function with sequential parameter and return correct value" do
-      plsql.test_full_name(@p_employee).should == 'First Last'
+      expect(plsql.test_full_name(@p_employee)).to eq('First Last')
     end
 
     it "should raise error if wrong field name is passed for record parameter" do
-      lambda do
+      expect do
         plsql.test_full_name(@p_employee.merge :xxx => 'xxx')
-      end.should raise_error(ArgumentError)
+      end.to raise_error(ArgumentError)
     end
 
     it "should return object type return value" do
-      plsql.test_employee_object(@p_employee).should == @p_employee
+      expect(plsql.test_employee_object(@p_employee)).to eq(@p_employee)
     end
 
     it "should return object type return value and output object type parameter value" do
-      plsql.test_employee_object2(@p_employee, nil).should == [@p_employee, {:x_employee => @p_employee}]
+      expect(plsql.test_employee_object2(@p_employee, nil)).to eq([@p_employee, {:x_employee => @p_employee}])
     end
 
     it "should accept NULL as input parameter" do
-      plsql.test_employee_object(nil).should == nil
+      expect(plsql.test_employee_object(nil)).to eq(nil)
     end
 
   end
@@ -1149,83 +1150,83 @@ describe "Parameter type mapping /" do
     end
 
     it "should find existing function" do
-      PLSQL::Procedure.find(plsql, :test_sum).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_sum)).not_to be_nil
     end
 
     it "should execute function with number array parameter" do
-      plsql.test_sum([1,2,3,4]).should == 10
+      expect(plsql.test_sum([1,2,3,4])).to eq(10)
     end
     
     it "should return number array return value" do
-      plsql.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+      expect(plsql.test_increment([1,2,3,4], 1)).to eq([2,3,4,5])
     end
 
     it "should execute function with string array and return string array output parameter" do
       strings = ['1','2','3','4']
-      plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+      expect(plsql.test_copy_strings(strings)).to eq([strings, {:x_strings => strings}])
     end
 
     it "should execute function with table of numbers type (defined inside package) parameter" do
-      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+      expect(plsql.test_collections.test_sum([1,2,3,4])).to eq(10)
     end
 
     it "should clear temporary tables after executing function with table of numbers type even if an error occurs in the package" do
       # this should work fine
-      plsql.test_collections.test_function_failure([1,2,3,4], 'N').should == 4
+      expect(plsql.test_collections.test_function_failure([1,2,3,4], 'N')).to eq(4)
       # we will force a package error here to see if things get cleaned up before the next call
-      lambda { plsql.test_collections.test_function_failure([1,2,3,4], 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      expect { plsql.test_collections.test_function_failure([1,2,3,4], 'Y') }.to raise_error(/Simulate business error to test clearing of temp table/)
       # after the error in the first call temporary tables should be cleared
-      plsql.test_collections.test_function_failure([5,6,7], 'N').should == 3
+      expect(plsql.test_collections.test_function_failure([5,6,7], 'N')).to eq(3)
     end
 
     it "should return table of numbers type (defined inside package)" do
-      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+      expect(plsql.test_collections.test_numbers([1,2,3,4])).to eq([[1,2,3,4], {:x_numbers => [1,2,3,4]}])
     end
 
     it "should clear temporary tables after executing function with table of numbers type (defined inside package) parameter" do
-      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+      expect(plsql.test_collections.test_numbers([1,2,3,4])).to eq([[1,2,3,4], {:x_numbers => [1,2,3,4]}])
       # after first call temporary tables should be cleared
-      plsql.test_collections.test_numbers([1,2,3,4]).should == [[1,2,3,4], {:x_numbers => [1,2,3,4]}]
+      expect(plsql.test_collections.test_numbers([1,2,3,4])).to eq([[1,2,3,4], {:x_numbers => [1,2,3,4]}])
     end
 
     it "should clear temporary tables when autocommit with table of numbers type (defined inside package) parameter" do
       old_autocommit = plsql.connection.autocommit?
       plsql.connection.autocommit = true
       numbers_array = (1..400).to_a
-      plsql.test_collections.test_numbers(numbers_array).should == [numbers_array, {:x_numbers => numbers_array}]
+      expect(plsql.test_collections.test_numbers(numbers_array)).to eq([numbers_array, {:x_numbers => numbers_array}])
       # after first call temporary tables should be cleared
-      plsql.test_collections.test_numbers(numbers_array).should == [numbers_array, {:x_numbers => numbers_array}]
+      expect(plsql.test_collections.test_numbers(numbers_array)).to eq([numbers_array, {:x_numbers => numbers_array}])
       plsql.connection.autocommit = old_autocommit
     end
 
     it "should execute function with table of records type (defined inside package) parameter" do
-      plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+      expect(plsql.test_collections.test_employees(@employees)).to eq([@employees, {:p_employees => @employees}])
     end
 
     it "should execute function with table of records type (defined inside package and includes NVARCHAR columns) parameter" do
-      plsql.test_collections.test_nstring(@nstrings).should == [(1..5).map{|i| "NCh #{i}NStr #{i},"}.join, {:p_out => @nstrings}]
+      expect(plsql.test_collections.test_nstring(@nstrings)).to eq([(1..5).map{|i| "NCh #{i}NStr #{i},"}.join, {:p_out => @nstrings}])
     end
 
     it "should execute function with object array and return object array output parameter" do
       phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
-      plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+      expect(plsql.test_copy_objects(phones)).to eq([phones, {:x_phones => phones}])
     end
 
     it "should execute function with empty object array" do
       phones = []
-      plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+      expect(plsql.test_copy_objects(phones)).to eq([phones, {:x_phones => phones}])
     end
 
     it "should raise error with record parameter that has table as element" do
-      lambda {
-        plsql.test_collections.test_employee2(@employees[0]).should == [@employees[0], {:p_employee => @employees[0]}]
-      }.should raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
+      expect {
+        expect(plsql.test_collections.test_employee2(@employees[0])).to eq([@employees[0], {:p_employee => @employees[0]}])
+      }.to raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
     end
 
     it "should raise error with table of records parameter when record has table as element" do
-      lambda {
-        plsql.test_collections.test_employees2(@employees).should == [@employees, {:p_employees => @employees}]
-      }.should raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
+      expect {
+        expect(plsql.test_collections.test_employees2(@employees)).to eq([@employees, {:p_employees => @employees}])
+      }.to raise_error(ArgumentError, /TEST_COLLECTIONS\.T_NUMBERS definition inside package is not supported/)
     end
 
   end
@@ -1355,37 +1356,37 @@ describe "Parameter type mapping /" do
 
     it "should clear temporary tables after executing function with index-by table of numbers type even if an error occurs in the package" do
       # this should work fine
-      plsql.test_collections.test_function_failure(@numbers, 'N').should == 10
+      expect(plsql.test_collections.test_function_failure(@numbers, 'N')).to eq(10)
       # we will force a package error here to see if things get cleaned up before the next call
-      lambda { plsql.test_collections.test_function_failure(@numbers, 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      expect { plsql.test_collections.test_function_failure(@numbers, 'Y') }.to raise_error(/Simulate business error to test clearing of temp table/)
       # after the error in the first call temporary tables should be cleared
-      plsql.test_collections.test_function_failure(@numbers2, 'N').should == 18
+      expect(plsql.test_collections.test_function_failure(@numbers2, 'N')).to eq(18)
     end
 
     it "should execute function with index-by table of numbers type (defined inside package) parameter" do
-      plsql.test_collections.test_sum(@numbers).should == 10
+      expect(plsql.test_collections.test_sum(@numbers)).to eq(10)
     end
 
     it "should return index-by table of numbers type (defined inside package)" do
-      plsql.test_collections.test_numbers(@numbers).should == [@numbers, {:x_numbers => @numbers}]
+      expect(plsql.test_collections.test_numbers(@numbers)).to eq([@numbers, {:x_numbers => @numbers}])
     end
 
     it "should clear temporary tables when autocommit with index-by table of numbers type (defined inside package) parameter" do
       old_autocommit = plsql.connection.autocommit?
       plsql.connection.autocommit = true
       numbers_hash = Hash[*(1..400).map{|i|[i,i]}.flatten]
-      plsql.test_collections.test_numbers(numbers_hash).should == [numbers_hash, {:x_numbers => numbers_hash}]
+      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash, {:x_numbers => numbers_hash}])
       # after first call temporary tables should be cleared
-      plsql.test_collections.test_numbers(numbers_hash).should == [numbers_hash, {:x_numbers => numbers_hash}]
+      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash, {:x_numbers => numbers_hash}])
       plsql.connection.autocommit = old_autocommit
     end
 
     it "should execute function with index-by table of records type (defined inside package) parameter" do
-      plsql.test_collections.test_employees(@employees).should == [@employees, {:p_employees => @employees}]
+      expect(plsql.test_collections.test_employees(@employees)).to eq([@employees, {:p_employees => @employees}])
     end
 
     it "should execute procedure with index-by table of records type (defined inside package) parameter" do
-      plsql.test_collections.test_employees_prc(@employees).should == {:p_employees => @employees}
+      expect(plsql.test_collections.test_employees_prc(@employees)).to eq({:p_employees => @employees})
     end
 
     it "should create temporary tables in autonomous transaction" do
@@ -1395,23 +1396,23 @@ describe "Parameter type mapping /" do
       # procedure call should not commit initial insert
       plsql.test_collections.insert_employees(2=>@employees[2], 3=>@employees[3])
       plsql.rollback
-      plsql.test_employees.all.should be_empty
+      expect(plsql.test_employees.all).to be_empty
       plsql.connection.autocommit = old_autocommit
     end
 
     describe "using Oracle 9.2" do
-      before(:all) do
+      before do
         # simulate Oracle 9.2 connection
         plsql(:oracle_9).connection = get_connection
-        plsql(:oracle_9).connection.stub!(:database_version).and_return([9, 2, 0, 0])
+        allow(plsql(:oracle_9).connection).to receive(:database_version).and_return([9, 2, 0, 0])
       end
 
-      after(:all) do
+      after do
         plsql(:oracle_9).logoff
       end
 
       it "should create temporary tables when using Oracle 9.2" do
-        plsql(:oracle_9).test_collections.test_numbers(@numbers).should == [@numbers, {:x_numbers => @numbers}]
+        expect(plsql(:oracle_9).test_collections.test_numbers(@numbers)).to eq([@numbers, {:x_numbers => @numbers}])
       end
 
     end
@@ -1510,30 +1511,30 @@ describe "Parameter type mapping /" do
     end
 
     it "should find existing function" do
-      PLSQL::Procedure.find(plsql, :test_sum).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_sum)).not_to be_nil
     end
 
     it "should execute function with number array parameter" do
-      plsql.test_sum([1,2,3,4]).should == 10
+      expect(plsql.test_sum([1,2,3,4])).to eq(10)
     end
 
     it "should return number array return value" do
-      plsql.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+      expect(plsql.test_increment([1,2,3,4], 1)).to eq([2,3,4,5])
     end
 
     it "should execute function with string array and return string array output parameter" do
       strings = ['1','2','3','4']
-      plsql.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+      expect(plsql.test_copy_strings(strings)).to eq([strings, {:x_strings => strings}])
     end
 
     it "should execute function with object array and return object array output parameter" do
       phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
-      plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+      expect(plsql.test_copy_objects(phones)).to eq([phones, {:x_phones => phones}])
     end
 
     it "should execute function with empty object array" do
       phones = []
-      plsql.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+      expect(plsql.test_copy_objects(phones)).to eq([phones, {:x_phones => phones}])
     end
 
   end
@@ -1643,30 +1644,30 @@ describe "Parameter type mapping /" do
     end
 
     it "should execute function with number array parameter" do
-      plsql.test_collections.test_sum([1,2,3,4]).should == 10
+      expect(plsql.test_collections.test_sum([1,2,3,4])).to eq(10)
     end
 
     it "should clear temporary tables after executing function with varray of numbers type even if an error occurs in the package" do
       # this should work fine
-      plsql.test_collections.test_function_failure([1,2,3,4], 'N').should == 10
+      expect(plsql.test_collections.test_function_failure([1,2,3,4], 'N')).to eq(10)
       # we will force a package error here to see if things get cleaned up before the next call
-      lambda { plsql.test_collections.test_function_failure([5,6,7], 'Y') }.should raise_error(/Simulate business error to test clearing of temp table/)
+      expect { plsql.test_collections.test_function_failure([5,6,7], 'Y') }.to raise_error(/Simulate business error to test clearing of temp table/)
       # after the error in the first call temporary tables should be cleared
-      plsql.test_collections.test_function_failure([3,4,5,6], 'N').should == 18
+      expect(plsql.test_collections.test_function_failure([3,4,5,6], 'N')).to eq(18)
     end
 
     it "should return number array return value" do
-      plsql.test_collections.test_increment([1,2,3,4], 1).should == [2,3,4,5]
+      expect(plsql.test_collections.test_increment([1,2,3,4], 1)).to eq([2,3,4,5])
     end
 
     it "should execute function with string array and return string array output parameter" do
       strings = ['1','2','3','4']
-      plsql.test_collections.test_copy_strings(strings).should == [strings, {:x_strings => strings}]
+      expect(plsql.test_collections.test_copy_strings(strings)).to eq([strings, {:x_strings => strings}])
     end
 
     it "should execute function with object array and return object array output parameter" do
       phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
-      plsql.test_collections.test_copy_objects(phones).should == [phones, {:x_phones => phones}]
+      expect(plsql.test_collections.test_copy_objects(phones)).to eq([phones, {:x_phones => phones}])
     end
 
     # This test fails without wcmatthysen's "Procedure-call Fix." pull request.
@@ -1751,71 +1752,71 @@ describe "Parameter type mapping /" do
     end
 
     it "should find existing function" do
-      PLSQL::Procedure.find(plsql, :test_cursor).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_cursor)).not_to be_nil
     end
 
     it "should return cursor and fetch first row" do
-      plsql.test_cursor do |cursor|
-        cursor.fetch.should == @fields.map{|f| @employees[0][f]}
-      end.should be_nil
+      expect(plsql.test_cursor do |cursor|
+        expect(cursor.fetch).to eq(@fields.map{|f| @employees[0][f]})
+      end).to be_nil
     end
 
     it "should close all returned cursors after block is executed" do
       cursor2 = nil
-      plsql.test_cursor do |cursor|
+      expect(plsql.test_cursor do |cursor|
         cursor2 = cursor
-      end.should be_nil
-      lambda { cursor2.fetch }.should raise_error
+      end).to be_nil
+      expect { cursor2.fetch }.to raise_error
     end
 
     it "should not raise error if cursor is closed inside block" do
-      lambda do
+      expect do
         plsql.test_cursor do |cursor|
           cursor.close
         end
-      end.should_not raise_error
+      end.not_to raise_error
     end
 
     it "should fetch hash from returned cursor" do
       plsql.test_cursor do |cursor|
-        cursor.fetch_hash.should == @employees[0]
+        expect(cursor.fetch_hash).to eq(@employees[0])
       end
     end
 
     it "should fetch all rows from returned cursor" do
       plsql.test_cursor do |cursor|
-        cursor.fetch_all.should == @employees.map{|e| @fields.map{|f| e[f]}}
+        expect(cursor.fetch_all).to eq(@employees.map{|e| @fields.map{|f| e[f]}})
       end
     end
 
     it "should fetch all rows as hash from returned cursor" do
       plsql.test_cursor do |cursor|
-        cursor.fetch_hash_all.should == @employees
+        expect(cursor.fetch_hash_all).to eq(@employees)
       end
     end
 
     it "should get field names from returned cursor" do
       plsql.test_cursor do |cursor|
-        cursor.fields.should == @fields
+        expect(cursor.fields).to eq(@fields)
       end
     end
 
     it "should return output parameter with cursor and fetch first row" do
-      plsql.test_cursor_out do |result|
-        result[:x_cursor].fetch.should == @fields.map{|f| @employees[0][f]}
-      end.should be_nil
+      expect(plsql.test_cursor_out do |result|
+        expect(result[:x_cursor].fetch).to eq(@fields.map{|f| @employees[0][f]})
+      end).to be_nil
     end
 
     it "should return output parameter with cursor and fetch all rows as hash" do
-      plsql.test_cursor_out do |result|
-        result[:x_cursor].fetch_hash_all.should == @employees
-      end.should be_nil
+      expect(plsql.test_cursor_out do |result|
+        expect(result[:x_cursor].fetch_hash_all).to eq(@employees)
+      end).to be_nil
     end
 
     it "should execute function with cursor parameter and return record" do
-      pending "not possible from JDBC" if defined?(JRUBY_VERSION)
+      skip "not possible from JDBC" if defined?(JRUBY_VERSION)
       plsql.test_cursor do |cursor|
-        plsql.test_cursor_fetch(cursor).should == @employees[0]
+        expect(plsql.test_cursor_fetch(cursor)).to eq(@employees[0])
       end
     end
 
@@ -1865,20 +1866,20 @@ describe "Parameter type mapping /" do
     end
 
     it "should return cursor and fetch first row" do
-      plsql.typed_ref_cursor_test.get_all do |cursor|
-        cursor.fetch.should == @rows[0]
-      end.should be_nil
+      expect(plsql.typed_ref_cursor_test.get_all do |cursor|
+        expect(cursor.fetch).to eq(@rows[0])
+      end).to be_nil
     end
 
     it "should fetch hash from returned cursor" do
       plsql.typed_ref_cursor_test.get_all do |cursor|
-        cursor.fetch_hash.should == Hash[*@fields.zip(@rows[0]).flatten]
+        expect(cursor.fetch_hash).to eq(Hash[*@fields.zip(@rows[0]).flatten])
       end
     end
 
     it "should fetch all rows from returned cursor" do
       plsql.typed_ref_cursor_test.get_all do |cursor|
-        cursor.fetch_all.should == @rows
+        expect(cursor.fetch_all).to eq(@rows)
       end
     end
 
@@ -1916,11 +1917,11 @@ describe "Synonyms /" do
     end
   
     it "should find synonym to function" do
-      PLSQL::Procedure.find(plsql, :test_synonym).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :test_synonym)).not_to be_nil
     end
 
     it "should execute function using synonym and return correct value" do
-      plsql.test_synonym('xxx').should == 'XXX'
+      expect(plsql.test_synonym('xxx')).to eq('XXX')
     end
 
   end
@@ -1943,15 +1944,15 @@ describe "Synonyms /" do
     end
   
     it "should find public synonym to function" do
-      PLSQL::Procedure.find(plsql, :ora_login_user).should_not be_nil
+      expect(PLSQL::Procedure.find(plsql, :ora_login_user)).not_to be_nil
     end
 
     it "should execute function using public synonym and return correct value" do
-      plsql.ora_login_user.should == 'HR'
+      expect(plsql.ora_login_user).to eq('HR')
     end
 
     it "should not find public synonym if schema prefix is used" do
-      lambda { plsql.hr.ora_login_user }.should raise_error(ArgumentError)
+      expect { plsql.hr.ora_login_user }.to raise_error(ArgumentError)
     end
 
     it "should find private synonym before public synonym" do
@@ -1959,10 +1960,10 @@ describe "Synonyms /" do
       plsql.connection = get_connection
       plsql.execute "DROP SYNONYM ora_login_user" rescue nil
       plsql.execute "CREATE SYNONYM ora_login_user FOR hr.test_ora_login_user"
-      plsql.ora_login_user.should == 'XXX'
+      expect(plsql.ora_login_user).to eq('XXX')
       plsql.execute "DROP SYNONYM ora_login_user"
       plsql.connection = get_connection
-      plsql.ora_login_user.should == 'HR'
+      expect(plsql.ora_login_user).to eq('HR')
     end
 
   end
@@ -1999,15 +2000,15 @@ describe "Synonyms /" do
     end
 
     it "should raise error when invalid function is called" do
-      lambda {
+      expect {
         plsql.test_invalid_function('test')
-      }.should raise_error(ArgumentError, /is not in valid status/)
+      }.to raise_error(ArgumentError, /is not in valid status/)
     end
 
     it "should raise error when function from invalid package body is called" do
-      lambda {
+      expect {
         plsql.test_invalid_package.test_invalid_function('test')
-      }.should raise_error(ArgumentError, /body is not in valid status/)
+      }.to raise_error(ArgumentError, /body is not in valid status/)
     end
   end
 
@@ -2024,24 +2025,24 @@ describe "SYS.STANDARD procedures /" do
   end
 
   it "should execute function from SYS.STANDARD package" do
-    plsql.upper('abc').should == 'ABC'
+    expect(plsql.upper('abc')).to eq('ABC')
   end
 
   it "should find function overload based on types of sequential arguments" do
-    plsql.nvl(1, 2).should == 1
-    plsql.nvl(nil, 2).should == 2
-    plsql.nvl(1.1, 2.2).should == 1.1
-    plsql.nvl(nil, 2.2).should == 2.2
-    plsql.nvl(BigDecimal('1.1'), BigDecimal('2.2')).should == BigDecimal('1.1')
-    plsql.nvl(nil, BigDecimal('2.2')).should == BigDecimal('2.2')
-    plsql.nvl('a', 'b').should == 'a'
-    plsql.nvl(nil, 'b').should == 'b'
-    plsql.nvl(Date.new(2010,1,13), Date.new(2010,1,19)).should == Time.local(2010,1,13)
-    plsql.nvl(nil, Date.new(2010,1,19)).should == Time.local(2010,1,19)
-    plsql.nvl(Time.local(2010,1,13), Time.local(2010,1,19)).should == Time.local(2010,1,13)
-    plsql.nvl(nil, Time.local(2010,1,19)).should == Time.local(2010,1,19)
-    plsql.nvl(true, false).should == true
-    plsql.nvl(nil, false).should == false
+    expect(plsql.nvl(1, 2)).to eq(1)
+    expect(plsql.nvl(nil, 2)).to eq(2)
+    expect(plsql.nvl(1.1, 2.2)).to eq(1.1)
+    expect(plsql.nvl(nil, 2.2)).to eq(2.2)
+    expect(plsql.nvl(BigDecimal('1.1'), BigDecimal('2.2'))).to eq(BigDecimal('1.1'))
+    expect(plsql.nvl(nil, BigDecimal('2.2'))).to eq(BigDecimal('2.2'))
+    expect(plsql.nvl('a', 'b')).to eq('a')
+    expect(plsql.nvl(nil, 'b')).to eq('b')
+    expect(plsql.nvl(Date.new(2010,1,13), Date.new(2010,1,19))).to eq(Time.local(2010,1,13))
+    expect(plsql.nvl(nil, Date.new(2010,1,19))).to eq(Time.local(2010,1,19))
+    expect(plsql.nvl(Time.local(2010,1,13), Time.local(2010,1,19))).to eq(Time.local(2010,1,13))
+    expect(plsql.nvl(nil, Time.local(2010,1,19))).to eq(Time.local(2010,1,19))
+    expect(plsql.nvl(true, false)).to eq(true)
+    expect(plsql.nvl(nil, false)).to eq(false)
   end
 
 end
