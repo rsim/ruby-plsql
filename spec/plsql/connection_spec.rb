@@ -155,7 +155,7 @@ describe "Connection" do
         ora_value = @conn.ruby_value_to_ora_value(large_text, Java::OracleSql::CLOB)
         ora_value.class.should == Java::OracleSql::CLOB
         ora_value.length.should == 100_000
-        ora_value.getSubString(1, ora_value.length) == large_text
+        ora_value.getSubString(1, ora_value.length).should == large_text
         ora_value.freeTemporary
       end
 
