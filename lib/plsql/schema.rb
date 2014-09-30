@@ -41,7 +41,7 @@ module PLSQL
     # or
     #
     #   plsql.connection = java.sql.DriverManager.getConnection(
-    #     "jdbc:oracle:thin:@#{database_host}:#{database_port}:#{database_name}",
+    #     "jdbc:oracle:thin:@#{database_host}:#{database_port}/#{database_service_name}",
     #     database_user, database_password)
     #
     def connection=(conn)

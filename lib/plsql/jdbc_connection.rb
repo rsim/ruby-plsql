@@ -39,10 +39,12 @@ module PLSQL
   class JDBCConnection < Connection  #:nodoc:
 
     def self.create_raw(params)
-      url = if ENV['TNS_ADMIN'] && params[:database] && !params[:host] && !params[:url]
-        "jdbc:oracle:thin:@#{params[:database]}"
+      database = params[:database]
+      url = if ENV['TNS_ADMIN'] && database && !params[:host] && !params[:url]
+        "jdbc:oracle:thin:@#{database}"
       else
-        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}:#{params[:database]}"
+        database = ":#{database}" unless database.match(/^(\:|\/)/)
+        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}#{database}"
       end
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end

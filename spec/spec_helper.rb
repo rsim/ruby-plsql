@@ -15,7 +15,8 @@ end
 require 'ruby-plsql'
 
 DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
-DATABASE_SERVICE_NAME = ENV['DATABASE_SERVICE_NAME'] || DATABASE_NAME
+DATABASE_SERVICE_NAME = (defined?(JRUBY_VERSION) ? "/" : "") +
+                        (ENV['DATABASE_SERVICE_NAME'] || DATABASE_NAME)
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
 DATABASE_PORT = (ENV['DATABASE_PORT'] || 1521).to_i
 DATABASE_USERS_AND_PASSWORDS = [
@@ -33,7 +34,7 @@ def get_connection(user_number = 0)
     end
   else
     try_to_connect(NativeException) do
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}:#{DATABASE_NAME}",
+      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}#{DATABASE_SERVICE_NAME}",
         database_user, database_password)
     end
   end
