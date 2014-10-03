@@ -66,21 +66,21 @@ Gem::Specification.new do |s|
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_development_dependency(%q<jeweler>, ["~> 1.8.3"])
       s.add_development_dependency(%q<rspec>, ["~> 3.1"])
-      s.add_development_dependency(%q<activerecord>, ["~> 3.2.3"])
-      s.add_development_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
+      s.add_development_dependency(%q<activerecord>, [">= 3.2.3", "< 4.2.0"])
+      s.add_development_dependency(%q<activerecord-oracle_enhanced-adapter>, [">= 1.4.1", "< 1.6.0"])
       s.add_development_dependency(%q<ruby-oci8>, [">= 0"])
     else
       s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
       s.add_dependency(%q<rspec>, ["~> 3.1"])
-      s.add_dependency(%q<activerecord>, ["~> 3.2.3"])
-      s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
+      s.add_dependency(%q<activerecord>, [">= 3.2.3", "< 4.2.0"])
+      s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, [">= 1.4.1", "< 1.6.0"])
       s.add_dependency(%q<ruby-oci8>, [">= 0"])
     end
   else
     s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
     s.add_dependency(%q<rspec>, ["~> 3.1"])
-    s.add_dependency(%q<activerecord>, ["~> 3.2.3"])
-    s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, ["~> 1.4.1"])
+    s.add_dependency(%q<activerecord>, [">= 3.2.3", "< 4.2.0"])
+    s.add_dependency(%q<activerecord-oracle_enhanced-adapter>, [">= 1.4.1", "< 1.6.0"])
     s.add_dependency(%q<ruby-oci8>, [">= 0"])
   end
 end
