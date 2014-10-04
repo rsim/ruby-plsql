@@ -10,7 +10,7 @@ ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. It
 
 NUMBER, BINARY_INTEGER, PLS_INTEGER, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
 
-ruby-plsql supports Ruby 1.8.7, 1.9.3 and JRuby 1.6.7 implementations.
+ruby-plsql supports Ruby 1.8.7, 1.9.3, 2.1.3 and JRuby 1.6.7, 1.7.16 implementations.
 
 USAGE
 -----
@@ -127,10 +127,10 @@ or include gem in Gemfile if using bundler.
 
 In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver to $JRUBY_HOME/lib (for JRuby).
 
-If you are using MRI 1.8 or 1.9 Ruby implementation then you need to install ruby-oci8 gem (version 2.0.x or 2.1.x)
+If you are using MRI 1.8, 1.9 or 2.x Ruby implementation then you need to install ruby-oci8 gem (version 2.0.x or 2.1.x)
 as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
 
-If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc6.jar for Java 6 or ojdbc5.jar for Java 5. And copy this file to one of these locations:
+If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc6.jar for Java 6, 7, 8 or ojdbc5.jar for Java 5. And copy this file to one of these locations:
 
 * in `./lib` directory of Rails application and require it manually
 * in some directory which is in `PATH`
@@ -182,7 +182,7 @@ LICENSE
 
 (The MIT License)
 
-Copyright (c) 2008-2012 Raimonds Simanovskis
+Copyright (c) 2008-2014 Raimonds Simanovskis
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
