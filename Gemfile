@@ -1,7 +1,7 @@
 source 'http://rubygems.org'
 
 group :development do
-  gem 'jeweler', '~> 1.8.3'
+  gem 'jeweler', '~> 2.0.1'
   gem 'rspec', '~> 3.1'
 
   unless ENV['NO_ACTIVERECORD']
