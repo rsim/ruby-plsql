@@ -35,11 +35,16 @@ DATABASE_USERS_AND_PASSWORDS = [
 # specify which database version is used (will be verified in one test)
 DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 
+def get_eazy_connect_url(svc_separator = "")
+  "#{DATABASE_HOST}:#{DATABASE_PORT}#{svc_separator}#{DATABASE_SERVICE_NAME}"
+end
+
 def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
   unless defined?(JRUBY_VERSION)
+    url = (ENV['DATABASE_USE_TNS'] == 'NO') ? get_eazy_connect_url("/") : DATABASE_NAME
     try_to_connect(OCIError) do
-      OCI8.new(database_user, database_password, DATABASE_NAME)
+        OCI8.new(database_user, database_password, url)
     end
   else
     try_to_connect(NativeException) do
