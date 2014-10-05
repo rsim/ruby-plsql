@@ -29,9 +29,10 @@ Jeweler::RubygemsDotOrgTasks.new
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec)
 
-RSpec::Core::RakeTask.new(:rcov) do |t|
-  t.rcov = true
-  t.rcov_opts =  ['--exclude', '/Library,spec/']
+desc "Code coverage detail"
+task :simplecov do
+  ENV['COVERAGE'] = "true"
+  Rake::Task['spec'].execute
 end
 
 task :default => :spec
