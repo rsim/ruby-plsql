@@ -39,17 +39,23 @@ def get_eazy_connect_url(svc_separator = "")
   "#{DATABASE_HOST}:#{DATABASE_PORT}#{svc_separator}#{DATABASE_SERVICE_NAME}"
 end
 
+def get_connection_url
+  unless defined?(JRUBY_VERSION)
+    (ENV['DATABASE_USE_TNS'] == 'NO') ? get_eazy_connect_url("/") : DATABASE_NAME
+  else
+    "jdbc:oracle:thin:@#{get_eazy_connect_url}"
+  end
+end
+
 def get_connection(user_number = 0)
   database_user, database_password = DATABASE_USERS_AND_PASSWORDS[user_number]
   unless defined?(JRUBY_VERSION)
-    url = (ENV['DATABASE_USE_TNS'] == 'NO') ? get_eazy_connect_url("/") : DATABASE_NAME
     try_to_connect(OCIError) do
-        OCI8.new(database_user, database_password, url)
+      OCI8.new(database_user, database_password, get_connection_url)
     end
   else
     try_to_connect(NativeException) do
-      java.sql.DriverManager.getConnection("jdbc:oracle:thin:@#{DATABASE_HOST}:#{DATABASE_PORT}#{DATABASE_SERVICE_NAME}",
-        database_user, database_password)
+      java.sql.DriverManager.getConnection(get_connection_url, database_user, database_password)
     end
   end
 end
