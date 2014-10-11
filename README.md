@@ -176,6 +176,7 @@ CONTRIBUTORS
 * Wiehann Matthysen
 * Dayle Larson
 * Yasuo Honda
+* Yavor Nikolov
 
 LICENSE
 -------
