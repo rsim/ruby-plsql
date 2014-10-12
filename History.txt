@@ -1,3 +1,17 @@
+== 0.5.1 2014-10-12
+* Improvements
+  * Support for Oracle Ehnanced Adapter 1.5 and ActiveRecord 4.1, 4.2
+  * Oracle 12c support
+  * Better diagnostics output when ruby-oci8 initialization fails
+* Bug fixes
+  * Support for ruby-oci8 2.1.2+ preventing segfaults
+  * Multi-thread support (applies to oci8 connections)
+* Internal (development) improvements
+  * Tests database connection enhancements (eazy connect syntax, allow service name != db name)
+  * Tests migrated to rspec 3
+  * Tests coverage migrated from rcov to simplecov
+  * README update with how to run tests
+
 == 0.5.0 2012-04-16
 
 * Improvements
