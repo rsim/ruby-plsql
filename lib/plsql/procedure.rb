@@ -10,7 +10,6 @@ module PLSQL
               AND p.object_name = :object_name
               AND o.owner = p.owner
               AND o.object_name = p.object_name
-              AND o.object_type = p.object_type
               AND o.object_type in ('PROCEDURE', 'FUNCTION')",
             schema.schema_name, procedure.to_s.upcase))
           new(schema, procedure, nil, nil, row[0])
@@ -25,7 +24,6 @@ module PLSQL
               AND o.object_type IN ('PROCEDURE','FUNCTION')
               AND o.owner = p.owner
               AND o.object_name = p.object_name
-              AND o.object_type = p.object_type
               ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
             schema.schema_name, procedure.to_s.upcase))
           new(schema, row[1], nil, row[0], row[2])
@@ -41,7 +39,6 @@ module PLSQL
               AND p.procedure_name = :procedure_name
               AND o.owner = p.owner
               AND o.object_name = p.object_name
-              AND o.object_type = p.object_type
               AND o.object_type = 'PACKAGE'",
             override_schema_name || schema.schema_name, package, procedure.to_s.upcase))
         new(schema, procedure, package, override_schema_name, row[0])
