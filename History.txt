@@ -1,4 +1,10 @@
+== 0.5.2 2014-10-23
+
+* Bug fixes
+  * Use all_procedures.object_type only if Oracle versions < 11g (regression in 0.5.1, affecting Oracle < 11g)
+
 == 0.5.1 2014-10-12
+
 * Improvements
   * Support for Oracle Ehnanced Adapter 1.5 and ActiveRecord 4.1, 4.2
   * Oracle 12c support
