@@ -24,11 +24,19 @@ class TestDb
     unless defined?(@connection)
       begin
         Timeout::timeout(5) {
-          @connection = OCI8.new(
-            'system',
-            'oracle',
-            '(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))'
-          )
+          if defined?(JRUBY_VERSION)
+            @connection = java.sql.DriverManager.get_connection(
+              'jdbc:oracle:thin:@127.0.0.1:1521/XE',
+              'system',
+              'oracle'
+            );
+          else
+            @connection = OCI8.new(
+              'system',
+              'oracle',
+              '(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))'
+            )
+          end
         }
       rescue Timeout::Error
         raise "Cannot establish connection with Oracle database as SYSTEM user. Seams you need to start local Oracle database"
@@ -40,7 +48,7 @@ class TestDb
   def drop_databases(databases=[])
     return unless connection
     databases.each do |db|
-      connection.exec(<<-STATEMENT
+      execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
            l_cnt   INTEGER;
@@ -70,7 +78,7 @@ class TestDb
   def create_databases(databases=[])
     return unless connection
     databases.each do |db|
-      connection.exec(<<-STATEMENT
+      execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
         BEGIN
@@ -92,11 +100,33 @@ class TestDb
   end
 
   def database_version
-    return unless connection
-    cursor = connection.exec('SELECT version FROM V$INSTANCE')
-    cursor.fetch()[0].match(/(.*)\.\d$/)[1]
-  ensure
-    cursor.close
+    query = 'SELECT version FROM V$INSTANCE'
+
+    if defined?(JRUBY_VERSION)
+      statement = connection.create_statement
+      resource  = statement.execute_query(query)
+
+      resource.next
+      value = resource.get_string('VERSION')
+
+      resource.close
+      statement.close
+    else
+      cursor = execute_statement(query)
+      value = cursor.fetch()[0]
+      cursor.close
+    end
+
+    value.match(/(.*)\.\d$/)[1]
   end
 
+  def execute_statement(statement)
+    if defined?(JRUBY_VERSION)
+      statement = connection.prepare_call(statement)
+      statement.execute
+      statement.close
+    else
+      connection.exec(statement)
+    end
+  end
 end
