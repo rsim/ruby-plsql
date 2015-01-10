@@ -69,7 +69,7 @@ ruby-plsql also provides simple API for select/insert/update/delete table operat
 employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
 plsql.employees.insert employee           # INSERT INTO employees VALUES (1, 'First', 'Last', ...)
 
-# insert many records 
+# insert many records
 employees = [employee1, employee2, ... ]  # array of many Hashes
 plsql.employees.insert employees
 
@@ -140,13 +140,24 @@ If you are using JRuby then you need to download latest [Oracle JDBC driver](htt
 TESTS
 -----
 
-* Create Oracle database schema for test purposes. Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
+Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
+
+##### Prepare database
+
+* With local Vagrant based Oracle XE database
+
+        # Download Oracle XE database (oracle-xe-11.2.0-1.0.x86_64.rpm.zip) from Oracle Home page
+        vagrant up
+
+* Within other Oracle Database create Oracle database schema for test purposes.
 
         SQL> CREATE USER hr IDENTIFIED BY hr;
         SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
 
         SQL> CREATE USER arunit IDENTIFIED BY arunit;
         SQL> GRANT create session TO arunit;
+
+##### Prepare dependencies
 
 * Install bundler with
 
@@ -156,7 +167,13 @@ TESTS
 
         bundle install
 
-* Run tests with
+##### Run tests
+
+* Run tests with local Vagrant based Oracle XE database
+
+        DATABASE_NAME=XE rake spec
+
+* Run tests with other Oracle database
 
         rake spec
 
