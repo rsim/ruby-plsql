@@ -78,7 +78,7 @@ class TestDb
                         FROM v$session
                         WHERE username = UPPER('#{db}'))
             LOOP
-              EXECUTE IMMEDIATE 'alter system kill session ''' || x.sid || ',' || x.serial# || ''' IMMEDIATE';
+              EXECUTE IMMEDIATE 'ALTER SYSTEM DISCONNECT SESSION ''' || x.sid || ',' || x.serial# || ''' IMMEDIATE';
             END LOOP;
 
             EXECUTE IMMEDIATE ('DROP USER #{db} CASCADE');
