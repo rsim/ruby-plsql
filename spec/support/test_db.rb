@@ -1,23 +1,18 @@
 class TestDb
 
-  DATABASES = %w{hr arunit}
+  DATABASE_USERS = %w{hr arunit}
 
   def self.build
     db = self.new
-    db.drop_databases(DATABASES)
-    db.create_databases(DATABASES)
+    db.cleanup_database_users
+    db.create_user_tablespace
+    db.setup_database_users
     db.connection.logoff
   end
 
   def self.database_version
      db = self.new
      db.database_version
-  end
-
-  def self.drop
-    db = self.new
-    db.drop_databases(DATABASES)
-    db.connection.logoff
   end
 
   def connection
@@ -45,9 +40,28 @@ class TestDb
     @connection
   end
 
-  def drop_databases(databases=[])
+  def create_user_tablespace
     return unless connection
-    databases.each do |db|
+    execute_statement(<<-STATEMENT
+      DECLARE
+        v_exists number;
+      BEGIN
+        SELECT count(1)
+          INTO v_exists
+          FROM dba_tablespaces
+          WHERE tablespace_name = 'TBS_USERS';
+
+          IF v_exists = 0 THEN
+            EXECUTE IMMEDIATE 'CREATE TABLESPACE TBS_USERS DATAFILE ''tbs_users.dat'' SIZE 10M REUSE AUTOEXTEND ON NEXT 10M MAXSIZE 200M';
+          END IF;
+      END;
+      STATEMENT
+      )
+  end
+
+  def cleanup_database_users
+    return unless connection
+    DATABASE_USERS.each do |db|
       execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
@@ -75,9 +89,9 @@ class TestDb
     end
   end
 
-  def create_databases(databases=[])
+  def setup_database_users
     return unless connection
-    databases.each do |db|
+    DATABASE_USERS.each do |db|
       execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
@@ -91,7 +105,7 @@ class TestDb
           IF v_count = 0 THEN
             EXECUTE IMMEDIATE ('CREATE USER #{db} IDENTIFIED BY #{db}');
             EXECUTE IMMEDIATE ('GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO #{db}');
-            EXECUTE IMMEDIATE ('ALTER USER #{db} QUOTA 50m ON SYSTEM');
+            EXECUTE IMMEDIATE ('ALTER USER #{db} QUOTA 10m ON TBS_USERS');
           END IF;
         END;
         STATEMENT
