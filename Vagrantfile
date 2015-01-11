@@ -1,20 +1,12 @@
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
-if ! File.exists?('./oracle-xe-11.2.0-1.0.x86_64.rpm.zip')
-  puts 'Oracle XE database installation (oracle-xe-11.2.0-1.0.x86_64.rpm.zip) can not be found. Please download from Oracle homepage'
-  exit 1
-end
-
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Every Vagrant virtual environment requires a box to build off of.
   config.vm.box = "chef/centos-6.6"
-
   config.vm.hostname = "vagrant.oracle"
-
   config.vm.network :forwarded_port, guest: 1521, host: 1521
-  # config.vm.network :forwarded_port, guest: 8080, host: 8080
 
   config.vm.provider :virtualbox do |vb|
     vb.name = "Ruby-PLSQL Oracle XE box"
@@ -25,11 +17,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
   end
 
+  # Check for Oracle XE installation file
+  config.vm.provision :shell, path: "./spec/support/file_check_script.sh"
+
   config.vm.provision :shell, inline: "yum update -y"
   config.vm.provision :shell, inline: "yum install -y libaio bc flex unzip"
   config.vm.provision :shell, inline: "mkdir -p /opt/oracle"
-  config.vm.provision :shell, inline: "cp /vagrant/oracle-xe* /opt/oracle"
-  config.vm.provision :shell, inline: "cd /opt/oracle && unzip -q oracle-xe-11.2.0-1.0.x86_64.rpm.zip"
+  config.vm.provision :shell, inline: "unzip -q -d /opt/oracle /vagrant/oracle-xe-11.2.0-1.0.x86_64.rpm.zip"
   config.vm.provision :shell, inline: "cd /opt/oracle/Disk1 && rpm -ivh oracle-xe-11.2.0-1.0.x86_64.rpm"
   config.vm.provision :shell, inline: "cp /opt/oracle/Disk1/response/xe.rsp /opt/oracle/Disk1/response/xe.rsp-bak"
   config.vm.provision :shell, inline: %q{sed -i -E "s/<value required>/oracle/" /opt/oracle/Disk1/response/xe.rsp}
