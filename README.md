@@ -59,6 +59,7 @@ plsql.logoff
 
 Look at RSpec tests under spec directory for more usage examples.
 
+Note: named arguments in procedures calls should be in lower case.
 
 ### Table operations:
 
