@@ -171,7 +171,7 @@ Review `spec/spec_helper.rb` to see default schema/user names and database names
 
 * Run tests with local Vagrant based Oracle XE database
 
-        DATABASE_NAME=XE rake spec
+        LOCAL_DATABASE=Y rake spec
 
 * Run tests with other Oracle database
 

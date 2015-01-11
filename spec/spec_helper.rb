@@ -27,7 +27,12 @@ require 'ruby-plsql'
 # in spec/support/ and its subdirectories.
 Dir[File.join(File.dirname(__FILE__), 'support/**/*.rb')].each {|f| require f}
 
-DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+if ENV['LOCAL_DATABASE'] == 'Y'
+  DATABASE_NAME = 'XE'
+else
+  DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+end
+
 DATABASE_SERVICE_NAME = (defined?(JRUBY_VERSION) ? "/" : "") +
                         (ENV['DATABASE_SERVICE_NAME'] || DATABASE_NAME)
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
@@ -39,7 +44,7 @@ DATABASE_USERS_AND_PASSWORDS = [
 # specify which database version is used (will be verified in one test)
 DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
 
-if DATABASE_NAME == 'XE'
+if ENV['LOCAL_DATABASE'] == 'Y'
   RSpec.configure do |config|
     config.before(:suite) do
       TestDb.build
