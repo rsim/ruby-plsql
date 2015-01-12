@@ -52,6 +52,7 @@ class TestDb
           WHERE tablespace_name = 'TBS_USERS';
 
           IF v_exists = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER SYSTEM SET DB_CREATE_FILE_DEST = ''/u01/app/oracle/oradata/XE''';
             EXECUTE IMMEDIATE 'CREATE TABLESPACE TBS_USERS DATAFILE ''tbs_users.dat'' SIZE 10M REUSE AUTOEXTEND ON NEXT 10M MAXSIZE 200M';
           END IF;
       END;
@@ -103,9 +104,8 @@ class TestDb
             WHERE username = UPPER ('#{db}');
 
           IF v_count = 0 THEN
-            EXECUTE IMMEDIATE ('CREATE USER #{db} IDENTIFIED BY #{db}');
-            EXECUTE IMMEDIATE ('GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO #{db}');
-            EXECUTE IMMEDIATE ('ALTER USER #{db} QUOTA 10m ON TBS_USERS');
+            EXECUTE IMMEDIATE ('CREATE USER #{db} IDENTIFIED BY #{db} DEFAULT TABLESPACE TBS_USERS QUOTA 10m ON TBS_USERS');
+            EXECUTE IMMEDIATE ('GRANT create session, create table, create sequence, create procedure, create type, create view, create synonym TO #{db}');
           END IF;
         END;
         STATEMENT
