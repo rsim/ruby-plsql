@@ -60,9 +60,13 @@ class TestDb
       )
   end
 
+  def database_users
+    DATABASE_USERS.inject([]){|array, user| array << [user.upcase, user]}
+  end
+
   def cleanup_database_users
     return unless connection
-    DATABASE_USERS.each do |db|
+    database_users.each do | db, _ |
       execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
@@ -72,12 +76,12 @@ class TestDb
           SELECT COUNT (1)
             INTO v_count
             FROM dba_users
-            WHERE username = UPPER('#{db}');
+            WHERE username = '#{db}';
 
           IF v_count != 0 THEN
             FOR x IN (SELECT *
                         FROM v$session
-                        WHERE username = UPPER('#{db}'))
+                        WHERE username = '#{db}')
             LOOP
               EXECUTE IMMEDIATE 'ALTER SYSTEM DISCONNECT SESSION ''' || x.sid || ',' || x.serial# || ''' IMMEDIATE';
             END LOOP;
@@ -92,7 +96,7 @@ class TestDb
 
   def setup_database_users
     return unless connection
-    DATABASE_USERS.each do |db|
+    database_users.each do | db, passwd |
       execute_statement(<<-STATEMENT
         DECLARE
            v_count INTEGER := 0;
@@ -101,10 +105,10 @@ class TestDb
           SELECT COUNT (1)
             INTO v_count
             FROM dba_users
-            WHERE username = UPPER ('#{db}');
+            WHERE username = '#{db}';
 
           IF v_count = 0 THEN
-            EXECUTE IMMEDIATE ('CREATE USER #{db} IDENTIFIED BY #{db} DEFAULT TABLESPACE TBS_USERS QUOTA 10m ON TBS_USERS');
+            EXECUTE IMMEDIATE ('CREATE USER #{db} IDENTIFIED BY #{passwd} DEFAULT TABLESPACE TBS_USERS QUOTA 10m ON TBS_USERS');
             EXECUTE IMMEDIATE ('GRANT create session, create table, create sequence, create procedure, create type, create view, create synonym TO #{db}');
           END IF;
         END;
