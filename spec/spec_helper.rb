@@ -23,7 +23,16 @@ end
 
 require 'ruby-plsql'
 
-DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+# Requires supporting ruby files with custom matchers and macros, etc,
+# in spec/support/ and its subdirectories.
+Dir[File.join(File.dirname(__FILE__), 'support/**/*.rb')].each {|f| require f}
+
+if ENV['USE_VM_DATABASE'] == 'Y'
+  DATABASE_NAME = 'XE'
+else
+  DATABASE_NAME = ENV['DATABASE_NAME'] || 'orcl'
+end
+
 DATABASE_SERVICE_NAME = (defined?(JRUBY_VERSION) ? "/" : "") +
                         (ENV['DATABASE_SERVICE_NAME'] || DATABASE_NAME)
 DATABASE_HOST = ENV['DATABASE_HOST'] || 'localhost'
@@ -34,6 +43,20 @@ DATABASE_USERS_AND_PASSWORDS = [
 ]
 # specify which database version is used (will be verified in one test)
 DATABASE_VERSION = ENV['DATABASE_VERSION'] || '10.2.0.4'
+
+if ENV['USE_VM_DATABASE'] == 'Y'
+  RSpec.configure do |config|
+    config.before(:suite) do
+      TestDb.build
+
+      # Set Verbose off to hide warning: already initialized constant DATABASE_VERSION
+      original_verbosity = $VERBOSE
+      $VERBOSE           = nil
+      DATABASE_VERSION   = TestDb.database_version
+      $VERBOSE           = original_verbosity
+    end
+  end
+end
 
 def get_eazy_connect_url(svc_separator = "")
   "#{DATABASE_HOST}:#{DATABASE_PORT}#{svc_separator}#{DATABASE_SERVICE_NAME}"
