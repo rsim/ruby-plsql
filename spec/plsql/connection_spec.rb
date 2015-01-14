@@ -117,7 +117,7 @@ describe "Connection" do
         clob = OCI8::CLOB.new(@raw_conn, large_text)
         expect(@conn.ora_value_to_ruby_value(clob)).to eq large_text
       end
-      
+
     end
 
   # JRuby
@@ -132,19 +132,19 @@ describe "Connection" do
       it "should translate PL/SQL NUMBER to Ruby BigDecimal" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15)).to eq [BigDecimal, nil]
       end
-      
+
       it "should translate PL/SQL DATE to Ruby DateTime" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil)).to eq [DateTime, nil]
       end
-      
+
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
       end
-      
+
       it "should not translate Ruby Fixnum when BigDecimal type specified" do
         expect(@conn.ruby_value_to_ora_value(100, BigDecimal)).to eq java.math.BigDecimal.new(100)
       end
-      
+
       it "should translate Ruby Bignum value to BigDecimal when BigDecimal type specified" do
         big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
         expect(big_decimal).to eq java.math.BigDecimal.new("12345678901234567890")
@@ -167,7 +167,7 @@ describe "Connection" do
       it "should translate Oracle BigDecimal integer value to Fixnum" do
         expect(@conn.ora_value_to_ruby_value(BigDecimal("100"))).to eql(100)
       end
-      
+
       it "should translate Oracle BigDecimal float value to BigDecimal" do
         expect(@conn.ora_value_to_ruby_value(BigDecimal("100.11"))).to eql(BigDecimal("100.11"))
       end
@@ -210,7 +210,7 @@ describe "Connection" do
       expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
         'abc',123,123.456,@now,@today)).to eq ["abc",123,123.456,@now,Time.parse(@today.to_s)]
     end
-    
+
     it "should execute SQL statement with NULL values and return first result" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_first("SELECT NULL,123,123.456,
@@ -226,7 +226,7 @@ describe "Connection" do
         expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
           nil,123,123.456,@now,@today)).to eq [nil,123,123.456,@now,Time.parse(@today.to_s)]
       end
-    
+
     end
 
     it "should execute SQL statement and return all results" do
@@ -254,7 +254,7 @@ describe "Connection" do
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
         'abc',123,123.456,@now,'abc',123,123.456,@now)).to eq [["abc",123,123.456,@now],["abc",123,123.456,@now]]
     end
-    
+
     it "should execute SQL statement and yield all results in block" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_all("SELECT 'abc',123,123.456,
@@ -266,7 +266,7 @@ describe "Connection" do
         expect(r).to eq ["abc",123,123.456,@now]
       end).to eq 2
     end
-    
+
     it "should execute SQL statement with bind parameters and yield all results in block" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
@@ -276,7 +276,7 @@ describe "Connection" do
     end
 
   end
-  
+
   describe "PL/SQL procedures" do
     before(:all) do
       @random = rand(1000)
@@ -313,9 +313,9 @@ describe "Connection" do
       expect(cursor[":p_date"]).to eq @now
       expect(cursor.close).to be_nil
     end
-  
+
   end
-  
+
   describe "commit and rollback" do
     before(:all) do
       expect(@conn.exec("CREATE TABLE test_commit (dummy VARCHAR2(100))")).to be true

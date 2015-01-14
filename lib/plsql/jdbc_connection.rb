@@ -109,14 +109,14 @@ module PLSQL
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
           if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
+            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type),
               metadata[:sql_type_name])
           else
             @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
           end
         end
       end
-      
+
       def exec
         @statement.execute
       end
@@ -128,9 +128,9 @@ module PLSQL
       def close
         @statement.close
       end
-      
+
       private
-      
+
       def bind_param_index(key)
         return key if key.kind_of? Integer
         key = ":#{key.to_s}" unless key.to_s =~ /^:/
@@ -301,7 +301,7 @@ module PLSQL
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
       end
     end
-    
+
     def get_bind_variable(stmt, i, type)
       case type.to_s.to_sym
       when :Fixnum, :Bignum, :Integer
@@ -337,7 +337,7 @@ module PLSQL
     end
 
     def result_set_to_ruby_data_type(column_type, column_type_name)
-      
+
     end
 
     def plsql_to_ruby_data_type(metadata)
@@ -521,7 +521,7 @@ module PLSQL
     end
 
     private
-    
+
     def java_date(value)
       value && Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S"))
     end
@@ -538,7 +538,7 @@ module PLSQL
       # return BigDecimal instead of Float to avoid rounding errors
       num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end
-    
+
   end
-  
+
 end
