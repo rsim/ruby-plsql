@@ -258,7 +258,7 @@ describe "Connection" do
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
         'abc',123,123.456,@now,'abc',123,123.456,@now)).to eq [["abc",123,123.456,@now],["abc",123,123.456,@now]]
     end
-
+    
     it "should execute SQL statement and yield all results in block" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_all("SELECT 'abc',123,123.456,

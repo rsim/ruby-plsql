@@ -128,7 +128,7 @@ module PLSQL
       def close
         @statement.close
       end
-
+      
       private
       
       def bind_param_index(key)
