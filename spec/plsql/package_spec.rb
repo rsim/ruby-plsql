@@ -48,11 +48,11 @@ describe "Package" do
   end
 
   it "should report an existing procedure as existing" do
-    plsql.test_package.procedure_defined?(:test_procedure).should == true
+    expect(plsql.test_package.procedure_defined?(:test_procedure)).to be_truthy
   end
 
   it "should report an inexistent procedure as not existing" do
-    plsql.test_package.procedure_defined?(:inexistent_procedure).should == false
+    expect(plsql.test_package.procedure_defined?(:inexistent_procedure)).to be_falsey
   end
 
   describe "variables" do
