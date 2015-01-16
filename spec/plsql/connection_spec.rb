@@ -145,7 +145,7 @@ describe "Connection" do
         expect(@conn.ruby_value_to_ora_value(100, BigDecimal)).to eq java.math.BigDecimal.new(100)
       end
 
-      it "should translate Ruby String to sting value" do
+      it "should translate Ruby String to string value" do
         expect(@conn.ruby_value_to_ora_value(1.1, String)).to eq '1.1'
       end
 
