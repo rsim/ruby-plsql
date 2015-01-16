@@ -37,6 +37,10 @@ module PLSQL
       @package_objects = {}
     end
 
+    def procedure_defined?(name)
+      PLSQL::Procedure.find(@schema, name, @package) ? true : false
+    end
+
     private
     
     def method_missing(method, *args, &block)
