@@ -105,7 +105,7 @@ plsql.employees.delete(:employee_id => 1) # DELETE FROM employees WHERE employee
 # select from sequences
 plsql.employees_seq.nextval               # SELECT employees_seq.NEXTVAL FROM dual
 plsql.employees_seq.currval               # SELECT employees_seq.CURRVAL FROM dual
-
+```
 
 ### Usage with Rails:
 
