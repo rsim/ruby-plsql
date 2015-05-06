@@ -1,3 +1,15 @@
+== 0.5.3 2015-05-07
+
+* Improvements
+  * Support for ActiveRecord 4.2
+* Docs
+  * README formatting fixed (Usage with Rails section)
+* Bug fixes
+  * Force to convert String type value as real string to avoid error when used JRuby and for VARCHAR2 parameter is assigned non String value
+  * Fix dbms_output functionality in case when database exception is raised
+* Internal (development) improvements
+  * Vagrant box provisioning added
+
 == 0.5.2 2014-10-23
 
 * Bug fixes
