@@ -215,10 +215,8 @@ module PLSQL
       end
       add_out_variables
 
-      dbms_output_enable_sql, dbms_output_get_sql = dbms_output_sql
-
       @sql = @declare_sql.empty? ? "" : "DECLARE\n" << @declare_sql
-      @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
+      @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << @return_sql << "END;\n"
     end
 
     def add_argument(argument, value, argument_metadata=nil)
@@ -539,34 +537,24 @@ module PLSQL
       @procedure_name ||= @procedure.procedure
     end
 
-    def dbms_output_sql
-      if @dbms_output_stream
-        dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
-        # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
-        if (@schema.connection.database_version <=> [10, 2, 0, 0]) >= 0
-          @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
-          dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
-          @bind_values[:dbms_output_lines] = nil
-          @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil,
-            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
-        else
-          dbms_output_get_sql = ""
-        end
-        [dbms_output_enable_sql, dbms_output_get_sql]
-      else
-        ["", ""]
-      end
+    def dbms_output_enable_sql
+      @dbms_output_stream ? "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n" : ""
     end
 
-    def dbms_output_log
+    def dbms_output_lines
+      lines = []
       if @dbms_output_stream
-        # if database version is at least 10.2 then :dbms_output_lines output bind variable has dbms_output lines
-        if @bind_metadata[:dbms_output_lines]
-          @cursor[':dbms_output_lines'].each do |line|
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
-          end
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        if (@schema.connection.database_version <=> [10, 2, 0, 0]) >= 0
+          cursor = @schema.connection.parse("BEGIN DBMS_OUTPUT.GET_LINES(:dbms_output_lines, :dbms_output_numlines); END;\n")
+          cursor.bind_param(':dbms_output_lines', nil,
+                            :data_type => 'TABLE',
+                            :data_length => nil,
+                            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY",
+                            :in_out => 'OUT')
+          cursor.bind_param(':dbms_output_numlines', Schema::DBMS_OUTPUT_MAX_LINES, :data_type => 'NUMBER', :in_out => 'IN/OUT')
+          cursor.exec
+          lines = cursor[':dbms_output_lines']
+          cursor.close
         else
           cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")
           while true do
@@ -574,12 +562,19 @@ module PLSQL
             cursor.bind_param(':status', nil, :data_type => 'NUMBER', :in_out => 'OUT')
             cursor.exec
             break unless cursor[':status'] == 0
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{cursor[':line']}"
+            lines << cursor[':line']
           end
           cursor.close
         end
-        @dbms_output_stream.flush
       end
+      lines
+    end
+
+    def dbms_output_log
+      dbms_output_lines.each do |line|
+        @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+      end
+      @dbms_output_stream.flush if @dbms_output_stream
     end
 
   end
