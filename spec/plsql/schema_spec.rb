@@ -227,10 +227,13 @@ describe "DBMS_OUTPUT logging" do
   before(:all) do
     plsql.connection = get_connection
     plsql.execute <<-SQL
-      CREATE OR REPLACE PROCEDURE test_dbms_output(p_string VARCHAR2)
+      CREATE OR REPLACE PROCEDURE test_dbms_output(p_string VARCHAR2, p_raise_error BOOLEAN := false)
       IS
       BEGIN
         DBMS_OUTPUT.PUT_LINE(p_string);
+        IF p_raise_error THEN
+          RAISE_APPLICATION_ERROR(-20000 - 12, 'Test Error');
+        END IF;
       END;
     SQL
     plsql.execute <<-SQL
@@ -269,6 +272,11 @@ describe "DBMS_OUTPUT logging" do
 
     it "should log output to specified stream" do
       plsql.test_dbms_output("test_dbms_output")
+      expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
+    end
+
+    it "should log output to specified stream in case of exception" do
+      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error /Test Error/
       expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
     end
 

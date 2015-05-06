@@ -26,8 +26,6 @@ module PLSQL
 
       @cursor.exec
 
-      dbms_output_log
-
       if block_given?
         yield get_return_value
         nil
@@ -36,6 +34,7 @@ module PLSQL
       end
     ensure
       @cursor.close if @cursor
+      dbms_output_log
     end
 
     private
