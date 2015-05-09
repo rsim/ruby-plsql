@@ -629,6 +629,11 @@ describe "Parameter type mapping /" do
             hire_date     DATE
           );
 
+          TYPE t_candidate IS RECORD(
+            candidate_id NUMBER(5),
+            is_approved  BOOLEAN
+          );
+
           TYPE table_of_records IS TABLE OF t_employee;
 
           FUNCTION test_full_name(p_employee t_employee)
@@ -636,6 +641,9 @@ describe "Parameter type mapping /" do
 
           FUNCTION test_empty_records
             RETURN table_of_records;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN;
         END;
       SQL
       plsql.execute <<-SQL
@@ -665,6 +673,13 @@ describe "Parameter type mapping /" do
             FETCH employees_cur BULK COLLECT INTO employees_tab;
             CLOSE employees_cur;
             RETURN employees_tab;
+          END;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN
+          IS
+          BEGIN
+            RETURN p_candidate.is_approved;
           END;
         END;
       SQL
@@ -747,6 +762,18 @@ describe "Parameter type mapping /" do
 
     it "should execute package function with parameter with record type defined in package" do
       plsql.test_record.test_full_name(@p_employee).should == 'First Last'
+    end
+
+    context "functions with record parameters having boolean attributes" do
+      def new_candidate(status)
+        {:candidate_id => 1, :is_approved => status}
+      end
+
+      [true, false, nil].each do |status|
+        it "should execute function with record having boolean attribute (#{status})" do
+          expect(plsql.test_record.is_approved(new_candidate(status))).to eq status
+        end
+      end
     end
 
   end
