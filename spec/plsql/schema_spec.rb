@@ -220,6 +220,15 @@ describe "ActiveRecord connection" do
     plsql.activerecord_class = TestModel
     expect(plsql.schema_name).to eq('HR')
   end
+
+  it "should safely close cursors in threaded environment" do
+    expect {
+      t1 = Thread.new { plsql.dbms_lock.sleep(1) }.tap { |t| t.abort_on_exception = true }
+      t2 = Thread.new { plsql.dbms_lock.sleep(2) }.tap { |t| t.abort_on_exception = true }
+      [t2, t1].each { |t| t.join }
+    }.not_to raise_error
+  end
+
 end if defined?(ActiveRecord)
 
 describe "DBMS_OUTPUT logging" do
