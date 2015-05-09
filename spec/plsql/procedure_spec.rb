@@ -644,6 +644,11 @@ describe "Parameter type mapping /" do
 
           FUNCTION is_approved(p_candidate t_candidate)
             RETURN BOOLEAN;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate);
         END;
       SQL
       plsql.execute <<-SQL
@@ -680,6 +685,22 @@ describe "Parameter type mapping /" do
           IS
           BEGIN
             RETURN p_candidate.is_approved;
+          END;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate
+          IS
+            result t_candidate := p_candidate;
+          BEGIN
+            result.is_approved := p_status;
+            return result;
+          END;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate)
+          IS
+          BEGIN
+            p_result := p_candidate;
+            p_result.is_approved := p_status;
           END;
         END;
       SQL
@@ -772,6 +793,14 @@ describe "Parameter type mapping /" do
       [true, false, nil].each do |status|
         it "should execute function with record having boolean attribute (#{status})" do
           expect(plsql.test_record.is_approved(new_candidate(status))).to eq status
+        end
+
+        it "procedure should return record with boolean attribute as output parameter (#{status})" do
+          expect(plsql.test_record.p_set_candidate_status(new_candidate(nil), status)[:p_result]).to eq new_candidate(status)
+        end
+
+        it "function should return record with boolean attribute (#{status})" do
+          expect(plsql.test_record.f_set_candidate_status(new_candidate(nil), status)).to eq new_candidate(status)
         end
       end
     end
