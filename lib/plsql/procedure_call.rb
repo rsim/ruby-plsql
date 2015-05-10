@@ -337,9 +337,16 @@ module PLSQL
         metadata = argument_metadata[:fields][field]
         raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
         bind_variable = :"#{argument}_f#{metadata[:position]}"
-        sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
-        bind_values[bind_variable] = value
-        bind_metadata[bind_variable] = metadata
+        case metadata[:data_type]
+        when 'PL/SQL BOOLEAN'
+          sql << "l_#{argument}.#{field} := (:#{bind_variable} = 1);\n"
+          bind_values[bind_variable] = value.nil? ? nil : (value ? 1 : 0)
+          bind_metadata[bind_variable] = metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        else
+          sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
+          bind_values[bind_variable] = value
+          bind_metadata[bind_variable] = metadata
+        end
       end
       [sql, bind_values, bind_metadata]
     end
@@ -362,9 +369,18 @@ module PLSQL
           # should use different output bind variable as JDBC does not support
           # if output bind variable appears in several places
           bind_variable = :"#{argument}_o#{metadata[:position]}"
-          @return_vars << bind_variable
-          @return_vars_metadata[bind_variable] = metadata
-          @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
+          case metadata[:data_type]
+          when 'PL/SQL BOOLEAN'
+            @return_vars << bind_variable
+            @return_vars_metadata[bind_variable] = metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+            arg_field = "l_#{argument}.#{field}"
+            @return_sql << ":#{bind_variable} := " << "CASE WHEN #{arg_field} = true THEN 1 " <<
+                                                      "WHEN #{arg_field} = false THEN 0 ELSE NULL END;\n"
+          else
+            @return_vars << bind_variable
+            @return_vars_metadata[bind_variable] = metadata
+            @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
+          end
         end
         "l_#{argument} := " if is_return_value
       when 'PL/SQL BOOLEAN'
@@ -468,7 +484,13 @@ module PLSQL
       when 'PL/SQL RECORD'
         return_value = {}
         argument_metadata[:fields].each do |field, metadata|
-          return_value[field] = @cursor[":#{argument}_o#{metadata[:position]}"]
+          field_value = @cursor[":#{argument}_o#{metadata[:position]}"]
+          case metadata[:data_type]
+          when 'PL/SQL BOOLEAN'
+            return_value[field] = field_value.nil? ? nil : field_value == 1
+          else
+            return_value[field] = field_value
+          end
         end
         return_value
       when 'PL/SQL BOOLEAN'

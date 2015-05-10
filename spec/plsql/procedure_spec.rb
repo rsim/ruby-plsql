@@ -630,6 +630,11 @@ describe "Parameter type mapping /" do
             hire_date     DATE
           );
 
+          TYPE t_candidate IS RECORD(
+            candidate_id NUMBER(5),
+            is_approved  BOOLEAN
+          );
+
           TYPE table_of_records IS TABLE OF t_employee;
 
           FUNCTION test_full_name(p_employee t_employee)
@@ -637,6 +642,14 @@ describe "Parameter type mapping /" do
 
           FUNCTION test_empty_records
             RETURN table_of_records;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate);
         END;
       SQL
       plsql.execute <<-SQL
@@ -666,6 +679,29 @@ describe "Parameter type mapping /" do
             FETCH employees_cur BULK COLLECT INTO employees_tab;
             CLOSE employees_cur;
             RETURN employees_tab;
+          END;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN
+          IS
+          BEGIN
+            RETURN p_candidate.is_approved;
+          END;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate
+          IS
+            result t_candidate := p_candidate;
+          BEGIN
+            result.is_approved := p_status;
+            return result;
+          END;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate)
+          IS
+          BEGIN
+            p_result := p_candidate;
+            p_result.is_approved := p_status;
           END;
         END;
       SQL
@@ -748,6 +784,26 @@ describe "Parameter type mapping /" do
 
     it "should execute package function with parameter with record type defined in package" do
       expect(plsql.test_record.test_full_name(@p_employee)).to eq('First Last')
+    end
+
+    context "functions with record parameters having boolean attributes" do
+      def new_candidate(status)
+        {:candidate_id => 1, :is_approved => status}
+      end
+
+      [true, false, nil].each do |status|
+        it "should execute function with record having boolean attribute (#{status})" do
+          expect(plsql.test_record.is_approved(new_candidate(status))).to eq status
+        end
+
+        it "procedure should return record with boolean attribute as output parameter (#{status})" do
+          expect(plsql.test_record.p_set_candidate_status(new_candidate(nil), status)[:p_result]).to eq new_candidate(status)
+        end
+
+        it "function should return record with boolean attribute (#{status})" do
+          expect(plsql.test_record.f_set_candidate_status(new_candidate(nil), status)).to eq new_candidate(status)
+        end
+      end
     end
 
   end
