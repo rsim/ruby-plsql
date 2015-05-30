@@ -111,8 +111,3 @@ class Hash
     self.reject {|key, value| !whitelist.include?(key) }
   end unless method_defined?(:only)
 end
-
-# set default time zone in TZ environment variable
-# which will be used to set session time zone
-ENV['TZ'] ||= 'Europe/Riga'
-# ENV['TZ'] ||= 'UTC'

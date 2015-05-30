@@ -86,7 +86,7 @@ describe "Connection with connect!" do
   it "should not connect with wrong port number" do
     expect {
       plsql.connect! @username, @password, :host => @host, :port => 9999, :database => @database
-    }.to raise_error(/no listener|could not establish the connection/)
+    }.to raise_error(/ORA-12541|could not establish the connection/)
   end
 
   it "should connect with one Hash parameter" do
@@ -95,10 +95,11 @@ describe "Connection with connect!" do
     expect(plsql.schema_name).to eq(@username.upcase)
   end
 
-  it "should set session time zone from TZ environment variable" do
+  it "should set session time zone from ORA_SDTZ environment variable" do
     plsql.connect! @username, @password, @database
-    expect(plsql.connection.time_zone).to eq(ENV['TZ'])
-  end
+    expect(plsql.connection.time_zone).to eq(ENV['ORA_SDTZ'])
+  end if ENV['ORA_SDTZ']
+
 
   it "should set session time zone from :time_zone parameter" do
     plsql.connect! :username => @username, :password => @password, :database => @database, :time_zone => 'EET'

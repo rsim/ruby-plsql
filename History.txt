@@ -1,3 +1,6 @@
+* Bug fixes
+  * Support for Session timezone from ENV['TZ'] removed, due to time zone name discrepancies on Windows
+
 == 0.5.3 2015-05-07
 
 * Improvements

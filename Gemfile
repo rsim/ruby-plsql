@@ -10,7 +10,7 @@ group :development do
     gem 'simplecov', '>= 0'
   end
 
-  platforms :ruby do
+  platforms :ruby, :mswin, :mingw do
     gem 'ruby-oci8', '~> 2.1.2'
   end
 end

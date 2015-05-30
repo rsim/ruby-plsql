@@ -50,8 +50,7 @@ module PLSQL
     end
 
     def set_time_zone(time_zone=nil)
-      time_zone ||= ENV['TZ']
-      raw_connection.setSessionTimeZone(time_zone)
+      raw_connection.setSessionTimeZone(time_zone) if time_zone
     end
 
     def logoff
