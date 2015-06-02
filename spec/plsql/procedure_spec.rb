@@ -2102,3 +2102,102 @@ describe "SYS.STANDARD procedures /" do
   end
 
 end
+
+describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
+
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_pls_f ( p_num PLS_INTEGER ) RETURN PLS_INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_bin_f ( p_num BINARY_INTEGER ) RETURN BINARY_INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_int_f ( p_num INTEGER ) RETURN INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_pls_p ( p_num IN OUT PLS_INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_bin_p ( p_num IN OUT BINARY_INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_int_p ( p_num IN OUT INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_flt_p ( p_num IN OUT BINARY_FLOAT ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_dbl_p ( p_num IN OUT BINARY_DOUBLE ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP FUNCTION test_pls_f"
+    plsql.execute "DROP FUNCTION test_bin_f"
+    plsql.execute "DROP FUNCTION test_int_f"
+    plsql.execute "DROP PROCEDURE test_pls_p"
+    plsql.execute "DROP PROCEDURE test_int_p"
+    plsql.execute "DROP PROCEDURE test_flt_p"
+    plsql.execute "DROP PROCEDURE test_dbl_p"
+    plsql.logoff
+  end
+
+  it 'should return null for a function call with NULL PLS_INTEGER param' do
+    expect(plsql.test_pls_f(nil)).to be_nil
+  end
+
+  it 'should return null for a function call with NULL BINARY_INTEGER param' do
+    expect(plsql.test_bin_f(nil)).to be_nil
+  end
+
+  it 'should return null for a function call with NULL INTEGER param' do
+    expect(plsql.test_int_f(nil)).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL PLS_INTEGER param' do
+    expect(plsql.test_pls_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_INTEGER param' do
+    expect(plsql.test_bin_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL INTEGER param' do
+    expect(plsql.test_int_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_FLOAT param' do
+    expect(plsql.test_flt_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_DOUBLE param' do
+    expect(plsql.test_dbl_p(nil)[:p_num]).to be_nil
+  end
+
+end

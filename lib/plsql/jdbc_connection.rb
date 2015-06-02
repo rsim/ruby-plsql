@@ -305,7 +305,7 @@ module PLSQL
     def get_bind_variable(stmt, i, type)
       case type.to_s.to_sym
       when :Fixnum, :Bignum, :Integer
-        stmt.getInt(i)
+        stmt.getObject(i)
       when :Float
         stmt.getFloat(i)
       when :BigDecimal
