@@ -51,6 +51,11 @@ describe "Connection" do
   # Ruby 1.8 and 1.9
   unless defined?(JRuby)
     describe "OCI data type conversions" do
+      it "should translate PL/SQL VARCHAR to Ruby String" do
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+      end
+
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]
@@ -122,6 +127,10 @@ describe "Connection" do
   else
 
     describe "JDBC data type conversions" do
+      it "should translate PL/SQL VARCHAR to Ruby String" do
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+      end
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]

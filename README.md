@@ -8,7 +8,7 @@ DESCRIPTION
 
 ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. It could be used both for accessing Oracle PL/SQL API procedures in legacy applications as well as it could be used to create PL/SQL unit tests using Ruby testing libraries.
 
-NUMBER, BINARY_INTEGER, PLS_INTEGER, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
+NUMBER, BINARY_INTEGER, PLS_INTEGER, NATURAL, NATURALN, POSITIVE, POSITIVEN, SIGNTYPE, SIMPLE_INTEGER, VARCHAR, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
 
 ruby-plsql supports Ruby 1.8.7, 1.9.3, 2.1.3 and JRuby 1.6.7, 1.7.16 implementations.
 
