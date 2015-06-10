@@ -32,7 +32,7 @@ module PLSQL
       else
         raise ArgumentError, "Unknown raw driver"
       end
-      conn.set_time_zone(params[:time_zone])
+      conn.set_time_zone(params[:time_zone]||ENV['ORA_SDTZ'])
       conn
     end
 
@@ -197,9 +197,8 @@ module PLSQL
       @session_id ||= select_first("SELECT TO_NUMBER(USERENV('SESSIONID')) FROM dual")[0]
     end
 
-    # Set time zone (default taken from TZ environment variable)
+    # Set time zone
     def set_time_zone(time_zone=nil)
-      time_zone ||= ENV['TZ']
       exec("alter session set time_zone = '#{time_zone}'") if time_zone
     end
 
