@@ -147,13 +147,13 @@ module PLSQL
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
-      when "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
+      when "VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
         [String, data_length || 32767]
       when "CLOB", "NCLOB"
         [OCI8::CLOB, nil]
       when "BLOB"
         [OCI8::BLOB, nil]
-      when "NUMBER", "PLS_INTEGER", "BINARY_INTEGER"
+      when "NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"
         [OraNumber, nil]
       when "DATE"
         [DateTime, nil]

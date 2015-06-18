@@ -16,6 +16,7 @@ describe "Package variables /" do
           varchar2_default3 varchar2(50) NOT NULL := 'default';
           varchar2_3_char VARCHAR2(3 CHAR);
           varchar2_3_byte VARCHAR2(3 BYTE);
+          varchar_variable VARCHAR(50);
           char_variable char(10) ;
           nvarchar2_variable NVARCHAR2(50);
           nchar_variable NCHAR(10);
@@ -31,6 +32,11 @@ describe "Package variables /" do
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
       plsql.logoff
+    end
+
+    it "should set and get VARCHAR variable" do
+      plsql.test_package.varchar_variable = 'abc'
+      expect(plsql.test_package.varchar_variable).to eq('abc')
     end
 
     it "should set and get VARCHAR2 variable" do
@@ -95,25 +101,15 @@ describe "Package variables /" do
 
   end
 
-  describe "Numeric" do
+  shared_examples "Numeric" do |ora_data_type, default, class_, given, expected|
+
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE PACKAGE test_package IS
-          integer_variable INTEGER;
-          integer10_variable NUMBER(10);
-          integer10_default NUMBER(10) := 1;
-          number_variable NUMBER;
-          number_with_scale NUMBER(15,2);
-          pls_int_variable PLS_INTEGER;
-          bin_int_variable BINARY_INTEGER;
+          numeric_var #{ora_data_type}#{default ? ':= ' + default.to_s : nil};
         END;
       SQL
-      plsql.execute <<-SQL
-        CREATE OR REPLACE PACKAGE BODY test_package IS
-        END;
-      SQL
-
     end
 
     after(:all) do
@@ -121,45 +117,41 @@ describe "Package variables /" do
       plsql.logoff
     end
 
-    it "should set and get INTEGER variable" do
-      plsql.test_package.integer_variable = 1
-      expect(plsql.test_package.integer_variable).to be_a Fixnum
-      expect(plsql.test_package.integer_variable).to eq(1)
+    it "should get #{ora_data_type} variable default value" do
+      expect(plsql.test_package.numeric_var).to eq(default)
+    end if default
+
+    it "should get #{ora_data_type} variable type mapped to #{class_.to_s}" do
+      plsql.test_package.numeric_var = given
+      expect(plsql.test_package.numeric_var).to be_a class_
     end
 
-    it "should set and get integer variable with precision" do
-      plsql.test_package.integer10_variable = 1
-      expect(plsql.test_package.integer10_variable).to be_a Fixnum
-      expect(plsql.test_package.integer10_variable).to eq(1)
+    it "should set and get #{ora_data_type} variable" do
+      plsql.test_package.numeric_var = given
+      expect(plsql.test_package.numeric_var).to eq(expected)
     end
 
-    it "should get integer variable default value" do
-      expect(plsql.test_package.integer10_default).to eq(1)
-    end
+  end
 
-    it "should set and get PLS_INTEGER variable" do
-      plsql.test_package.pls_int_variable = 1
-      expect(plsql.test_package.pls_int_variable).to be_a Fixnum
-      expect(plsql.test_package.pls_int_variable).to eq(1)
+  [
+      {:ora_data_type => 'INTEGER',        :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'NUMBER(10)',     :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'NUMBER(10)',     :default => 5,   :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'NUMBER',         :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.456},
+      {:ora_data_type => 'NUMBER(15,2)',   :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.46},
+      {:ora_data_type => 'PLS_INTEGER',    :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'BINARY_INTEGER', :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'SIMPLE_INTEGER', :default => 10,  :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'NATURAL',        :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'NATURALN',       :default => 0,   :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'POSITIVE',       :default => nil, :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'POSITIVEN',      :default => 5,   :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'SIGNTYPE',       :default => -1,  :class => Fixnum, :given => 1, :expected => 1},
+  ].each do |row|
+    ora_data_type, default, class_, given, expected = row.values
+    describe ora_data_type+(default ? ' with default' : '') do
+      include_examples "Numeric", ora_data_type, default, class_, given, expected
     end
-
-    it "should set and get BINARY_INTEGER variable" do
-      plsql.test_package.bin_int_variable = 1
-      expect(plsql.test_package.bin_int_variable).to be_a Fixnum
-      expect(plsql.test_package.bin_int_variable).to eq(1)
-    end
-
-    it "should set and get NUMBER variable" do
-      plsql.test_package.number_variable = 123.456
-      expect(plsql.test_package.number_variable).to be_a BigDecimal
-      expect(plsql.test_package.number_variable).to eq(123.456)
-    end
-
-    it "should set and get NUMBER variable with scale" do
-      plsql.test_package.number_with_scale = 123.456
-      expect(plsql.test_package.number_with_scale).to eq(123.46) # rounding to two decimal digits
-    end
-
   end
 
   describe "Date and Time" do

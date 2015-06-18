@@ -109,9 +109,9 @@ module PLSQL
     end
 
     MATCHING_TYPES = {
-      :integer => ['NUMBER', 'PLS_INTEGER', 'BINARY_INTEGER'],
+      :integer => ['NUMBER', 'NATURAL', 'NATURALN', 'POSITIVE', 'POSITIVEN', 'SIGNTYPE', 'SIMPLE_INTEGER', 'PLS_INTEGER', 'BINARY_INTEGER'],
       :decimal => ['NUMBER', 'BINARY_FLOAT', 'BINARY_DOUBLE'],
-      :string => ['VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB'],
+      :string => ['VARCHAR', 'VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB'],
       :date => ['DATE'],
       :time => ['DATE', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITH LOCAL TIME ZONE'],
       :boolean => ['PL/SQL BOOLEAN'],

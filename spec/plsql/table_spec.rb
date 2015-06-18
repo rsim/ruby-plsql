@@ -8,7 +8,7 @@ describe "Table" do
       CREATE TABLE test_employees (
         employee_id   NUMBER(15) NOT NULL,
         first_name    VARCHAR2(50),
-        last_name     VARCHAR2(50),
+        last_name     VARCHAR(50),
         hire_date     DATE,
         created_at    TIMESTAMP,
         status        VARCHAR2(1) DEFAULT 'N'
@@ -35,7 +35,7 @@ describe "Table" do
       CREATE TABLE test_employees2 (
         employee_id   NUMBER(15) NOT NULL,
         first_name    VARCHAR2(50),
-        last_name     VARCHAR2(50),
+        last_name     VARCHAR(50),
         hire_date     DATE DEFAULT SYSDATE,
         address       t_address,
         phones        t_phones

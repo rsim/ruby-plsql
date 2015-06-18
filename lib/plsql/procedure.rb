@@ -64,7 +64,7 @@ module PLSQL
       when 'NUMBER'
         precision, scale = metadata[:data_precision], metadata[:data_scale]
         "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
-      when 'VARCHAR2', 'CHAR'
+      when 'VARCHAR', 'VARCHAR2', 'CHAR'
         length = case metadata[:char_used]
         when 'C' then "#{metadata[:char_length]} CHAR"
         when 'B' then "#{metadata[:data_length]} BYTE"
