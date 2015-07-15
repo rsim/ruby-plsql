@@ -55,6 +55,18 @@ describe "Package" do
     expect(plsql.test_package.procedure_defined?(:inexistent_procedure)).to be_falsey
   end
 
+  it "should search objects via []" do
+    package = PLSQL::Package.find(plsql, :test_package)
+
+    [:Test_Procedure, :test_procedure, 'test_procedure', 'TEST_PROCEDURE'].each do |name_variant|
+      expect(package[name_variant]).to be_a PLSQL::Procedure
+    end
+
+    [:Test_Variable, :test_variable, 'test_variable', 'TEST_VARIABLE'].each do |name_variant|
+      expect(package[name_variant]).to be_a PLSQL::Variable
+    end
+  end
+
   describe "variables" do
     it "should set and get package variable value" do
       plsql.test_package.test_variable = 1
