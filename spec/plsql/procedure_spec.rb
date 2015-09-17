@@ -235,6 +235,53 @@ describe "Parameter type mapping /" do
 
   end
 
+  describe "Function or procedure with XMLType parameters" do
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_xmltype
+          ( p_xml XMLTYPE )
+          RETURN XMLTYPE
+        IS
+        BEGIN
+          RETURN p_xml;
+        END test_xmltype;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_xmltype2
+          ( p_xml XMLTYPE, po_xml OUT XMLTYPE )
+        IS
+        BEGIN
+          po_xml := p_xml;
+        END test_xmltype2;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP FUNCTION test_xmltype"
+      plsql.execute "DROP PROCEDURE test_xmltype2"
+      plsql.logoff
+    end
+
+    it "should process XMLType parameters" do
+      xml = '<DUMMY>value</DUMMY>'
+      result = plsql.test_xmltype(xml)
+      expect(result).to eq('<DUMMY>value</DUMMY>')
+    end
+
+    it "should work when passing a NULL value" do
+      result = plsql.test_xmltype(nil)
+      expect(result).to be_nil
+    end
+
+    it "should assign input parameter to putput parameter" do
+      xml = '<DUMMY>value</DUMMY>'
+      result = plsql.test_xmltype2(xml)
+      expect(result[:po_xml]).to eq('<DUMMY>value</DUMMY>')
+    end
+  end
+
+
   describe "Procedure with output parameters" do
     before(:all) do
       plsql.connect! CONNECTION_PARAMS

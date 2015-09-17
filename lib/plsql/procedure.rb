@@ -75,7 +75,7 @@ module PLSQL
       when 'NVARCHAR2', 'NCHAR'
         length = metadata[:char_length]
         "#{metadata[:data_type]}#{length && "(#{length})"}"
-      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT'
+      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT', 'XMLTYPE'
         metadata[:sql_type_name]
       else
         metadata[:data_type]
