@@ -100,11 +100,13 @@ module PLSQL
 
       # subprogram_id column is available just from version 10g
       subprogram_id_column = (@schema.connection.database_version <=> [10, 2, 0, 2]) >= 0 ? 'subprogram_id' : 'NULL'
+      # defaulted is available just from version 11g
+      defaulted_column = (@schema.connection.database_version <=> [11, 0, 0, 0]) >= 0 ? 'defaulted' : 'NULL'
 
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
-              char_length, type_owner, type_name, type_subname
+              char_length, type_owner, type_name, type_subname, #{defaulted_column}
         FROM all_arguments
         WHERE object_id = :object_id
         AND owner = :owner
@@ -115,7 +117,7 @@ module PLSQL
 
         subprogram_id, object_name, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
-            char_length, type_owner, type_name, type_subname = r
+            char_length, type_owner, type_name, type_subname, defaulted = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -155,7 +157,8 @@ module PLSQL
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,
-          :sql_type_name => sql_type_name
+          :sql_type_name => sql_type_name,
+          :defaulted => defaulted
         }
         if tmp_table_name
           @tmp_table_names[overload] << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]

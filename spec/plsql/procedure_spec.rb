@@ -2251,3 +2251,49 @@ describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
   end
 
 end
+
+describe '#get_argument_metadata' do
+  before(:each) do
+    plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION magic_number(p_num INTEGER #{defaulted_clause})
+        RETURN INTEGER
+      IS
+      BEGIN
+        RETURN p_num * 2;
+      END magic_number;
+    SQL
+  end
+
+  after(:each) do
+    plsql.execute "DROP FUNCTION magic_number"
+  end
+
+  context 'on procedure with defaulted field' do
+    let(:defaulted_clause) { 'DEFAULT 21' }
+
+    it 'field\'s metadata attribute "defaulted" is Y' do
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to eq('Y')
+    end
+  end
+
+  context 'procedure without defaulted field' do
+    let(:defaulted_clause) { '' }
+
+    it 'field\'s metadata attribute "defaulted" is N' do
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to eq('N')
+    end
+  end
+
+  context 'oracle <= 10g without defaulted functionality' do
+    let(:defaulted_clause) { '' }
+
+    it 'field\'s metadata attribute "defaulted" is nil' do
+      allow(plsql.connection).to receive(:database_version).and_return([10, 2, 0, 2])
+
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to be_nil
+    end
+  end
+end
