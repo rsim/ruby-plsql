@@ -107,7 +107,7 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
+          if ['TABLE','VARRAY','OBJECT','XMLTYPE'].include?(metadata[:data_type])
             @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type),
               metadata[:sql_type_name])
           else
@@ -277,7 +277,7 @@ module PLSQL
       when :Time, :'Java::JavaSql::Timestamp'
         stmt.send("setTimestamp#{key && "AtName"}", key || i, value)
       when :NilClass
-        if ['TABLE', 'VARRAY', 'OBJECT'].include?(metadata[:data_type])
+        if ['TABLE', 'VARRAY', 'OBJECT','XMLTYPE'].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
             metadata[:sql_type_name])
         elsif metadata[:data_type] == 'REF CURSOR'

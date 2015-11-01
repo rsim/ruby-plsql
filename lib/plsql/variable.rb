@@ -51,7 +51,8 @@ module PLSQL
         {:data_type => $1, :data_length => $3.to_i, :in_out => 'IN/OUT'}
       when /^(CLOB|NCLOB|BLOB)$/,
           /^(NUMBER)(\(.*\))?$/, /^(NATURAL|NATURALN|POSITIVE|POSITIVEN|SIGNTYPE|SIMPLE_INTEGER|PLS_INTEGER|BINARY_INTEGER)$/,
-          /^(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)$/
+          /^(DATE|TIMESTAMP|TIMESTAMP WITH TIME ZONE|TIMESTAMP WITH LOCAL TIME ZONE)$/,
+          /^(XMLTYPE)$/
         {:data_type => $1, :in_out => 'IN/OUT'}
       when /^INTEGER$/
         {:data_type => 'NUMBER', :in_out => 'IN/OUT'}

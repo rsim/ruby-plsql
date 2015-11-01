@@ -159,7 +159,7 @@ module PLSQL
         [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
-      when "TABLE", "VARRAY", "OBJECT"
+      when "TABLE", "VARRAY", "OBJECT", "XMLTYPE"
         # create Ruby class for collection
         klass = OCI8::Object::Base.get_class_by_typename(metadata[:sql_type_name])
         unless klass

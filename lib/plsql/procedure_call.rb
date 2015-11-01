@@ -111,7 +111,7 @@ module PLSQL
     MATCHING_TYPES = {
       :integer => ['NUMBER', 'NATURAL', 'NATURALN', 'POSITIVE', 'POSITIVEN', 'SIGNTYPE', 'SIMPLE_INTEGER', 'PLS_INTEGER', 'BINARY_INTEGER'],
       :decimal => ['NUMBER', 'BINARY_FLOAT', 'BINARY_DOUBLE'],
-      :string => ['VARCHAR', 'VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB'],
+      :string => ['VARCHAR', 'VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB', 'XMLTYPE'],
       :date => ['DATE'],
       :time => ['DATE', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITH LOCAL TIME ZONE'],
       :boolean => ['PL/SQL BOOLEAN'],
@@ -236,6 +236,14 @@ module PLSQL
         @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
         @bind_metadata[argument] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
         "l_#{argument}"
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @declare_sql << "l_#{argument} XMLTYPE;\n"
+          @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
+          @bind_values[argument] = value if not value.nil?
+          @bind_metadata[argument] = argument_metadata.merge(:data_type => "CLOB")
+          "l_#{argument}"
+        end
       else
         # TABLE or PL/SQL TABLE type defined inside package
         if argument_metadata[:tmp_table_name]
@@ -383,6 +391,15 @@ module PLSQL
           end
         end
         "l_#{argument} := " if is_return_value
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @declare_sql << "l_#{argument} XMLTYPE;\n" if is_return_value
+          bind_variable = :"o_#{argument}"
+          @return_vars << bind_variable
+          @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "CLOB")
+          @return_sql << ":#{bind_variable} := CASE WHEN l_#{argument} IS NOT NULL THEN l_#{argument}.getclobval() END;\n"
+          "l_#{argument} := " if is_return_value
+        end
       when 'PL/SQL BOOLEAN'
         @declare_sql << "l_#{argument} BOOLEAN;\n" if is_return_value
         @declare_sql << "o_#{argument} NUMBER(1);\n"
@@ -496,6 +513,10 @@ module PLSQL
       when 'PL/SQL BOOLEAN'
         numeric_value = @cursor[":o_#{argument}"]
         numeric_value.nil? ? nil : numeric_value == 1
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @cursor[":o_#{argument}"]
+        end
       else
         if argument_metadata[:tmp_table_name]
           is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
