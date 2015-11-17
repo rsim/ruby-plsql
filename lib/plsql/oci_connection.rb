@@ -229,6 +229,9 @@ module PLSQL
             collection = type.new(raw_oci_connection)
             collection.instance_variable_set('@attributes', elem_list)
             collection
+          elsif value.class == type
+            # already an instance of the required type
+            value
           else # object type
             raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
             object_attrs = value.dup
