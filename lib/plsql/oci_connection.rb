@@ -176,79 +176,80 @@ module PLSQL
 
     def ruby_value_to_ora_value(value, type=nil)
       type ||= value.class
-      case type.to_s.to_sym
-      when :Fixnum, :BigDecimal, :String
+      if value.class == type
         value
-      when :OraNumber
-        # pass parameters as OraNumber to avoid rounding errors
-        case value
-        when Bignum
-          OraNumber.new(value.to_s)
-        when BigDecimal
-          OraNumber.new(value.to_s('F'))
-        when TrueClass
-          OraNumber.new(1)
-        when FalseClass
-          OraNumber.new(0)
-        else
-          value
-        end
-      when :DateTime
-        case value
-        when Time
-          ::DateTime.civil(value.year, value.month, value.day, value.hour, value.min, value.sec, Rational(value.utc_offset, 86400))
-        when DateTime
-          value
-        when Date
-          ::DateTime.civil(value.year, value.month, value.day, 0, 0, 0, 0)
-        else
-          value
-        end
-      when :"OCI8::CLOB", :"OCI8::BLOB"
-        # ruby-oci8 cannot create CLOB/BLOB from ''
-        value.to_s.length > 0 ? type.new(raw_oci_connection, value) : nil
-      when :"OCI8::Cursor"
-        value && value.raw_cursor
       else
-        # collections and object types
-        if type.superclass == OCI8::Object::Base
-          return nil if value.nil?
-          tdo = raw_oci_connection.get_tdo_by_class(type)
-          if tdo.is_collection?
-            raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
-            elem_list = value.map do |elem|
-              if (attr_tdo = tdo.coll_attr.typeinfo)
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
-              else
-                attr_type = elem.class
-              end
-              ruby_value_to_ora_value(elem, attr_type)
-            end
-            # construct collection value
-            # TODO: change setting instance variable to appropriate ruby-oci8 method call when available
-            collection = type.new(raw_oci_connection)
-            collection.instance_variable_set('@attributes', elem_list)
-            collection
-          elsif value.class == type
-            # already an instance of the required type
-            value
-          else # object type
-            raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
-            object_attrs = value.dup
-            object_attrs.keys.each do |key|
-              raise ArgumentError, "Wrong object type field passed to PL/SQL procedure" unless (attr = tdo.attr_getters[key])
-              case attr.datatype
-              when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
-                # nested object type or collection
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
-                object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
-              end
-            end
-            type.new(raw_oci_connection, object_attrs)
-          end
-        # all other cases
-        else
+        case type.to_s.to_sym
+        when :Fixnum, :BigDecimal, :String
           value
+        when :OraNumber
+          # pass parameters as OraNumber to avoid rounding errors
+          case value
+          when Bignum
+            OraNumber.new(value.to_s)
+          when BigDecimal
+            OraNumber.new(value.to_s('F'))
+          when TrueClass
+            OraNumber.new(1)
+          when FalseClass
+            OraNumber.new(0)
+          else
+            value
+          end
+        when :DateTime
+          case value
+          when Time
+            ::DateTime.civil(value.year, value.month, value.day, value.hour, value.min, value.sec, Rational(value.utc_offset, 86400))
+          when DateTime
+            value
+          when Date
+            ::DateTime.civil(value.year, value.month, value.day, 0, 0, 0, 0)
+          else
+            value
+          end
+        when :"OCI8::CLOB", :"OCI8::BLOB"
+          # ruby-oci8 cannot create CLOB/BLOB from ''
+          value.to_s.length > 0 ? type.new(raw_oci_connection, value) : nil
+        when :"OCI8::Cursor"
+          value && value.raw_cursor
+        else
+          # collections and object types
+          if type.superclass == OCI8::Object::Base
+            return nil if value.nil?
+            tdo = raw_oci_connection.get_tdo_by_class(type)
+            if tdo.is_collection?
+              raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
+              elem_list = value.map do |elem|
+                if (attr_tdo = tdo.coll_attr.typeinfo)
+                  attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
+                else
+                  attr_type = elem.class
+                end
+                ruby_value_to_ora_value(elem, attr_type)
+              end
+              # construct collection value
+              # TODO: change setting instance variable to appropriate ruby-oci8 method call when available
+              collection = type.new(raw_oci_connection)
+              collection.instance_variable_set('@attributes', elem_list)
+              collection
+            else # object type
+              raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
+              object_attrs = value.dup
+              object_attrs.keys.each do |key|
+                raise ArgumentError, "Wrong object type field passed to PL/SQL procedure" unless (attr = tdo.attr_getters[key])
+                case attr.datatype
+                when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
+                  # nested object type or collection
+                  attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
+                  object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
+                end
+              end
+              type.new(raw_oci_connection, object_attrs)
+            end
+          # all other cases
+          else
+            value
+          end
         end
       end
     end
@@ -342,4 +343,17 @@ module PLSQL
 
   end
   
+end
+
+
+module OCI8::Object::Mdsys
+  class SdoPointType < OCI8::Object::Base
+  end
+  class SdoElemInfoArray < OCI8::Object::Base
+  end
+  class SdoOrdinateArray < OCI8::Object::Base
+  end
+  class SdoGeometry < OCI8::Object::Base
+    set_typename('MDSYS.SDO_GEOMETRY')
+  end
 end
