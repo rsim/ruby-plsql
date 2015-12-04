@@ -4,7 +4,7 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "chef/centos-6.6"
+  config.vm.box = "bento/centos-6.7"
   config.vm.hostname = "vagrant.oracle"
   config.vm.network :forwarded_port, guest: 1521, host: 1521
 
