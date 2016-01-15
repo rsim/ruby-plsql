@@ -4,7 +4,7 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "chef/centos-6.6"
+  config.vm.box = "boxcutter/centos72"
   config.vm.hostname = "vagrant.oracle"
   config.vm.network :forwarded_port, guest: 1521, host: 1521
 
@@ -23,7 +23,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision :shell, inline: "yum update -y"
   config.vm.provision :shell, inline: "yum install -y libaio bc flex unzip"
   config.vm.provision :shell, inline: "mkdir -p /opt/oracle"
-  config.vm.provision :shell, inline: "unzip -q -d /opt/oracle /vagrant/oracle-xe-11.2.0-1.0.x86_64.rpm.zip"
+  config.vm.provision :shell, inline: "unzip -o -q -d /opt/oracle /vagrant/oracle-xe-11.2.0-1.0.x86_64.rpm.zip"
   config.vm.provision :shell, inline: "cd /opt/oracle/Disk1 && rpm -ivh oracle-xe-11.2.0-1.0.x86_64.rpm"
   config.vm.provision :shell, inline: %q{sed -i -E "s/<value required>/oracle/" /opt/oracle/Disk1/response/xe.rsp}
   config.vm.provision :shell, inline: "/etc/init.d/oracle-xe configure responseFile=/opt/oracle/Disk1/response/xe.rsp >> /opt/oracle/XEsilentinstall.log"
