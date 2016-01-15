@@ -90,7 +90,7 @@ module PLSQL
     # Current Oracle schema name
     def schema_name
       return nil unless connection
-      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
+      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','current_schema') FROM dual")[0]
     end
 
     # Default timezone to which database values will be converted - :utc or :local
