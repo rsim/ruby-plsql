@@ -37,6 +37,13 @@ describe "Schema connection" do
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)
   end
 
+  it 'should match altered current_schema in database session' do
+    plsql.connection = @conn
+    expected_current_schema = DATABASE_USERS_AND_PASSWORDS[1][0]
+    plsql.execute "ALTER SESSION set current_schema=#{expected_current_schema}"
+    expect(plsql.schema_name).to eq(expected_current_schema.upcase)
+  end
+
   it "should return new schema name after reconnection" do
     plsql.connection = @conn
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)
