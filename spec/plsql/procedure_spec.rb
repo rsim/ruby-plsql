@@ -1872,7 +1872,7 @@ describe "Parameter type mapping /" do
       expect(plsql.test_cursor do |cursor|
         cursor2 = cursor
       end).to be_nil
-      expect { cursor2.fetch }.to raise_error
+      expect { cursor2.fetch }.to raise_error(/Cursor was already closed|Closed Statement/)
     end
 
     it "should not raise error if cursor is closed inside block" do
@@ -2260,7 +2260,6 @@ describe '#get_argument_metadata' do
   after(:all) do
     plsql.logoff
   end
-
 
   before(:each) do
     plsql.execute <<-SQL
