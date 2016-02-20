@@ -2253,6 +2253,15 @@ describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
 end
 
 describe '#get_argument_metadata' do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+  end
+
+  after(:all) do
+    plsql.logoff
+  end
+
+
   before(:each) do
     plsql.execute <<-SQL
       CREATE OR REPLACE FUNCTION magic_number(p_num INTEGER #{defaulted_clause})
