@@ -99,6 +99,8 @@ describe "Parameter type mapping /" do
   [
       {:ora_data_type => 'INTEGER',       :class => Bignum,     :num1 => @big_number, :num2 => @big_number, :expected => @big_number*2},
       {:ora_data_type => 'NUMBER',        :class => BigDecimal, :num1 => 12345.12345, :num2 => 12345.12345, :expected => 24690.2469   },
+      {:ora_data_type => 'BINARY_DOUBLE', :class => BigDecimal, :num1 => 123.456789,  :num2 => 123.456789,  :expected => 246.913578   },
+      {:ora_data_type => 'BINARY_FLOAT' , :class => BigDecimal, :num1 => 123.125,     :num2 => 123.125,     :expected => 246.25       },
       {:ora_data_type => 'PLS_INTEGER',   :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
       {:ora_data_type => 'BINARY_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
       {:ora_data_type => 'SIMPLE_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
