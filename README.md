@@ -117,6 +117,11 @@ plsql.activerecord_class = ActiveRecord::Base
 
 and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
 
+
+### Cheat Sheet:
+
+You may have a look at this [Cheat Sheet](http://cheatography.com/jgebal/cheat-sheets/ruby-plsql-cheat-sheet/) for instructions on how to use ruby-plsql
+
 INSTALLATION
 ------------
 
