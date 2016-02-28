@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rsim/ruby-plsql.svg?branch=master)](https://travis-ci.org/rsim/ruby-plsql)
+
 ruby-plsql
 ==========
 
