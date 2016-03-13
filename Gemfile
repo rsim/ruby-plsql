@@ -7,11 +7,11 @@ group :development do
 
   unless ENV['NO_ACTIVERECORD']
     gem 'activerecord', '>= 3.2.3', '< 4.3.0'
-    gem 'activerecord-oracle_enhanced-adapter', '>= 1.4.1', '< 1.6.0'
+    gem 'activerecord-oracle_enhanced-adapter', '>= 1.4.1', '< 1.7.0'
     gem 'simplecov', '>= 0'
   end
 
   platforms :ruby, :mswin, :mingw do
-    gem 'ruby-oci8', '~> 2.1.2'
+    gem 'ruby-oci8', '~> 2.1'
   end
 end
