@@ -24,7 +24,7 @@ install:
   - .travis/oracle/download.sh
   - .travis/oracle/install.sh
   - .travis/setup_accounts.sh
-  - bundle install
+  - bundle install --without=development
 
 language: ruby
 rvm:

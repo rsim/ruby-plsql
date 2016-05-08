@@ -1,9 +1,13 @@
 source 'http://rubygems.org'
 
 group :development do
-  gem 'jeweler', '~> 2.0.1'
-  gem 'rspec', '~> 3.1'
+  gem 'juwelier', '~> 2.0'
   gem 'rspec_junit_formatter'
+end
+
+group :test, :development do
+  gem 'rake', '>= 10.0'
+  gem 'rspec', '~> 3.1'
 
   unless ENV['NO_ACTIVERECORD']
     gem 'activerecord', '>= 3.2.3', '< 4.3.0'
