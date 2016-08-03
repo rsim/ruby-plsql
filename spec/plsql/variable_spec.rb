@@ -103,9 +103,11 @@ describe "Package variables /" do
     end
 
     it 'can use package variables with spaces in size' do
-      expect(plsql.test_package.varchar_with_spaces1).to eq('a string')
-      expect(plsql.test_package.varchar_with_spaces2).to eq('a string')
-      expect(plsql.test_package.varchar_with_spaces3).to eq('a string')
+      aggregate_failures 'for different formats' do
+        expect(plsql.test_package.varchar_with_spaces1).to eq('a string')
+        expect(plsql.test_package.varchar_with_spaces2).to eq('a string')
+        expect(plsql.test_package.varchar_with_spaces3).to eq('a string')
+      end
     end
 
   end
