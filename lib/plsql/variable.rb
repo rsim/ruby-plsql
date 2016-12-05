@@ -47,7 +47,7 @@ module PLSQL
 
     def metadata(type_string)
       case type_string
-      when /^(VARCHAR|VARCHAR2|CHAR|NVARCHAR2|NCHAR)(?:\s+)?(\((?:\s+)?(\d+)[\s\w]*\))?$/
+      when /^(VARCHAR|VARCHAR2|CHAR|NVARCHAR2|NCHAR)\s*(\(\s*(\d+)[\s\w]*\))?$/
         {:data_type => $1, :data_length => $3.to_i, :in_out => 'IN/OUT'}
       when /^(CLOB|NCLOB|BLOB)$/,
           /^(NUMBER)(\(.*\))?$/, /^(NATURAL|NATURALN|POSITIVE|POSITIVEN|SIGNTYPE|SIMPLE_INTEGER|PLS_INTEGER|BINARY_INTEGER)$/,
