@@ -39,3 +39,14 @@ gemfile:
     - gemfiles/Gemfile.activerecord-4.1
     - gemfiles/Gemfile.activerecord-4.2
     - gemfiles/Gemfile.activerecord-5.0
+
+matrix:
+    exclude:
+      - gemfile: Gemfile
+        rvm: 1.9.3
+      - gemfile: Gemfile
+        rvm: jruby-1.7.9
+      - gemfile: gemfiles/Gemfile.activerecord-5.0
+        rvm: 1.9.3
+      - gemfile: gemfiles/Gemfile.activerecord-5.0
+        rvm: jruby-1.7.9
