@@ -38,3 +38,4 @@ gemfile:
     - Gemfile
     - gemfiles/Gemfile.activerecord-4.1
     - gemfiles/Gemfile.activerecord-4.2
+    - gemfiles/Gemfile.activerecord-5.0
