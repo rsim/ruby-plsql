@@ -28,10 +28,10 @@ install:
 
 language: ruby
 rvm:
-  - 2.3.0
-  - 2.2.4
+  - 2.3.3
+  - 2.2.6
   - 1.9.3
-  - jruby-1.7.9
+  - jruby-1.7.26
   - jruby-9.0.5.0
 
 gemfile:
@@ -45,8 +45,8 @@ matrix:
       - gemfile: Gemfile
         rvm: 1.9.3
       - gemfile: Gemfile
-        rvm: jruby-1.7.9
+        rvm: jruby-1.7.26
       - gemfile: gemfiles/Gemfile.activerecord-5.0
         rvm: 1.9.3
       - gemfile: gemfiles/Gemfile.activerecord-5.0
-        rvm: jruby-1.7.9
+        rvm: jruby-1.7.26
