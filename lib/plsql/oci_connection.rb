@@ -177,13 +177,11 @@ module PLSQL
     def ruby_value_to_ora_value(value, type=nil)
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :BigDecimal, :String
+      when :Integer, :BigDecimal, :String
         value
       when :OraNumber
         # pass parameters as OraNumber to avoid rounding errors
         case value
-        when Bignum
-          OraNumber.new(value.to_s)
         when BigDecimal
           OraNumber.new(value.to_s('F'))
         when TrueClass

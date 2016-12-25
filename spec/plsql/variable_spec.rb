@@ -134,19 +134,19 @@ describe "Package variables /" do
   end
 
   [
-      {:ora_data_type => 'INTEGER',        :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'NUMBER(10)',     :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'NUMBER(10)',     :default => 5,   :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'INTEGER',        :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'NUMBER(10)',     :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'NUMBER(10)',     :default => 5,   :class => Integer, :given => 1, :expected => 1},
       {:ora_data_type => 'NUMBER',         :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.456},
       {:ora_data_type => 'NUMBER(15,2)',   :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.46},
-      {:ora_data_type => 'PLS_INTEGER',    :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'BINARY_INTEGER', :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'SIMPLE_INTEGER', :default => 10,  :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'NATURAL',        :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'NATURALN',       :default => 0,   :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'POSITIVE',       :default => nil, :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'POSITIVEN',      :default => 5,   :class => Fixnum, :given => 1, :expected => 1},
-      {:ora_data_type => 'SIGNTYPE',       :default => -1,  :class => Fixnum, :given => 1, :expected => 1},
+      {:ora_data_type => 'PLS_INTEGER',    :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'BINARY_INTEGER', :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'SIMPLE_INTEGER', :default => 10,  :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'NATURAL',        :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'NATURALN',       :default => 0,   :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'POSITIVE',       :default => nil, :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'POSITIVEN',      :default => 5,   :class => Integer, :given => 1, :expected => 1},
+      {:ora_data_type => 'SIGNTYPE',       :default => -1,  :class => Integer, :given => 1, :expected => 1},
   ].each do |row|
     ora_data_type, default, class_, given, expected = row.values
     describe ora_data_type+(default ? ' with default' : '') do

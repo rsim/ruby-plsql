@@ -97,16 +97,16 @@ describe "Parameter type mapping /" do
 
   @big_number = ('1234567890' * 3).to_i
   [
-      {:ora_data_type => 'INTEGER',       :class => Bignum,     :num1 => @big_number, :num2 => @big_number, :expected => @big_number*2},
+      {:ora_data_type => 'INTEGER',       :class => Integer,    :num1 => @big_number, :num2 => @big_number, :expected => @big_number*2},
       {:ora_data_type => 'NUMBER',        :class => BigDecimal, :num1 => 12345.12345, :num2 => 12345.12345, :expected => 24690.2469   },
-      {:ora_data_type => 'PLS_INTEGER',   :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
-      {:ora_data_type => 'BINARY_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
-      {:ora_data_type => 'SIMPLE_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
-      {:ora_data_type => 'NATURAL',       :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
-      {:ora_data_type => 'NATURALN',      :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
-      {:ora_data_type => 'POSITIVE',      :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
-      {:ora_data_type => 'POSITIVEN',     :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
-      {:ora_data_type => 'SIGNTYPE',      :class => Fixnum,     :num1 => 1,           :num2 => -1,          :expected => 0            },
+      {:ora_data_type => 'PLS_INTEGER',   :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'BINARY_INTEGER',:class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'SIMPLE_INTEGER',:class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'NATURAL',       :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'NATURALN',      :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'POSITIVE',      :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'POSITIVEN',     :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'SIGNTYPE',      :class => Integer,    :num1 => 1,           :num2 => -1,          :expected => 0            },
   ].each do |row|
     ora_data_type, class_, num1, num2, expected, mandatory = row.values
     describe ora_data_type do
