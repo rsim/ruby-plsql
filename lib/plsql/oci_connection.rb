@@ -153,7 +153,7 @@ module PLSQL
         [OCI8::CLOB, nil]
       when "BLOB"
         [OCI8::BLOB, nil]
-      when "NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"
+      when "NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER", "BINARY_FLOAT", "BINARY_DOUBLE"
         [OraNumber, nil]
       when "DATE"
         [DateTime, nil]

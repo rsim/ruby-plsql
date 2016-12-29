@@ -99,6 +99,8 @@ describe "Parameter type mapping /" do
   [
       {:ora_data_type => 'INTEGER',       :class => Bignum,     :num1 => @big_number, :num2 => @big_number, :expected => @big_number*2},
       {:ora_data_type => 'NUMBER',        :class => BigDecimal, :num1 => 12345.12345, :num2 => 12345.12345, :expected => 24690.2469   },
+      {:ora_data_type => 'BINARY_DOUBLE', :class => BigDecimal, :num1 => 123.3,       :num2 => 123.3,       :expected => BigDecimal("246.59999999999999") },
+      {:ora_data_type => 'BINARY_FLOAT' , :class => BigDecimal, :num1 => 123.3,       :num2 => 123.3,       :expected => 246.600006         },
       {:ora_data_type => 'PLS_INTEGER',   :class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
       {:ora_data_type => 'BINARY_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
       {:ora_data_type => 'SIMPLE_INTEGER',:class => Fixnum,     :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
@@ -112,6 +114,32 @@ describe "Parameter type mapping /" do
     describe ora_data_type do
       include_examples "Function with numeric", ora_data_type, class_, num1, num2, expected, mandatory
     end
+  end
+
+  describe "BINARY_FLOAT with insufficient precision" do
+
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_bfloat( p_a BINARY_FLOAT ) RETURN BOOLEAN
+      IS
+        v_a BINARY_FLOAT := 2.0;
+        v_b BINARY_FLOAT := 3.0;
+      BEGIN
+        RETURN (p_a = (v_a / v_b));
+      END;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute 'DROP FUNCTION test_bfloat' rescue nil
+      plsql.logoff
+    end
+
+    it "should send a reslut of unprecise division in a way that is matching Oracle math" do
+      expect( plsql.test_bfloat(2.0/3.0) ).to be_truthy
+    end
+
   end
 
   describe "Boolean to NUMBER conversion" do
@@ -130,6 +158,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP FUNCTION test_num"
       plsql.logoff
     end
+
     it "should convert true value to 1 for NUMBER parameter" do
       expect(plsql.test_num(true)).to eq(1)
     end
