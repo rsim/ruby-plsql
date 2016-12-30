@@ -250,7 +250,7 @@ module PLSQL
       java.sql.Types::NVARCHAR => String,
       java.sql.Types::LONGVARCHAR => String,
       java.sql.Types::NUMERIC => BigDecimal,
-      java.sql.Types::INTEGER => Fixnum,
+      java.sql.Types::INTEGER => Integer,
       java.sql.Types::DATE => Time,
       java.sql.Types::TIMESTAMP => Time,
       Java::oracle.jdbc.OracleTypes::TIMESTAMPTZ => Time,
@@ -361,7 +361,7 @@ module PLSQL
       when "NUMBER"
         [BigDecimal, nil]
       when "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"
-        [Fixnum, nil]
+        [Integer, nil]
       when "DATE"
         [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
@@ -380,7 +380,7 @@ module PLSQL
     def ruby_value_to_ora_value(value, type=nil, metadata={})
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum
+      when :Integer
         value
       when :String
         value.to_s

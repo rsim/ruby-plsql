@@ -19,6 +19,7 @@ before_install:
   - chmod +x .travis/oracle/download.sh
   - chmod +x .travis/oracle/install.sh
   - chmod +x .travis/setup_accounts.sh
+  - gem install bundler
 
 install:
   - .travis/oracle/download.sh
@@ -28,6 +29,7 @@ install:
 
 language: ruby
 rvm:
+  - 2.4.0
   - 2.3.3
   - 2.2.6
   - 1.9.3

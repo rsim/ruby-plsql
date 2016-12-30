@@ -78,13 +78,13 @@ describe "Connection" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
       end
 
-      it "should not translate Ruby Fixnum when OraNumber type specified" do
+      it "should not translate small Ruby Integer when OraNumber type specified" do
         expect(@conn.ruby_value_to_ora_value(100, OraNumber)).to eql(100)
       end
 
-      it "should translate Ruby Bignum value to OraNumber when OraNumber type specified" do
+      it "should not translate big Ruby Integer when OraNumber type specified" do
         ora_number = @conn.ruby_value_to_ora_value(12345678901234567890, OraNumber)
-        expect(ora_number.class).to eq OraNumber
+        expect(ora_number).to be_an Integer
         expect(ora_number.to_s).to eq "12345678901234567890"
         # OraNumber has more numeric comparison methods in ruby-oci8 2.0
         expect(ora_number).to eq OraNumber.new("12345678901234567890") if OCI8::VERSION >= '2.0.0'
@@ -99,7 +99,7 @@ describe "Connection" do
         expect(ora_value.read).to eq large_text
       end
 
-      it "should translate Oracle OraNumber integer value to Fixnum" do
+      it "should translate Oracle OraNumber integer value to Integer" do
         expect(@conn.ora_value_to_ruby_value(OraNumber.new(100))).to eql(100)
       end
 
@@ -148,7 +148,7 @@ describe "Connection" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
       end
 
-      it "should not translate Ruby Fixnum when BigDecimal type specified" do
+      it "should not translate Ruby Integer when BigDecimal type specified" do
         expect(@conn.ruby_value_to_ora_value(100, BigDecimal)).to eq java.math.BigDecimal.new(100)
       end
 
@@ -156,7 +156,7 @@ describe "Connection" do
         expect(@conn.ruby_value_to_ora_value(1.1, String)).to eq '1.1'
       end
 
-      it "should translate Ruby Bignum value to BigDecimal when BigDecimal type specified" do
+      it "should translate Ruby Integer value to BigDecimal when BigDecimal type specified" do
         big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
         expect(big_decimal).to eq java.math.BigDecimal.new("12345678901234567890")
       end
@@ -175,7 +175,7 @@ describe "Connection" do
         expect(ora_value).to be_nil
       end
 
-      it "should translate Oracle BigDecimal integer value to Fixnum" do
+      it "should translate Oracle BigDecimal integer value to Integer" do
         expect(@conn.ora_value_to_ruby_value(BigDecimal("100"))).to eql(100)
       end
 

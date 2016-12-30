@@ -123,7 +123,7 @@ module PLSQL
       case value
       when NilClass
         :all
-      when Fixnum, Bignum
+      when Integer
         MATCHING_TYPES[:integer]
       when BigDecimal, Float
         MATCHING_TYPES[:decimal]
