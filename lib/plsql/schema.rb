@@ -20,6 +20,7 @@ module PLSQL
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @original_schema = original_schema
+      @dbms_output_stream = nil
     end
 
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
