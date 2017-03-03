@@ -1,0 +1,14 @@
+# Template file should be copied to locale_support.rb to be automatically included by code
+#
+
+# Set Oracle Database session timezone, if not already set in env variable
+#   This setting needs to be in place to make sure that Oracle properly represents the timestamp format on your local machine.
+#   Do not use 'OS_TZ' value or fixed offset values like '05:00', for daylight saving-enabled timezones.
+#   See: http://docs.oracle.com/cd/E18283_01/server.112/e10729/ch4datetime.htm#CBBEEAFB
+#   The setting cannot be derived directly from operating system or ruby, as different timezone names are used.
+ENV['ORA_SDTZ'] ||= 'Europe/Riga'
+#Sets the Ruby timezone to be used, if not already set in env variable
+ENV['TZ'] ||= 'Europe/Riga'
+#Sets the Language, locale and encoding settings to be used by Oracle session, if not already set in env variable
+ENV['NLS_LANG'] ||= 'AMERICAN_AMERICA.AL32UTF8'
+

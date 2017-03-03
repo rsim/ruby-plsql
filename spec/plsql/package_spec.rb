@@ -20,7 +20,6 @@ describe "Package" do
         END test_procedure;
       END;
     SQL
-
   end
   
   after(:all) do
@@ -45,6 +44,64 @@ describe "Package" do
 
   it "should execute package function and return correct value" do
     expect(plsql.test_package.test_procedure('xxx')).to eq('XXX')
+  end
+
+  it "should report an existing procedure as existing" do
+    expect(plsql.test_package.procedure_defined?(:test_procedure)).to be_truthy
+  end
+
+  it "should report an inexistent procedure as not existing" do
+    expect(plsql.test_package.procedure_defined?(:inexistent_procedure)).to be_falsey
+  end
+
+  it "should search objects via []" do
+    package = PLSQL::Package.find(plsql, :test_package)
+
+    [:Test_Procedure, :test_procedure, 'test_procedure', 'TEST_PROCEDURE'].each do |name_variant|
+      expect(package[name_variant]).to be_a PLSQL::Procedure
+    end
+
+    [:Test_Variable, :test_variable, 'test_variable', 'TEST_VARIABLE'].each do |name_variant|
+      expect(package[name_variant]).to be_a PLSQL::Variable
+    end
+  end
+
+  context "with a user with execute privilege who is not the package owner" do
+    before(:all) do
+      plsql.execute("grant execute on TEST_PACKAGE to #{DATABASE_USERS_AND_PASSWORDS[1][0]}")
+      @original_connection = plsql.connection
+      @conn = get_connection(1)
+    end
+
+    before(:each) do
+      # resetting connection clears cached package objects and schema name
+      plsql.connection = @conn
+    end
+
+    after(:all) do
+      plsql.logoff
+      plsql.connection = @original_connection
+    end
+
+    it "should not find existing package" do
+      expect(PLSQL::Package.find(plsql, :test_package)).to be_nil
+    end
+
+    context "who sets current_schema to match the package owner" do
+      before(:all) do
+        plsql.execute "ALTER SESSION set current_schema=#{DATABASE_USERS_AND_PASSWORDS[0][0]}"
+      end
+
+      it "should find existing package" do
+        expect(PLSQL::Package.find(plsql, :test_package)).not_to be_nil
+      end
+
+      it "should report an existing procedure as existing" do
+        expect(plsql.test_package.procedure_defined?(:test_procedure)).to be_truthy
+      end
+
+    end
+
   end
 
   describe "variables" do

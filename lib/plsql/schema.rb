@@ -20,6 +20,7 @@ module PLSQL
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @original_schema = original_schema
+      @dbms_output_stream = nil
     end
 
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
@@ -90,7 +91,7 @@ module PLSQL
     # Current Oracle schema name
     def schema_name
       return nil unless connection
-      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
+      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','current_schema') FROM dual")[0]
     end
 
     # Default timezone to which database values will be converted - :utc or :local

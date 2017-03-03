@@ -80,7 +80,7 @@ describe "Type" do
       CREATE OR REPLACE TYPE t_employee AS OBJECT (
         employee_id   NUMBER(15),
         first_name    VARCHAR2(50),
-        last_name     VARCHAR2(50),
+        last_name     VARCHAR(50),
         hire_date     DATE,
         address       t_address,
         phones        t_phones

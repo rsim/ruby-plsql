@@ -26,8 +26,6 @@ module PLSQL
 
       @cursor.exec
 
-      dbms_output_log
-
       if block_given?
         yield get_return_value
         nil
@@ -36,6 +34,7 @@ module PLSQL
       end
     ensure
       @cursor.close if @cursor
+      dbms_output_log
     end
 
     private
@@ -110,9 +109,9 @@ module PLSQL
     end
 
     MATCHING_TYPES = {
-      :integer => ['NUMBER', 'PLS_INTEGER', 'BINARY_INTEGER'],
+      :integer => ['NUMBER', 'NATURAL', 'NATURALN', 'POSITIVE', 'POSITIVEN', 'SIGNTYPE', 'SIMPLE_INTEGER', 'PLS_INTEGER', 'BINARY_INTEGER'],
       :decimal => ['NUMBER', 'BINARY_FLOAT', 'BINARY_DOUBLE'],
-      :string => ['VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB'],
+      :string => ['VARCHAR', 'VARCHAR2', 'NVARCHAR2', 'CHAR', 'NCHAR', 'CLOB', 'BLOB', 'XMLTYPE'],
       :date => ['DATE'],
       :time => ['DATE', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITH LOCAL TIME ZONE'],
       :boolean => ['PL/SQL BOOLEAN'],
@@ -124,7 +123,7 @@ module PLSQL
       case value
       when NilClass
         :all
-      when Fixnum, Bignum
+      when Integer
         MATCHING_TYPES[:integer]
       when BigDecimal, Float
         MATCHING_TYPES[:decimal]
@@ -215,10 +214,8 @@ module PLSQL
       end
       add_out_variables
 
-      dbms_output_enable_sql, dbms_output_get_sql = dbms_output_sql
-
       @sql = @declare_sql.empty? ? "" : "DECLARE\n" << @declare_sql
-      @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << dbms_output_get_sql << @return_sql << "END;\n"
+      @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << @return_sql << "END;\n"
     end
 
     def add_argument(argument, value, argument_metadata=nil)
@@ -239,6 +236,14 @@ module PLSQL
         @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
         @bind_metadata[argument] = argument_metadata.merge(:data_type => "NUMBER", :data_precision => 1)
         "l_#{argument}"
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @declare_sql << "l_#{argument} XMLTYPE;\n"
+          @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
+          @bind_values[argument] = value if not value.nil?
+          @bind_metadata[argument] = argument_metadata.merge(:data_type => "CLOB")
+          "l_#{argument}"
+        end
       else
         # TABLE or PL/SQL TABLE type defined inside package
         if argument_metadata[:tmp_table_name]
@@ -340,9 +345,16 @@ module PLSQL
         metadata = argument_metadata[:fields][field]
         raise ArgumentError, "Wrong field name #{key.inspect} passed to PL/SQL record argument #{argument.inspect}" unless metadata
         bind_variable = :"#{argument}_f#{metadata[:position]}"
-        sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
-        bind_values[bind_variable] = value
-        bind_metadata[bind_variable] = metadata
+        case metadata[:data_type]
+        when 'PL/SQL BOOLEAN'
+          sql << "l_#{argument}.#{field} := (:#{bind_variable} = 1);\n"
+          bind_values[bind_variable] = value.nil? ? nil : (value ? 1 : 0)
+          bind_metadata[bind_variable] = metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+        else
+          sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
+          bind_values[bind_variable] = value
+          bind_metadata[bind_variable] = metadata
+        end
       end
       [sql, bind_values, bind_metadata]
     end
@@ -365,11 +377,29 @@ module PLSQL
           # should use different output bind variable as JDBC does not support
           # if output bind variable appears in several places
           bind_variable = :"#{argument}_o#{metadata[:position]}"
-          @return_vars << bind_variable
-          @return_vars_metadata[bind_variable] = metadata
-          @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
+          case metadata[:data_type]
+          when 'PL/SQL BOOLEAN'
+            @return_vars << bind_variable
+            @return_vars_metadata[bind_variable] = metadata.merge(:data_type => "NUMBER", :data_precision => 1)
+            arg_field = "l_#{argument}.#{field}"
+            @return_sql << ":#{bind_variable} := " << "CASE WHEN #{arg_field} = true THEN 1 " <<
+                                                      "WHEN #{arg_field} = false THEN 0 ELSE NULL END;\n"
+          else
+            @return_vars << bind_variable
+            @return_vars_metadata[bind_variable] = metadata
+            @return_sql << ":#{bind_variable} := l_#{argument}.#{field};\n"
+          end
         end
         "l_#{argument} := " if is_return_value
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @declare_sql << "l_#{argument} XMLTYPE;\n" if is_return_value
+          bind_variable = :"o_#{argument}"
+          @return_vars << bind_variable
+          @return_vars_metadata[bind_variable] = argument_metadata.merge(:data_type => "CLOB")
+          @return_sql << ":#{bind_variable} := CASE WHEN l_#{argument} IS NOT NULL THEN l_#{argument}.getclobval() END;\n"
+          "l_#{argument} := " if is_return_value
+        end
       when 'PL/SQL BOOLEAN'
         @declare_sql << "l_#{argument} BOOLEAN;\n" if is_return_value
         @declare_sql << "o_#{argument} NUMBER(1);\n"
@@ -471,12 +501,22 @@ module PLSQL
       when 'PL/SQL RECORD'
         return_value = {}
         argument_metadata[:fields].each do |field, metadata|
-          return_value[field] = @cursor[":#{argument}_o#{metadata[:position]}"]
+          field_value = @cursor[":#{argument}_o#{metadata[:position]}"]
+          case metadata[:data_type]
+          when 'PL/SQL BOOLEAN'
+            return_value[field] = field_value.nil? ? nil : field_value == 1
+          else
+            return_value[field] = field_value
+          end
         end
         return_value
       when 'PL/SQL BOOLEAN'
         numeric_value = @cursor[":o_#{argument}"]
         numeric_value.nil? ? nil : numeric_value == 1
+      when 'UNDEFINED'
+        if argument_metadata[:type_name] == 'XMLTYPE'
+          @cursor[":o_#{argument}"]
+        end
       else
         if argument_metadata[:tmp_table_name]
           is_index_by_table = argument_metadata[:data_type] == 'PL/SQL TABLE'
@@ -539,34 +579,24 @@ module PLSQL
       @procedure_name ||= @procedure.procedure
     end
 
-    def dbms_output_sql
-      if @dbms_output_stream
-        dbms_output_enable_sql = "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n"
-        # if database version is at least 10.2 then use DBMS_OUTPUT.GET_LINES with SYS.DBMSOUTPUT_LINESARRAY
-        if (@schema.connection.database_version <=> [10, 2, 0, 0]) >= 0
-          @declare_sql << "l_dbms_output_numlines INTEGER := #{Schema::DBMS_OUTPUT_MAX_LINES};\n"
-          dbms_output_get_sql = "DBMS_OUTPUT.GET_LINES(:dbms_output_lines, l_dbms_output_numlines);\n"
-          @bind_values[:dbms_output_lines] = nil
-          @bind_metadata[:dbms_output_lines] = {:data_type => 'TABLE', :data_length => nil,
-            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY", :in_out => 'OUT'}
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
-        else
-          dbms_output_get_sql = ""
-        end
-        [dbms_output_enable_sql, dbms_output_get_sql]
-      else
-        ["", ""]
-      end
+    def dbms_output_enable_sql
+      @dbms_output_stream ? "DBMS_OUTPUT.ENABLE(#{@schema.dbms_output_buffer_size});\n" : ""
     end
 
-    def dbms_output_log
+    def dbms_output_lines
+      lines = []
       if @dbms_output_stream
-        # if database version is at least 10.2 then :dbms_output_lines output bind variable has dbms_output lines
-        if @bind_metadata[:dbms_output_lines]
-          @cursor[':dbms_output_lines'].each do |line|
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
-          end
-        # if database version is less than 10.2 then use individual DBMS_OUTPUT.GET_LINE calls
+        if (@schema.connection.database_version <=> [10, 2, 0, 0]) >= 0
+          cursor = @schema.connection.parse("BEGIN DBMS_OUTPUT.GET_LINES(:dbms_output_lines, :dbms_output_numlines); END;\n")
+          cursor.bind_param(':dbms_output_lines', nil,
+                            :data_type => 'TABLE',
+                            :data_length => nil,
+                            :sql_type_name => "SYS.DBMSOUTPUT_LINESARRAY",
+                            :in_out => 'OUT')
+          cursor.bind_param(':dbms_output_numlines', Schema::DBMS_OUTPUT_MAX_LINES, :data_type => 'NUMBER', :in_out => 'IN/OUT')
+          cursor.exec
+          lines = cursor[':dbms_output_lines']
+          cursor.close
         else
           cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")
           while true do
@@ -574,12 +604,19 @@ module PLSQL
             cursor.bind_param(':status', nil, :data_type => 'NUMBER', :in_out => 'OUT')
             cursor.exec
             break unless cursor[':status'] == 0
-            @dbms_output_stream.puts "DBMS_OUTPUT: #{cursor[':line']}"
+            lines << cursor[':line']
           end
           cursor.close
         end
-        @dbms_output_stream.flush
       end
+      lines
+    end
+
+    def dbms_output_log
+      dbms_output_lines.each do |line|
+        @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
+      end
+      @dbms_output_stream.flush if @dbms_output_stream
     end
 
   end

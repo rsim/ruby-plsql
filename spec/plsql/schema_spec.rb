@@ -37,6 +37,13 @@ describe "Schema connection" do
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)
   end
 
+  it 'should match altered current_schema in database session' do
+    plsql.connection = @conn
+    expected_current_schema = DATABASE_USERS_AND_PASSWORDS[1][0]
+    plsql.execute "ALTER SESSION set current_schema=#{expected_current_schema}"
+    expect(plsql.schema_name).to eq(expected_current_schema.upcase)
+  end
+
   it "should return new schema name after reconnection" do
     plsql.connection = @conn
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)
@@ -86,7 +93,7 @@ describe "Connection with connect!" do
   it "should not connect with wrong port number" do
     expect {
       plsql.connect! @username, @password, :host => @host, :port => 9999, :database => @database
-    }.to raise_error(/no listener|could not establish the connection/)
+    }.to raise_error(/ORA-12541|could not establish the connection/)
   end
 
   it "should connect with one Hash parameter" do
@@ -95,10 +102,11 @@ describe "Connection with connect!" do
     expect(plsql.schema_name).to eq(@username.upcase)
   end
 
-  it "should set session time zone from TZ environment variable" do
+  it "should set session time zone from ORA_SDTZ environment variable" do
     plsql.connect! @username, @password, @database
-    expect(plsql.connection.time_zone).to eq(ENV['TZ'])
-  end
+    expect(plsql.connection.time_zone).to eq(ENV['ORA_SDTZ'])
+  end if ENV['ORA_SDTZ']
+
 
   it "should set session time zone from :time_zone parameter" do
     plsql.connect! :username => @username, :password => @password, :database => @database, :time_zone => 'EET'
@@ -220,6 +228,15 @@ describe "ActiveRecord connection" do
     plsql.activerecord_class = TestModel
     expect(plsql.schema_name).to eq('HR')
   end
+
+  it "should safely close cursors in threaded environment" do
+    expect {
+      t1 = Thread.new { plsql.dbms_lock.sleep(1) }.tap { |t| t.abort_on_exception = true }
+      t2 = Thread.new { plsql.dbms_lock.sleep(2) }.tap { |t| t.abort_on_exception = true }
+      [t2, t1].each { |t| t.join }
+    }.not_to raise_error
+  end
+
 end if defined?(ActiveRecord)
 
 describe "DBMS_OUTPUT logging" do
@@ -227,10 +244,13 @@ describe "DBMS_OUTPUT logging" do
   before(:all) do
     plsql.connection = get_connection
     plsql.execute <<-SQL
-      CREATE OR REPLACE PROCEDURE test_dbms_output(p_string VARCHAR2)
+      CREATE OR REPLACE PROCEDURE test_dbms_output(p_string VARCHAR2, p_raise_error BOOLEAN := false)
       IS
       BEGIN
         DBMS_OUTPUT.PUT_LINE(p_string);
+        IF p_raise_error THEN
+          RAISE_APPLICATION_ERROR(-20000 - 12, 'Test Error');
+        END IF;
       END;
     SQL
     plsql.execute <<-SQL
@@ -269,6 +289,11 @@ describe "DBMS_OUTPUT logging" do
 
     it "should log output to specified stream" do
       plsql.test_dbms_output("test_dbms_output")
+      expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
+    end
+
+    it "should log output to specified stream in case of exception" do
+      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error /Test Error/
       expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
     end
 

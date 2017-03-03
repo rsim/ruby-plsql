@@ -7,7 +7,6 @@ describe "Connection" do
   before(:all) do
     @raw_conn = get_connection
     @conn = PLSQL::Connection.create( @raw_conn )
-    @conn.set_time_zone
   end
 
   after(:all) do
@@ -25,7 +24,6 @@ describe "Connection" do
 
     before(:each) do
       @conn1 = PLSQL::Connection.create( @raw_conn1 )
-      @conn1.set_time_zone
     end
 
     it "should create connection" do
@@ -53,6 +51,11 @@ describe "Connection" do
   # Ruby 1.8 and 1.9
   unless defined?(JRuby)
     describe "OCI data type conversions" do
+      it "should translate PL/SQL VARCHAR to Ruby String" do
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+      end
+
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]
@@ -75,13 +78,13 @@ describe "Connection" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
       end
 
-      it "should not translate Ruby Fixnum when OraNumber type specified" do
+      it "should not translate small Ruby Integer when OraNumber type specified" do
         expect(@conn.ruby_value_to_ora_value(100, OraNumber)).to eql(100)
       end
 
-      it "should translate Ruby Bignum value to OraNumber when OraNumber type specified" do
+      it "should not translate big Ruby Integer when OraNumber type specified" do
         ora_number = @conn.ruby_value_to_ora_value(12345678901234567890, OraNumber)
-        expect(ora_number.class).to eq OraNumber
+        expect(ora_number).to be_an Integer
         expect(ora_number.to_s).to eq "12345678901234567890"
         # OraNumber has more numeric comparison methods in ruby-oci8 2.0
         expect(ora_number).to eq OraNumber.new("12345678901234567890") if OCI8::VERSION >= '2.0.0'
@@ -96,7 +99,7 @@ describe "Connection" do
         expect(ora_value.read).to eq large_text
       end
 
-      it "should translate Oracle OraNumber integer value to Fixnum" do
+      it "should translate Oracle OraNumber integer value to Integer" do
         expect(@conn.ora_value_to_ruby_value(OraNumber.new(100))).to eql(100)
       end
 
@@ -117,13 +120,17 @@ describe "Connection" do
         clob = OCI8::CLOB.new(@raw_conn, large_text)
         expect(@conn.ora_value_to_ruby_value(clob)).to eq large_text
       end
-      
+
     end
 
   # JRuby
   else
 
     describe "JDBC data type conversions" do
+      it "should translate PL/SQL VARCHAR to Ruby String" do
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+      end
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
         expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]
@@ -132,20 +139,24 @@ describe "Connection" do
       it "should translate PL/SQL NUMBER to Ruby BigDecimal" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15)).to eq [BigDecimal, nil]
       end
-      
+
       it "should translate PL/SQL DATE to Ruby DateTime" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil)).to eq [DateTime, nil]
       end
-      
+
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
         expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
       end
-      
-      it "should not translate Ruby Fixnum when BigDecimal type specified" do
+
+      it "should not translate Ruby Integer when BigDecimal type specified" do
         expect(@conn.ruby_value_to_ora_value(100, BigDecimal)).to eq java.math.BigDecimal.new(100)
       end
-      
-      it "should translate Ruby Bignum value to BigDecimal when BigDecimal type specified" do
+
+      it "should translate Ruby String to string value" do
+        expect(@conn.ruby_value_to_ora_value(1.1, String)).to eq '1.1'
+      end
+
+      it "should translate Ruby Integer value to BigDecimal when BigDecimal type specified" do
         big_decimal = @conn.ruby_value_to_ora_value(12345678901234567890, BigDecimal)
         expect(big_decimal).to eq java.math.BigDecimal.new("12345678901234567890")
       end
@@ -164,10 +175,10 @@ describe "Connection" do
         expect(ora_value).to be_nil
       end
 
-      it "should translate Oracle BigDecimal integer value to Fixnum" do
+      it "should translate Oracle BigDecimal integer value to Integer" do
         expect(@conn.ora_value_to_ruby_value(BigDecimal("100"))).to eql(100)
       end
-      
+
       it "should translate Oracle BigDecimal float value to BigDecimal" do
         expect(@conn.ora_value_to_ruby_value(BigDecimal("100.11"))).to eql(BigDecimal("100.11"))
       end
@@ -210,7 +221,7 @@ describe "Connection" do
       expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
         'abc',123,123.456,@now,@today)).to eq ["abc",123,123.456,@now,Time.parse(@today.to_s)]
     end
-    
+
     it "should execute SQL statement with NULL values and return first result" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_first("SELECT NULL,123,123.456,
@@ -226,7 +237,7 @@ describe "Connection" do
         expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
           nil,123,123.456,@now,@today)).to eq [nil,123,123.456,@now,Time.parse(@today.to_s)]
       end
-    
+
     end
 
     it "should execute SQL statement and return all results" do
@@ -254,7 +265,7 @@ describe "Connection" do
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
         'abc',123,123.456,@now,'abc',123,123.456,@now)).to eq [["abc",123,123.456,@now],["abc",123,123.456,@now]]
     end
-    
+
     it "should execute SQL statement and yield all results in block" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_all("SELECT 'abc',123,123.456,
@@ -266,7 +277,7 @@ describe "Connection" do
         expect(r).to eq ["abc",123,123.456,@now]
       end).to eq 2
     end
-    
+
     it "should execute SQL statement with bind parameters and yield all results in block" do
       @now = Time.local(2008,05,31,23,22,11)
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
@@ -276,7 +287,7 @@ describe "Connection" do
     end
 
   end
-  
+
   describe "PL/SQL procedures" do
     before(:all) do
       @random = rand(1000)
@@ -313,9 +324,9 @@ describe "Connection" do
       expect(cursor[":p_date"]).to eq @now
       expect(cursor.close).to be_nil
     end
-  
+
   end
-  
+
   describe "commit and rollback" do
     before(:all) do
       expect(@conn.exec("CREATE TABLE test_commit (dummy VARCHAR2(100))")).to be true
@@ -464,7 +475,6 @@ describe "Connection" do
     def reconnect_connection
       @raw_conn = get_connection
       @conn = PLSQL::Connection.create( @raw_conn )
-      @conn.set_time_zone
     end
 
     it "should drop current session ruby temporary tables" do

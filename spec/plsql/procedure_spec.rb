@@ -3,13 +3,14 @@
 require 'spec_helper'
 
 describe "Parameter type mapping /" do
-  describe "Function with string parameters" do
+
+  shared_examples "Function with string parameters" do |datatype|
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_uppercase
-          ( p_string VARCHAR2 )
-          RETURN VARCHAR2
+          ( p_string #{datatype} )
+          RETURN #{datatype}
         IS
         BEGIN
           RETURN UPPER(p_string);
@@ -56,83 +57,85 @@ describe "Parameter type mapping /" do
 
   end
 
-  describe "Function with numeric parameters" do
+  ['VARCHAR', 'VARCHAR2'].each do |datatype|
+    describe "Function with #{datatype} parameters" do
+      it_should_behave_like "Function with string parameters", datatype
+    end
+  end
+
+  shared_examples "Function with numeric" do |ora_data_type, class_, num1, num2, expected, mandatory|
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_sum
-          ( p_num1 NUMBER, p_num2 NUMBER )
-          RETURN NUMBER
+          ( p_num1 #{ora_data_type}, p_num2 #{ora_data_type} )
+          RETURN #{ora_data_type}
         IS
         BEGIN
           RETURN p_num1 + p_num2;
         END test_sum;
       SQL
-      plsql.execute <<-SQL
-        CREATE OR REPLACE FUNCTION test_number_1
-          ( p_num NUMBER )
-          RETURN VARCHAR2
-        IS
-        BEGIN
-          IF p_num = 1 THEN
-            RETURN 'Y';
-          ELSIF p_num = 0 THEN
-            RETURN 'N';
-          ELSIF p_num IS NULL THEN
-            RETURN NULL;
-          ELSE
-            RETURN 'UNKNOWN';
-          END IF;
-        END test_number_1;
-      SQL
-      plsql.execute <<-SQL
-        CREATE OR REPLACE PROCEDURE test_integers
-          ( p_pls_int PLS_INTEGER, p_bin_int BINARY_INTEGER, x_pls_int OUT PLS_INTEGER, x_bin_int OUT BINARY_INTEGER )
-        IS
-        BEGIN
-          x_pls_int := p_pls_int;
-          x_bin_int := p_bin_int;
-        END;
-      SQL
     end
   
     after(:all) do
       plsql.execute "DROP FUNCTION test_sum"
-      plsql.execute "DROP FUNCTION test_number_1"
-      plsql.execute "DROP PROCEDURE test_integers"
       plsql.logoff
     end
   
-    it "should process integer parameters" do
-      expect(plsql.test_sum(123,456)).to eq(579)
+    it "should get #{ora_data_type} variable type mapped to #{class_.to_s}" do
+      expect(plsql.test_sum(num1, num2)).to be_a class_
     end
-
-    it "should process big integer parameters" do
-      expect(plsql.test_sum(123123123123,456456456456)).to eq(579579579579)
-    end
-
-    it "should process float parameters and return BigDecimal" do
-      expect(plsql.test_sum(123.123,456.456)).to eq(BigDecimal("579.579"))
-    end
-
-    it "should process BigDecimal parameters and return BigDecimal" do
-      expect(plsql.test_sum(:p_num1 => BigDecimal("123.123"), :p_num2 => BigDecimal("456.456"))).to eq(BigDecimal("579.579"))
+    it "should process input parameters and return correct result" do
+      expect(plsql.test_sum(num1, num2)).to eq(expected)
     end
 
     it "should process nil parameter as NULL" do
-      expect(plsql.test_sum(123,nil)).to be_nil
+      expect(plsql.test_sum(num1, nil)).to be_nil
+    end unless mandatory
+
+  end
+
+  @big_number = ('1234567890' * 3).to_i
+  [
+      {:ora_data_type => 'INTEGER',       :class => Integer,    :num1 => @big_number, :num2 => @big_number, :expected => @big_number*2},
+      {:ora_data_type => 'NUMBER',        :class => BigDecimal, :num1 => 12345.12345, :num2 => 12345.12345, :expected => 24690.2469   },
+      {:ora_data_type => 'PLS_INTEGER',   :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'BINARY_INTEGER',:class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'SIMPLE_INTEGER',:class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'NATURAL',       :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'NATURALN',      :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'POSITIVE',      :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578    },
+      {:ora_data_type => 'POSITIVEN',     :class => Integer,    :num1 => 123456789,   :num2 => 123456789,   :expected => 246913578, :mandatory => true },
+      {:ora_data_type => 'SIGNTYPE',      :class => Integer,    :num1 => 1,           :num2 => -1,          :expected => 0            },
+  ].each do |row|
+    ora_data_type, class_, num1, num2, expected, mandatory = row.values
+    describe ora_data_type do
+      include_examples "Function with numeric", ora_data_type, class_, num1, num2, expected, mandatory
+    end
+  end
+
+  describe "Boolean to NUMBER conversion" do
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_num ( p_num NUMBER) RETURN NUMBER
+        IS
+        BEGIN
+          RETURN p_num;
+        END test_num;
+      SQL
     end
 
+    after(:all) do
+      plsql.execute "DROP FUNCTION test_num"
+      plsql.logoff
+    end
     it "should convert true value to 1 for NUMBER parameter" do
-      expect(plsql.test_number_1(true)).to eq('Y')
+      expect(plsql.test_num(true)).to eq(1)
     end
 
     it "should convert false value to 0 for NUMBER parameter" do
-      expect(plsql.test_number_1(false)).to eq('N')
-    end
-
-    it "should process binary integer parameters" do
-      expect(plsql.test_integers(123, 456)).to eq({:x_pls_int => 123, :x_bin_int => 456})
+      expect(plsql.test_num(false)).to eq(0)
     end
   end
 
@@ -231,6 +234,53 @@ describe "Parameter type mapping /" do
     end
 
   end
+
+  describe "Function or procedure with XMLType parameters" do
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_xmltype
+          ( p_xml XMLTYPE )
+          RETURN XMLTYPE
+        IS
+        BEGIN
+          RETURN p_xml;
+        END test_xmltype;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_xmltype2
+          ( p_xml XMLTYPE, po_xml OUT XMLTYPE )
+        IS
+        BEGIN
+          po_xml := p_xml;
+        END test_xmltype2;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP FUNCTION test_xmltype"
+      plsql.execute "DROP PROCEDURE test_xmltype2"
+      plsql.logoff
+    end
+
+    it "should process XMLType parameters" do
+      xml = '<DUMMY>value</DUMMY>'
+      result = plsql.test_xmltype(xml)
+      expect(result).to eq('<DUMMY>value</DUMMY>')
+    end
+
+    it "should work when passing a NULL value" do
+      result = plsql.test_xmltype(nil)
+      expect(result).to be_nil
+    end
+
+    it "should assign input parameter to putput parameter" do
+      xml = '<DUMMY>value</DUMMY>'
+      result = plsql.test_xmltype2(xml)
+      expect(result[:po_xml]).to eq('<DUMMY>value</DUMMY>')
+    end
+  end
+
 
   describe "Procedure with output parameters" do
     before(:all) do
@@ -609,7 +659,7 @@ describe "Parameter type mapping /" do
         CREATE TABLE test_employees (
           employee_id   NUMBER(15),
           first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
+          last_name     VARCHAR(50),
           hire_date     DATE
         )
       SQL
@@ -626,8 +676,13 @@ describe "Parameter type mapping /" do
           TYPE t_employee IS RECORD(
             employee_id   NUMBER(15),
             first_name    VARCHAR2(50),
-            last_name     VARCHAR2(50),
+            last_name     VARCHAR(50),
             hire_date     DATE
+          );
+
+          TYPE t_candidate IS RECORD(
+            candidate_id NUMBER(5),
+            is_approved  BOOLEAN
           );
 
           TYPE table_of_records IS TABLE OF t_employee;
@@ -637,6 +692,14 @@ describe "Parameter type mapping /" do
 
           FUNCTION test_empty_records
             RETURN table_of_records;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate);
         END;
       SQL
       plsql.execute <<-SQL
@@ -666,6 +729,29 @@ describe "Parameter type mapping /" do
             FETCH employees_cur BULK COLLECT INTO employees_tab;
             CLOSE employees_cur;
             RETURN employees_tab;
+          END;
+
+          FUNCTION is_approved(p_candidate t_candidate)
+            RETURN BOOLEAN
+          IS
+          BEGIN
+            RETURN p_candidate.is_approved;
+          END;
+
+          FUNCTION f_set_candidate_status(p_candidate t_candidate, p_status boolean)
+            RETURN t_candidate
+          IS
+            result t_candidate := p_candidate;
+          BEGIN
+            result.is_approved := p_status;
+            return result;
+          END;
+
+          PROCEDURE p_set_candidate_status(p_candidate t_candidate, p_status boolean, p_result OUT t_candidate)
+          IS
+          BEGIN
+            p_result := p_candidate;
+            p_result.is_approved := p_status;
           END;
         END;
       SQL
@@ -750,6 +836,26 @@ describe "Parameter type mapping /" do
       expect(plsql.test_record.test_full_name(@p_employee)).to eq('First Last')
     end
 
+    context "functions with record parameters having boolean attributes" do
+      def new_candidate(status)
+        {:candidate_id => 1, :is_approved => status}
+      end
+
+      [true, false, nil].each do |status|
+        it "should execute function with record having boolean attribute (#{status})" do
+          expect(plsql.test_record.is_approved(new_candidate(status))).to eq status
+        end
+
+        it "procedure should return record with boolean attribute as output parameter (#{status})" do
+          expect(plsql.test_record.p_set_candidate_status(new_candidate(nil), status)[:p_result]).to eq new_candidate(status)
+        end
+
+        it "function should return record with boolean attribute (#{status})" do
+          expect(plsql.test_record.f_set_candidate_status(new_candidate(nil), status)).to eq new_candidate(status)
+        end
+      end
+    end
+
   end
 
   describe "Function with boolean parameters" do
@@ -831,7 +937,7 @@ describe "Parameter type mapping /" do
         CREATE OR REPLACE TYPE t_employee AS OBJECT (
           employee_id   NUMBER(15),
           first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
+          last_name     VARCHAR(50),
           hire_date     DATE,
           address       t_address,
           phones        t_phones
@@ -991,7 +1097,7 @@ describe "Parameter type mapping /" do
           TYPE t_employee IS RECORD(
             employee_id   NUMBER(15),
             first_name    VARCHAR2(50),
-            last_name     VARCHAR2(50),
+            last_name     VARCHAR(50),
             hire_date     DATE
           );
           TYPE t_employees IS TABLE OF t_employee;
@@ -1001,7 +1107,7 @@ describe "Parameter type mapping /" do
           TYPE t_employee2 IS RECORD(
             employee_id   NUMBER(15),
             first_name    VARCHAR2(50),
-            last_name     VARCHAR2(50),
+            last_name     VARCHAR(50),
             hire_date     DATE,
             numbers       t_numbers
           );
@@ -1238,7 +1344,7 @@ describe "Parameter type mapping /" do
         CREATE TABLE test_employees (
           employee_id   NUMBER(15),
           first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
+          last_name     VARCHAR(50),
           hire_date     DATE
         )
       SQL
@@ -1256,7 +1362,7 @@ describe "Parameter type mapping /" do
           TYPE t_employee IS RECORD(
             employee_id   NUMBER(15),
             first_name    VARCHAR2(50),
-            last_name     VARCHAR2(50),
+            last_name     VARCHAR(50),
             hire_date     DATE
           );
           TYPE t_employees IS TABLE OF t_employee
@@ -1686,7 +1792,7 @@ describe "Parameter type mapping /" do
         CREATE TABLE test_employees (
           employee_id   NUMBER(15),
           first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
+          last_name     VARCHAR(50),
           hire_date     DATE
         )
       SQL
@@ -1766,7 +1872,7 @@ describe "Parameter type mapping /" do
       expect(plsql.test_cursor do |cursor|
         cursor2 = cursor
       end).to be_nil
-      expect { cursor2.fetch }.to raise_error
+      expect { cursor2.fetch }.to raise_error(/Cursor was already closed|Closed Statement/)
     end
 
     it "should not raise error if cursor is closed inside block" do
@@ -2045,4 +2151,157 @@ describe "SYS.STANDARD procedures /" do
     expect(plsql.nvl(nil, false)).to eq(false)
   end
 
+end
+
+describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
+
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_pls_f ( p_num PLS_INTEGER ) RETURN PLS_INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_bin_f ( p_num BINARY_INTEGER ) RETURN BINARY_INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_int_f ( p_num INTEGER ) RETURN INTEGER IS
+        BEGIN
+          RETURN p_num;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_pls_p ( p_num IN OUT PLS_INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_bin_p ( p_num IN OUT BINARY_INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_int_p ( p_num IN OUT INTEGER ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_flt_p ( p_num IN OUT BINARY_FLOAT ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+    plsql.execute <<-SQL
+        CREATE OR REPLACE PROCEDURE test_dbl_p ( p_num IN OUT BINARY_DOUBLE ) IS
+        BEGIN
+          NULL;
+        END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP FUNCTION test_pls_f"
+    plsql.execute "DROP FUNCTION test_bin_f"
+    plsql.execute "DROP FUNCTION test_int_f"
+    plsql.execute "DROP PROCEDURE test_pls_p"
+    plsql.execute "DROP PROCEDURE test_int_p"
+    plsql.execute "DROP PROCEDURE test_flt_p"
+    plsql.execute "DROP PROCEDURE test_dbl_p"
+    plsql.logoff
+  end
+
+  it 'should return null for a function call with NULL PLS_INTEGER param' do
+    expect(plsql.test_pls_f(nil)).to be_nil
+  end
+
+  it 'should return null for a function call with NULL BINARY_INTEGER param' do
+    expect(plsql.test_bin_f(nil)).to be_nil
+  end
+
+  it 'should return null for a function call with NULL INTEGER param' do
+    expect(plsql.test_int_f(nil)).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL PLS_INTEGER param' do
+    expect(plsql.test_pls_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_INTEGER param' do
+    expect(plsql.test_bin_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL INTEGER param' do
+    expect(plsql.test_int_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_FLOAT param' do
+    expect(plsql.test_flt_p(nil)[:p_num]).to be_nil
+  end
+
+  it 'should return null for a procedure call with NULL BINARY_DOUBLE param' do
+    expect(plsql.test_dbl_p(nil)[:p_num]).to be_nil
+  end
+
+end
+
+describe '#get_argument_metadata' do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+  end
+
+  after(:all) do
+    plsql.logoff
+  end
+
+  before(:each) do
+    plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION magic_number(p_num INTEGER #{defaulted_clause})
+        RETURN INTEGER
+      IS
+      BEGIN
+        RETURN p_num * 2;
+      END magic_number;
+    SQL
+  end
+
+  after(:each) do
+    plsql.execute "DROP FUNCTION magic_number"
+  end
+
+  context 'on procedure with defaulted field' do
+    let(:defaulted_clause) { 'DEFAULT 21' }
+
+    it 'field\'s metadata attribute "defaulted" is Y' do
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to eq('Y')
+    end
+  end
+
+  context 'procedure without defaulted field' do
+    let(:defaulted_clause) { '' }
+
+    it 'field\'s metadata attribute "defaulted" is N' do
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to eq('N')
+    end
+  end
+
+  context 'oracle <= 10g without defaulted functionality' do
+    let(:defaulted_clause) { '' }
+
+    it 'field\'s metadata attribute "defaulted" is nil' do
+      allow(plsql.connection).to receive(:database_version).and_return([10, 2, 0, 2])
+
+      procedure = PLSQL::Procedure.find(plsql, :magic_number)
+      expect(procedure.arguments[0][:p_num][:defaulted]).to be_nil
+    end
+  end
 end
