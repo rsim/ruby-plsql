@@ -216,7 +216,7 @@ module PLSQL
             raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
             elem_list = value.map do |elem|
               if (attr_tdo = tdo.coll_attr.typeinfo)
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
               else
                 attr_type = elem.class
               end
@@ -235,7 +235,7 @@ module PLSQL
               case attr.datatype
               when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
                 # nested object type or collection
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
                 object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
               end
             end
