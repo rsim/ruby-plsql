@@ -84,10 +84,10 @@ module PLSQL
           :in_out => 'IN/OUT',
           :fields => {}
         }
-        table.columns.each do |name, column|
+        table.columns.each do |name, col|
           record_metadata[:fields][name] =
-            {:data_type => column[:data_type], :data_length => column[:data_length], :sql_type_name => column[:sql_type_name], 
-            :position => column[:position], :in_out => 'IN/OUT'}
+            {:data_type => col[:data_type], :data_length => col[:data_length], :sql_type_name => col[:sql_type_name],
+            :position => col[:position], :in_out => 'IN/OUT'}
         end
         record_metadata
       else
