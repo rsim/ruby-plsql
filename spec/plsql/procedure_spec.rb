@@ -2114,7 +2114,60 @@ describe "Synonyms /" do
     it "should raise error when function from invalid package body is called" do
       expect {
         plsql.test_invalid_package.test_invalid_function('test')
-      }.to raise_error(ArgumentError, /body is not in valid status/)
+      }.to raise_error(OCIError, /ORA-04063/)
+    end
+  end
+
+  describe "invalid objects that can be automatically recompiled" do
+    before(:all) do
+      plsql.execute "DROP TABLE test_recompilable_table" rescue nil
+      plsql.execute "CREATE TABLE test_recompilable_table (dummy VARCHAR2(10))"
+      plsql.execute <<-SQL
+        CREATE OR REPLACE FUNCTION test_recompilable_function(p_dummy VARCHAR2) RETURN VARCHAR2 IS
+          l_dummy test_recompilable_table.dummy%TYPE;
+        BEGIN
+          RETURN p_dummy;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_recompilable_package IS
+          FUNCTION test_recompilable_function(p_dummy VARCHAR2) RETURN VARCHAR2;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_recompilable_package IS
+          FUNCTION test_recompilable_function(p_dummy VARCHAR2) RETURN VARCHAR2 IS
+            l_dummy test_recompilable_table.dummy%TYPE;
+          BEGIN
+            RETURN p_dummy;
+          END;
+        END;
+      SQL
+    end
+
+    before(:each) do
+      # Cause the dependent function and package to go into INVALID status
+      plsql.execute "ALTER TABLE test_recompilable_table MODIFY (dummy VARCHAR2(10))"
+    end
+
+    after(:all) do
+      plsql.execute "DROP TABLE test_recompilable_table"
+      plsql.execute "DROP FUNCTION test_recompilable_function"
+      plsql.execute "DROP PACKAGE test_recompilable_package"
+    end
+
+    it "should successfully call invalid function that can be recompiled" do
+      expect {
+        result = plsql.test_recompilable_function("test")
+        expect(result).to eq("test")
+      }.not_to raise_error
+    end
+
+    it "should successfully call invalid package body that can be recompiled" do
+      expect {
+        result = plsql.test_recompilable_package.test_recompilable_function("test")
+        expect(result).to eq("test")
+      }.not_to raise_error
     end
   end
 
