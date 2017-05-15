@@ -2114,7 +2114,7 @@ describe "Synonyms /" do
     it "should raise error when function from invalid package body is called" do
       expect {
         plsql.test_invalid_package.test_invalid_function('test')
-      }.to raise_error(OCIError, /ORA-04063/)
+      }.to raise_error(oracle_error_class, /ORA-04063/)
     end
   end
 
