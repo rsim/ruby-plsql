@@ -58,6 +58,14 @@ if ENV['USE_VM_DATABASE'] == 'Y'
   end
 end
 
+def oracle_error_class
+  unless defined?(JRUBY_VERSION)
+    OCIError
+  else
+    java.sql.SQLException
+  end
+end
+
 def get_eazy_connect_url(svc_separator = "")
   "#{DATABASE_HOST}:#{DATABASE_PORT}#{svc_separator}#{DATABASE_SERVICE_NAME}"
 end
