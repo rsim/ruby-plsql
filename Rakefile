@@ -22,6 +22,7 @@ begin
   EOS
     gem.email = "raimonds.simanovskis@gmail.com"
     gem.homepage = "http://github.com/rsim/ruby-plsql"
+    gem.license = "MIT".freeze
     gem.authors = ["Raimonds Simanovskis"]
     gem.extra_rdoc_files = ['README.md']
   end

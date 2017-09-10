@@ -71,7 +71,7 @@ Gem::Specification.new do |s|
     "spec/support/unlock_and_setup_hr_user.sql"
   ]
   s.homepage = "http://github.com/rsim/ruby-plsql".freeze
-  s.license = "MIT".freeze
+  s.licenses = ["MIT".freeze]
   s.rubygems_version = "2.6.4".freeze
   s.summary = "Ruby API for calling Oracle PL/SQL procedures.".freeze
 
@@ -108,4 +108,3 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<ruby-oci8>.freeze, ["~> 2.1"])
   end
 end
-
