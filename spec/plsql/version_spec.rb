@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe "Version" do
   it "should return ruby-plsql version" do
-    PLSQL::VERSION.should == File.read(File.dirname(__FILE__)+'/../../VERSION').chomp
+    expect(PLSQL::VERSION).to eq(File.read(File.dirname(__FILE__)+'/../../VERSION').chomp)
   end
   
 end

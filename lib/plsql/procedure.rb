@@ -1,57 +1,59 @@
 module PLSQL
 
   module ProcedureClassMethods #:nodoc:
-    def find(schema, procedure_name, package_name = nil, override_schema_name = nil)
-      if package_name
-        find_procedure_in_package(schema, package_name, procedure_name, override_schema_name)
+    def find(schema, procedure, package = nil, override_schema_name = nil)
+      if package.nil?
+        if (row = schema.select_first(
+            "SELECT #{procedure_object_id_src(schema)}.object_id
+            FROM all_procedures p, all_objects o
+            WHERE p.owner = :owner
+              AND p.object_name = :object_name
+              AND p.pipelined    = 'NO'
+              AND o.owner = p.owner
+              AND o.object_name = p.object_name
+              AND o.object_type in ('PROCEDURE', 'FUNCTION')",
+            schema.schema_name, procedure.to_s.upcase))
+          new(schema, procedure, nil, nil, row[0])
+        # search for synonym
+        elsif (row = schema.select_first(
+            "SELECT o.owner, o.object_name, #{procedure_object_id_src(schema)}.object_id
+            FROM all_synonyms s, all_objects o, all_procedures p
+            WHERE s.owner IN (:owner, 'PUBLIC')
+              AND s.synonym_name = :synonym_name
+              AND o.owner = s.table_owner
+              AND o.object_name = s.table_name
+              AND o.object_type IN ('PROCEDURE','FUNCTION')
+              AND o.owner = p.owner
+              AND o.object_name = p.object_name
+              AND p.pipelined    = 'NO'
+              ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
+            schema.schema_name, procedure.to_s.upcase))
+          new(schema, row[1], nil, row[0], row[2])
+        else
+          nil
+        end
+      elsif package && (row = schema.select_first(
+            # older Oracle versions do not have object_id column in all_procedures
+            "SELECT #{procedure_object_id_src(schema)}.object_id
+            FROM all_procedures p, all_objects o
+            WHERE p.owner = :owner
+              AND p.object_name = :object_name
+              AND p.procedure_name = :procedure_name
+              AND p.pipelined = 'NO'
+              AND o.owner = p.owner
+              AND o.object_name = p.object_name
+              AND o.object_type = 'PACKAGE'",
+            override_schema_name || schema.schema_name, package, procedure.to_s.upcase))
+        new(schema, procedure, package, override_schema_name, row[0])
       else
-        find_procedure_in_schema(schema, procedure_name) || find_procedure_by_synonym(schema, procedure_name)
+        nil
       end
     end
 
-    def find_procedure_in_schema(schema, procedure_name)
-      row = schema.select_first(<<-SQL, schema.schema_name, procedure_name.to_s.upcase)
-        SELECT object_id
-        FROM   all_procedures
-        WHERE  owner = :owner
-        AND    object_name = :object_name
-        AND    object_type IN ('PROCEDURE', 'FUNCTION')
-        AND    pipelined = 'NO'
-      SQL
-      new(schema, procedure_name, nil, nil, row[0]) if row
-    end
+    private
 
-    def find_procedure_by_synonym(schema, procedure_name)
-      row = schema.select_first(<<-SQL, schema.schema_name, procedure_name.to_s.upcase)
-        SELECT p.owner, p.object_name, p.object_id
-        FROM   all_synonyms s,
-               all_procedures p
-        WHERE  s.owner IN (:owner, 'PUBLIC')
-        AND    s.synonym_name = :synonym_name
-        AND    p.owner        = s.table_owner
-        AND    p.object_name  = s.table_name
-        AND    p.object_type IN ('PROCEDURE','FUNCTION')
-        AND    p.pipelined    = 'NO'
-        ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)
-      SQL
-      new(schema, row[1], nil, row[0], row[2]) if row
-    end
-
-    def find_procedure_in_package(schema, package_name, procedure_name, override_schema_name = nil)
-      schema_name = override_schema_name || schema.schema_name
-      row = schema.select_first(<<-SQL, schema_name, package_name, procedure_name.to_s.upcase)
-        SELECT o.object_id
-        FROM   all_procedures p,
-               all_objects o
-        WHERE  p.owner       = :owner
-        AND    p.object_name = :object_name
-        AND    p.procedure_name = :procedure_name
-        AND    p.pipelined   = 'NO'
-        AND    o.owner       = p.owner
-        AND    o.object_name = p.object_name
-        AND    o.object_type = 'PACKAGE'
-      SQL
-      new(schema, procedure_name, package_name, override_schema_name, row[0]) if row
+    def procedure_object_id_src(schema)
+      (schema.connection.database_version <=> [11, 1, 0, 0]) >= 0 ? "p" : "o"
     end
   end
 
@@ -65,7 +67,7 @@ module PLSQL
       when 'NUMBER'
         precision, scale = metadata[:data_precision], metadata[:data_scale]
         "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
-      when 'VARCHAR2', 'CHAR'
+      when 'VARCHAR', 'VARCHAR2', 'CHAR'
         length = case metadata[:char_used]
         when 'C' then "#{metadata[:char_length]} CHAR"
         when 'B' then "#{metadata[:data_length]} BYTE"
@@ -76,7 +78,7 @@ module PLSQL
       when 'NVARCHAR2', 'NCHAR'
         length = metadata[:char_length]
         "#{metadata[:data_type]}#{length && "(#{length})"}"
-      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT'
+      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT', 'XMLTYPE'
         metadata[:sql_type_name]
       else
         metadata[:data_type]
@@ -101,11 +103,13 @@ module PLSQL
 
       # subprogram_id column is available just from version 10g
       subprogram_id_column = (@schema.connection.database_version <=> [10, 2, 0, 2]) >= 0 ? 'subprogram_id' : 'NULL'
+      # defaulted is available just from version 11g
+      defaulted_column = (@schema.connection.database_version <=> [11, 0, 0, 0]) >= 0 ? 'defaulted' : 'NULL'
 
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
               data_type, in_out, data_length, data_precision, data_scale, char_used,
-              char_length, type_owner, type_name, type_subname
+              char_length, type_owner, type_name, type_subname, #{defaulted_column}
         FROM all_arguments
         WHERE object_id = :object_id
         AND owner = :owner
@@ -116,7 +120,7 @@ module PLSQL
 
         subprogram_id, object_name, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
-            char_length, type_owner, type_name, type_subname = r
+            char_length, type_owner, type_name, type_subname, defaulted = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -156,7 +160,8 @@ module PLSQL
           :type_owner => type_owner,
           :type_name => type_name,
           :type_subname => type_subname,
-          :sql_type_name => sql_type_name
+          :sql_type_name => sql_type_name,
+          :defaulted => defaulted
         }
         if tmp_table_name
           @tmp_table_names[overload] << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]
@@ -261,9 +266,28 @@ module PLSQL
     end
 
     def exec(*args, &block)
-      call = ProcedureCall.new(self, args)
-      call.exec(&block)
+      if defined? ActiveSupport::Notifications
+        ActiveSupport::Notifications.instrument("procedure_call.plsql", :procedure => self, :arguments => args) do |payload|
+          call = call_class.new(self, args)
+          payload[:sql] = call.sql
+
+          begin
+            call.exec(&block)
+          rescue Exception => e
+            # save original error object (:exception key stores only class_name and message)
+            payload[:error] = e
+            raise e
+            end
+          end
+      else
+          call = call_class.new(self, args)
+          call.exec(&block)
+      end
     end
 
+    def call_class
+      ProcedureCall
+    end
   end
+
 end

@@ -67,7 +67,7 @@ module PLSQL
       ) do |r|
         attr_name, position,
               data_type, data_length, data_precision, data_scale,
-              data_type_owner, data_type_mod, typecode = r
+              data_type_owner, _, typecode = r
         @attributes[attr_name.downcase.to_sym] = {
           :position => position && position.to_i,
           :data_type => data_type_owner && (typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT' ) || data_type,

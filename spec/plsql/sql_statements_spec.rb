@@ -21,7 +21,7 @@ describe "SQL statements /" do
         CREATE TABLE test_employees (
           employee_id   NUMBER(15),
           first_name    VARCHAR2(50),
-          last_name     VARCHAR2(50),
+          last_name     VARCHAR(50),
           hire_date     DATE
         )
       SQL
@@ -57,33 +57,33 @@ describe "SQL statements /" do
     end
 
     it "should select first result" do
-      plsql.select(:first, "SELECT * FROM test_employees WHERE employee_id = :employee_id",
-        @employees.first[:employee_id]).should == @employees.first
+      expect(plsql.select(:first, "SELECT * FROM test_employees WHERE employee_id = :employee_id",
+        @employees.first[:employee_id])).to eq(@employees.first)
     end
 
     it "should prefetch only one row when selecting first result" do
-      lambda {
+      expect {
         plsql.select(:first, "SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual")
-      }.should_not raise_error
+      }.not_to raise_error
     end
 
     it "should select one value" do
-      plsql.select_one("SELECT count(*) FROM test_employees").should == @employees.size
+      expect(plsql.select_one("SELECT count(*) FROM test_employees")).to eq(@employees.size)
     end
 
     it "should return nil when selecting non-existing one value" do
-      plsql.select_one("SELECT employee_id FROM test_employees WHERE 1=2").should be_nil
+      expect(plsql.select_one("SELECT employee_id FROM test_employees WHERE 1=2")).to be_nil
     end
 
     it "should prefetch only one row when selecting one value" do
-      lambda {
+      expect {
         plsql.select_one("SELECT 1 FROM dual UNION ALL SELECT 1/0 FROM dual")
-      }.should_not raise_error
+      }.not_to raise_error
     end
 
     it "should select all results" do
-      plsql.select(:all, "SELECT * FROM test_employees ORDER BY employee_id").should == @employees
-      plsql.select("SELECT * FROM test_employees ORDER BY employee_id").should == @employees
+      expect(plsql.select(:all, "SELECT * FROM test_employees ORDER BY employee_id")).to eq(@employees)
+      expect(plsql.select("SELECT * FROM test_employees ORDER BY employee_id")).to eq(@employees)
     end
 
   end

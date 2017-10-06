@@ -58,7 +58,7 @@ module PLSQL
       ) do |r|
         column_name, position,
               data_type, data_length, data_precision, data_scale, char_used,
-              data_type_owner, data_type_mod, typecode, nullable, data_default = r
+              data_type_owner, _, typecode, nullable, data_default = r
         # remove scale (n) from data_type (returned for TIMESTAMPs and INTERVALs)
         data_type.sub!(/\(\d+\)/,'')
         # store column metadata

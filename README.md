@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rsim/ruby-plsql.svg?branch=master)](https://travis-ci.org/rsim/ruby-plsql)
+
 ruby-plsql
 ==========
 
@@ -8,9 +10,9 @@ DESCRIPTION
 
 ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. It could be used both for accessing Oracle PL/SQL API procedures in legacy applications as well as it could be used to create PL/SQL unit tests using Ruby testing libraries.
 
-NUMBER, BINARY_INTEGER, PLS_INTEGER, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
+NUMBER, BINARY_INTEGER, PLS_INTEGER, NATURAL, NATURALN, POSITIVE, POSITIVEN, SIGNTYPE, SIMPLE_INTEGER, VARCHAR, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
 
-ruby-plsql supports Ruby 1.8.7, 1.9.3 and JRuby 1.6.7 implementations.
+ruby-plsql supports Ruby 1.8.7, 1.9.3, 2.1, 2.2, 2.3, 2.4 (ruby-oci8 2.2.3+ is needed for Ruby 2.4) and JRuby 1.6.7, 1.7.16, 9.0, 9.1 implementations.
 
 USAGE
 -----
@@ -59,6 +61,7 @@ plsql.logoff
 
 Look at RSpec tests under spec directory for more usage examples.
 
+Note: named arguments in procedures calls should be in lower case.
 
 ### Table operations:
 
@@ -69,7 +72,7 @@ ruby-plsql also provides simple API for select/insert/update/delete table operat
 employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
 plsql.employees.insert employee           # INSERT INTO employees VALUES (1, 'First', 'Last', ...)
 
-# insert many records 
+# insert many records
 employees = [employee1, employee2, ... ]  # array of many Hashes
 plsql.employees.insert employees
 
@@ -104,7 +107,7 @@ plsql.employees.delete(:employee_id => 1) # DELETE FROM employees WHERE employee
 # select from sequences
 plsql.employees_seq.nextval               # SELECT employees_seq.NEXTVAL FROM dual
 plsql.employees_seq.currval               # SELECT employees_seq.CURRVAL FROM dual
-
+```
 
 ### Usage with Rails:
 
@@ -115,6 +118,11 @@ plsql.activerecord_class = ActiveRecord::Base
 ```
 
 and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
+
+
+### Cheat Sheet:
+
+You may have a look at this [Cheat Sheet](http://cheatography.com/jgebal/cheat-sheets/ruby-plsql-cheat-sheet/) for instructions on how to use ruby-plsql
 
 INSTALLATION
 ------------
@@ -127,16 +135,72 @@ or include gem in Gemfile if using bundler.
 
 In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver to $JRUBY_HOME/lib (for JRuby).
 
-If you are using MRI 1.8 or 1.9 Ruby implementation then you need to install ruby-oci8 gem (version 2.0.x or 2.1.x)
+If you are using MRI 1.8, 1.9 or 2.x Ruby implementation then you need to install ruby-oci8 gem (version 2.0.x or 2.1.x)
 as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
 
-If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc6.jar for Java 6 or ojdbc5.jar for Java 5. And copy this file to one of these locations:
+If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc7.jar for Java 8 and 7, ojdbc6.jar for Java 6, 7, 8 or ojdbc5.jar for Java 5. You can refer [the support matrix](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-faq-090281.html#01_03) for details.
 
-* in `./lib` directory of Rails application and require it manually
-* in some directory which is in `PATH`
+And copy this file to one of these locations. JDBC driver will be searched in this order:
+
 * in `JRUBY_HOME/lib` directory
+* in `./lib` directory of Rails application
 * or include path to JDBC driver jar file in Java `CLASSPATH`
+* in some directory which is in `PATH`
 
+If you put multiple versions of JDBC driver in the same directory the higher version one will be used.
+
+Make sure to setup the following Oracle-specific environment variables properly
+
+* [NLS_LANG](http://www.orafaq.com/wiki/NLS_LANG) - preferred value `NLS_LANG=AMERICAN_AMERICA.AL32UTF8`
+* [ORA_SDTZ](http://docs.oracle.com/cd/E18283_01/server.112/e10729/ch4datetime.htm#CBBEEAFB) The setting should point a machine timezone like: `ORA_SDTZ=Europe/Riga`, otherwise Oracle by default uses a Fixed-offset timezone (like `03:00`) that is not daylight saving (DST) aware, which will lead to wrong translations of the timestamp values between Ruby code (DTS-aware) and Oracle session (non-DST-aware).
+* [ORACLE_HOME](http://www.orafaq.com/wiki/ORACLE_HOME)
+
+You may either alter your environment settings or set the values in file `spec/support/custom_config.rb`. Sample file `custom_config.rb.sample` shows how to do that.
+
+
+Make sure you use correct version of Oracle client for database you're connecting to. Otherwise you may encounter TimeZone errors like [this](http://stackoverflow.com/questions/7678485/oracle-ora-01805-on-oracle-11g-database)
+
+
+TESTS
+-----
+
+Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
+
+##### Prepare database
+
+* With local [Vagrant](https://www.vagrantup.com) based Oracle XE database.
+
+    Download Oracle XE database ```oracle-xe-11.2.0-1.0.x86_64.rpm.zip``` from [Oracle Home page](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html) and put it into project home directory.
+
+    From project home directory run ```vagrant up``` command to build fully functioning **Centos 6.6** virtual machine with installed Oracle XE database.
+
+* Within other Oracle Database create Oracle database schema for test purposes.
+
+        SQL> CREATE USER hr IDENTIFIED BY hr;
+        SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
+
+        SQL> CREATE USER arunit IDENTIFIED BY arunit;
+        SQL> GRANT create session TO arunit;
+
+##### Prepare dependencies
+
+* Install bundler with
+
+        gem install bundler
+
+* Install necessary gems with
+
+        bundle install
+
+##### Run tests
+
+* Run tests with local Vagrant based Oracle XE database
+
+        USE_VM_DATABASE=Y rake spec
+
+* Run tests with other Oracle database
+
+        rake spec
 
 LINKS
 -----
@@ -154,13 +218,14 @@ CONTRIBUTORS
 * Wiehann Matthysen
 * Dayle Larson
 * Yasuo Honda
+* Yavor Nikolov
 
 LICENSE
 -------
 
 (The MIT License)
 
-Copyright (c) 2008-2012 Raimonds Simanovskis
+Copyright (c) 2008-2014 Raimonds Simanovskis
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

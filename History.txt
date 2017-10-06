@@ -1,3 +1,62 @@
+==
+
+* Internal (development) improvements
+  * Migrate from jeweler to juwelier
+
+== 0.6.0 2016-03-13
+* Improvements
+  * Add support for records with boolean attributes - as input and output parameters and as return values of stored procedures
+  * Add support for VARCHAR, SIMPLE_INTEGER+subtypes
+  * Accessing to package objects via #[]
+  * Add XMLTYPE support for procedures and functions
+  * New procedure argument metadata option 'defaulted'
+  * Use current_schema in PLSQL::Schema#schema_name
+  * Add support for ruby-oci8 ~> 2.1 (was ~> 2.1.2) - as ruby-oci8 2.2.x is already available
+  * Add support for Oracle enhanced adapter 1.6.x
+* Bug fixes
+  * Time-zone configuration support fixes and improvements. Support for Session timezone from ENV['TZ'] removed
+  * Fix thread safety problem in PLSQL::OCIConnection::Cursor
+  * Fix: JRuby PLS_INTEGER, BINARY_INTEGER NULL value becomes 0
+* Internal (development) improvements
+  * Travis CI setup for the project
+  * Allow reporting of Unit Tests on Jenkins CI with "RspecJunitFormatter"
+  * Vagrant box CentOS version updated to v7.2
+  * Unit tests setup/teardown fixes for procedure_spec
+* Documentation
+  * Add reference to ruby-plsql cheat sheet
+
+== 0.5.3 2015-05-07
+
+* Improvements
+  * Support for ActiveRecord 4.2
+* Docs
+  * README formatting fixed (Usage with Rails section)
+* Bug fixes
+  * Force to convert String type value as real string to avoid error when used JRuby and for VARCHAR2 parameter is assigned non String value
+  * Fix dbms_output functionality in case when database exception is raised
+* Internal (development) improvements
+  * Vagrant box provisioning added
+
+== 0.5.2 2014-10-23
+
+* Bug fixes
+  * Use all_procedures.object_type only if Oracle versions < 11g (regression in 0.5.1, affecting Oracle < 11g)
+
+== 0.5.1 2014-10-12
+
+* Improvements
+  * Support for Oracle Ehnanced Adapter 1.5 and ActiveRecord 4.1, 4.2
+  * Oracle 12c support
+  * Better diagnostics output when ruby-oci8 initialization fails
+* Bug fixes
+  * Support for ruby-oci8 2.1.2+ preventing segfaults
+  * Multi-thread support (applies to oci8 connections)
+* Internal (development) improvements
+  * Tests database connection enhancements (eazy connect syntax, allow service name != db name)
+  * Tests migrated to rspec 3
+  * Tests coverage migrated from rcov to simplecov
+  * README update with how to run tests
+
 == 0.5.0 2012-04-16
 
 * Improvements

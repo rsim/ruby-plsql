@@ -5,21 +5,31 @@ begin
   # ojdbc6.jar or ojdbc5.jar file should be in JRUBY_HOME/lib or should be in ENV['PATH'] or load path
 
   java_version = java.lang.System.getProperty("java.version")
-  ojdbc_jar = if java_version =~ /^1.5/
-    "ojdbc5.jar"
-  elsif java_version >= '1.6'
-    "ojdbc6.jar"
+  ojdbc_jars = if java_version =~ /^1.5/
+    %w(ojdbc5.jar)
+  elsif java_version =~ /^1.6/
+    %w(ojdbc6.jar)
+  elsif java_version >= "1.7"
+    # Oracle 11g client ojdbc6.jar is also compatible with Java 1.7
+    # Oracle 12c client provides new ojdbc7.jar
+    %w(ojdbc7.jar ojdbc6.jar)
   else
-    nil
+    []
   end
 
-  unless ENV_JAVA['java.class.path'] =~ Regexp.new(ojdbc_jar)
+  if ENV_JAVA["java.class.path"] !~ Regexp.new(ojdbc_jars.join("|"))
     # On Unix environment variable should be PATH, on Windows it is sometimes Path
-    env_path = (ENV["PATH"] || ENV["Path"] || '').split(/[:;]/)
+    env_path = (ENV["PATH"] || ENV["Path"] || "").split(File::PATH_SEPARATOR)
     # Look for JDBC driver at first in lib subdirectory (application specific JDBC file version)
     # then in Ruby load path and finally in environment PATH
-    if ojdbc_jar_path = ['./lib'].concat($LOAD_PATH).concat(env_path).find{|d| File.exists?(File.join(d,ojdbc_jar))}
-      require File.join(ojdbc_jar_path,ojdbc_jar)
+    ["./lib"].concat($LOAD_PATH).concat(env_path).detect do |dir|
+      # check any compatible JDBC driver in the priority order
+      ojdbc_jars.any? do |ojdbc_jar|
+        if File.exists?(file_path = File.join(dir, ojdbc_jar))
+          require file_path
+          true
+        end
+      end
     end
   end
 
@@ -32,24 +42,25 @@ begin
 
 rescue LoadError, NameError
   # JDBC driver is unavailable.
-  raise LoadError, "ERROR: ruby-plsql could not load Oracle JDBC driver. Please install #{ojdbc_jar || "Oracle JDBC"} library."
+  raise LoadError, "ERROR: ruby-plsql could not load Oracle JDBC driver. Please install #{ojdbc_jars.empty? ? "Oracle JDBC" : ojdbc_jars.join(' or ') } library."
 end
 
 module PLSQL
   class JDBCConnection < Connection  #:nodoc:
 
     def self.create_raw(params)
-      url = if ENV['TNS_ADMIN'] && params[:database] && !params[:host] && !params[:url]
-        "jdbc:oracle:thin:@#{params[:database]}"
+      database = params[:database]
+      url = if ENV['TNS_ADMIN'] && database && !params[:host] && !params[:url]
+        "jdbc:oracle:thin:@#{database}"
       else
-        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}:#{params[:database]}"
+        database = ":#{database}" unless database.match(/^(\:|\/)/)
+        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}#{database}"
       end
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
 
     def set_time_zone(time_zone=nil)
-      time_zone ||= ENV['TZ']
-      raw_connection.setSessionTimeZone(time_zone)
+      raw_connection.setSessionTimeZone(time_zone) if time_zone
     end
 
     def logoff
@@ -106,15 +117,15 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type), 
+          if ['TABLE','VARRAY','OBJECT','XMLTYPE'].include?(metadata[:data_type])
+            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type),
               metadata[:sql_type_name])
           else
             @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
           end
         end
       end
-      
+
       def exec
         @statement.execute
       end
@@ -126,9 +137,9 @@ module PLSQL
       def close
         @statement.close
       end
-      
+
       private
-      
+
       def bind_param_index(key)
         return key if key.kind_of? Integer
         key = ":#{key.to_s}" unless key.to_s =~ /^:/
@@ -239,7 +250,7 @@ module PLSQL
       java.sql.Types::NVARCHAR => String,
       java.sql.Types::LONGVARCHAR => String,
       java.sql.Types::NUMERIC => BigDecimal,
-      java.sql.Types::INTEGER => Fixnum,
+      java.sql.Types::INTEGER => Integer,
       java.sql.Types::DATE => Time,
       java.sql.Types::TIMESTAMP => Time,
       Java::oracle.jdbc.OracleTypes::TIMESTAMPTZ => Time,
@@ -276,7 +287,7 @@ module PLSQL
       when :Time, :'Java::JavaSql::Timestamp'
         stmt.send("setTimestamp#{key && "AtName"}", key || i, value)
       when :NilClass
-        if ['TABLE', 'VARRAY', 'OBJECT'].include?(metadata[:data_type])
+        if ['TABLE', 'VARRAY', 'OBJECT','XMLTYPE'].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
             metadata[:sql_type_name])
         elsif metadata[:data_type] == 'REF CURSOR'
@@ -299,11 +310,11 @@ module PLSQL
         raise ArgumentError, "Don't know how to bind variable with type #{type_symbol}"
       end
     end
-    
+
     def get_bind_variable(stmt, i, type)
       case type.to_s.to_sym
       when :Fixnum, :Bignum, :Integer
-        stmt.getInt(i)
+        stmt.getObject(i)
       when :Float
         stmt.getFloat(i)
       when :BigDecimal
@@ -335,13 +346,13 @@ module PLSQL
     end
 
     def result_set_to_ruby_data_type(column_type, column_type_name)
-      
+
     end
 
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
-      when "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
+      when "VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
         [String, data_length || 32767]
       when "CLOB", "NCLOB"
         [Java::OracleSql::CLOB, nil]
@@ -349,8 +360,8 @@ module PLSQL
         [Java::OracleSql::BLOB, nil]
       when "NUMBER"
         [BigDecimal, nil]
-      when "PLS_INTEGER", "BINARY_INTEGER"
-        [Fixnum, nil]
+      when "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"
+        [Integer, nil]
       when "DATE"
         [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
@@ -369,8 +380,10 @@ module PLSQL
     def ruby_value_to_ora_value(value, type=nil, metadata={})
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :String
+      when :Integer
         value
+      when :String
+        value.to_s
       when :BigDecimal
         case value
         when TrueClass
@@ -519,7 +532,7 @@ module PLSQL
     end
 
     private
-    
+
     def java_date(value)
       value && Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S"))
     end
@@ -536,7 +549,7 @@ module PLSQL
       # return BigDecimal instead of Float to avoid rounding errors
       num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end
-    
+
   end
-  
+
 end

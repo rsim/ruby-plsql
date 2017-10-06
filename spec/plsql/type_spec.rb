@@ -80,7 +80,7 @@ describe "Type" do
       CREATE OR REPLACE TYPE t_employee AS OBJECT (
         employee_id   NUMBER(15),
         first_name    VARCHAR2(50),
-        last_name     VARCHAR2(50),
+        last_name     VARCHAR(50),
         hire_date     DATE,
         address       t_address,
         phones        t_phones
@@ -103,15 +103,15 @@ describe "Type" do
   describe "find" do
 
     it "should find existing type" do
-      PLSQL::Type.find(plsql, :t_employee).should_not be_nil
+      expect(PLSQL::Type.find(plsql, :t_employee)).not_to be_nil
     end
 
     it "should not find nonexisting type" do
-      PLSQL::Type.find(plsql, :qwerty123456).should be_nil
+      expect(PLSQL::Type.find(plsql, :qwerty123456)).to be_nil
     end
 
     it "should find existing type in schema" do
-      plsql.t_employee.should be_a(PLSQL::Type)
+      expect(plsql.t_employee).to be_a(PLSQL::Type)
     end
 
   end
@@ -127,11 +127,11 @@ describe "Type" do
     end
 
     it "should find synonym to type" do
-      PLSQL::Type.find(plsql, :t_employee_synonym).should_not be_nil
+      expect(PLSQL::Type.find(plsql, :t_employee_synonym)).not_to be_nil
     end
 
     it "should find type using synonym in schema" do
-      plsql.t_employee_synonym.should be_a(PLSQL::Type)
+      expect(plsql.t_employee_synonym).to be_a(PLSQL::Type)
     end
 
   end
@@ -139,11 +139,11 @@ describe "Type" do
   describe "public synonym" do
 
     it "should find public synonym to type" do
-      PLSQL::Type.find(plsql, :xmltype).should_not be_nil
+      expect(PLSQL::Type.find(plsql, :xmltype)).not_to be_nil
     end
 
     it "should find type using public synonym in schema" do
-      plsql.xmltype.should be_a(PLSQL::Type)
+      expect(plsql.xmltype).to be_a(PLSQL::Type)
     end
 
   end
@@ -151,11 +151,11 @@ describe "Type" do
   describe "typecode" do
 
     it "should get typecode of object type" do
-      plsql.t_employee.typecode.should == "OBJECT"
+      expect(plsql.t_employee.typecode).to eq("OBJECT")
     end
 
     it "should get typecode of collection type" do
-      plsql.t_phones.typecode.should == "COLLECTION"
+      expect(plsql.t_phones.typecode).to eq("COLLECTION")
     end
 
   end
@@ -163,11 +163,11 @@ describe "Type" do
   describe "attributes" do
 
     it "should get attribute names" do
-      plsql.t_employee.attribute_names.should == [:employee_id, :first_name, :last_name, :hire_date, :address, :phones]
+      expect(plsql.t_employee.attribute_names).to eq([:employee_id, :first_name, :last_name, :hire_date, :address, :phones])
     end
 
     it "should get attributes metadata" do
-      plsql.t_employee.attributes.should == {
+      expect(plsql.t_employee.attributes).to eq({
         :employee_id =>
           {:position=>1, :data_type=>"NUMBER", :data_length=>nil, :data_precision=>15, :data_scale=>0, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
         :first_name =>
@@ -180,7 +180,7 @@ describe "Type" do
           {:position=>5, :data_type=>"OBJECT", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>"HR", :type_name=>"T_ADDRESS", :sql_type_name=>"HR.T_ADDRESS"},
         :phones => 
           {:position=>6, :data_type=>"TABLE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>"HR", :type_name=>"T_PHONES", :sql_type_name=>"HR.T_PHONES"}
-      }
+      })
     end
 
   end
@@ -193,37 +193,37 @@ describe "Type" do
     end
 
     it "should get new object instance using named parameters" do
-      plsql.t_phone(@phone_attributes).should == @phone_attributes
+      expect(plsql.t_phone(@phone_attributes)).to eq(@phone_attributes)
     end
 
     it "should be an ObjectInstance" do
-      plsql.t_phone(@phone_attributes).should be_a(PLSQL::ObjectInstance)
+      expect(plsql.t_phone(@phone_attributes)).to be_a(PLSQL::ObjectInstance)
     end
 
     it "should get new object instance using sequential parameters" do
-      plsql.t_phone(@phone_attributes[:type], @phone_attributes[:phone_number]).should == @phone_attributes
+      expect(plsql.t_phone(@phone_attributes[:type], @phone_attributes[:phone_number])).to eq(@phone_attributes)
     end
 
     it "should get new object instance using custom constructor" do
-      plsql.t_address(@full_address).should == @address_attributes
-      plsql.t_address(:p_full_address => @full_address).should == @address_attributes
+      expect(plsql.t_address(@full_address)).to eq(@address_attributes)
+      expect(plsql.t_address(:p_full_address => @full_address)).to eq(@address_attributes)
     end
 
     it "should get new object instance using default constructor when custom constructor exists" do
-      plsql.t_address(@address_attributes).should == @address_attributes
-      plsql.t_address(@address_attributes[:street], @address_attributes[:city], @address_attributes[:country]).should == @address_attributes
+      expect(plsql.t_address(@address_attributes)).to eq(@address_attributes)
+      expect(plsql.t_address(@address_attributes[:street], @address_attributes[:city], @address_attributes[:country])).to eq(@address_attributes)
     end
 
     it "should get new empty collection of objects instance" do
-      plsql.t_phones.new.should == []
-      plsql.t_phones([]).should == []
+      expect(plsql.t_phones.new).to eq([])
+      expect(plsql.t_phones([])).to eq([])
     end
 
     it "should get new collection of objects instances" do
       phone = plsql.t_phone(@phone_attributes)
-      plsql.t_phones([phone, phone]).should == [phone, phone]
-      plsql.t_phones(phone, phone).should == [phone, phone]
-      plsql.t_phones(@phone_attributes, @phone_attributes).should == [phone, phone]
+      expect(plsql.t_phones([phone, phone])).to eq([phone, phone])
+      expect(plsql.t_phones(phone, phone)).to eq([phone, phone])
+      expect(plsql.t_phones(@phone_attributes, @phone_attributes)).to eq([phone, phone])
     end
 
   end
@@ -235,46 +235,47 @@ describe "Type" do
     end
 
     it "should call object instance member function without parameters" do
-      plsql.t_address(@address_attributes).display_address.should == @full_address
+      expect(plsql.t_address(@address_attributes).display_address).to eq(@full_address)
     end
 
     it "should call object instance member function with parameters" do
-      plsql.t_address(@address_attributes).display_address(',').should == @full_address
+      expect(plsql.t_address(@address_attributes).display_address(',')).to eq(@full_address)
     end
 
     it "should call object instance member function with named parameters" do
-      plsql.t_address(@address_attributes).display_address(:p_separator => ',').should == @full_address
+      expect(plsql.t_address(@address_attributes).display_address(:p_separator => ',')).to eq(@full_address)
     end
 
     it "should call object overloaded instance member function" do
-      plsql.t_address(@address_attributes).display_address(true).should == @full_address.upcase
-      plsql.t_address(@address_attributes).display_address(true, ',').should == @full_address.upcase
+      expect(plsql.t_address(@address_attributes).display_address(true)).to eq(@full_address.upcase)
+      expect(plsql.t_address(@address_attributes).display_address(true, ',')).to eq(@full_address.upcase)
     end
 
     it "should call object instance member function with explicit first SELF parameter" do
-      plsql.t_address.display_address(@address_attributes, ',').should == @full_address
+      expect(plsql.t_address.display_address(@address_attributes, ',')).to eq(@full_address)
     end
 
     it "should call object instance member function with explicit named SELF parameter" do
-      plsql.t_address.display_address(:self => @address_attributes, :p_separator => ',').should == @full_address
+      expect(plsql.t_address.display_address(:self => @address_attributes, :p_separator => ',')).to eq(@full_address)
     end
 
     it "should call object instance member procedure" do
       other_country = "Other"
-      plsql.t_address(@address_attributes).set_country(other_country).should == @address_attributes.merge(:country => other_country)
+      expect(plsql.t_address(@address_attributes).set_country(other_country)).to eq(@address_attributes.merge(:country => other_country))
     end
 
     it "should call object instance member procedure with output parameters" do
       other_country = "Other"
-      plsql.t_address(@address_attributes).set_country2(other_country).should == 
+      expect(plsql.t_address(@address_attributes).set_country2(other_country)).to eq(
         [@address_attributes.merge(:country => other_country),
         {:x_display_address => "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{other_country}"}]
+      )
     end
 
     it "should raise error if invalid member procedure is called" do
-      lambda do
+      expect do
         plsql.t_address(@address_attributes).invalid_procedure
-      end.should raise_error(ArgumentError)
+      end.to raise_error(ArgumentError)
     end
 
   end
@@ -286,17 +287,17 @@ describe "Type" do
     end
 
     it "should call object type static function" do
-      plsql.t_address.create_address(@full_address).should == @address_attributes
+      expect(plsql.t_address.create_address(@full_address)).to eq(@address_attributes)
     end
 
     it "should call object type static function with named parameters" do
-      plsql.t_address.create_address(:p_full_address => @full_address).should == @address_attributes
+      expect(plsql.t_address.create_address(:p_full_address => @full_address)).to eq(@address_attributes)
     end
 
     it "should raise error if invalid static procedure is called" do
-      lambda do
+      expect do
         plsql.t_address.invalid_procedure
-      end.should raise_error(ArgumentError)
+      end.to raise_error(ArgumentError)
     end
 
   end

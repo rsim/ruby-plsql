@@ -1,0 +1,62 @@
+sudo: required
+
+env:
+  global:
+    - ORACLE_COOKIE=sqldev
+    - ORACLE_FILE=oracle11g/xe/oracle-xe-11.2.0-1.0.x86_64.rpm.zip
+    - ORACLE_HOME=/u01/app/oracle/product/11.2.0/xe
+    - NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+    - ORACLE_BASE=/u01/app/oracle
+    - LD_LIBRARY_PATH=$ORACLE_HOME/lib
+    - PATH=$PATH:$ORACLE_HOME/jdbc/lib
+    - DATABASE_VERSION=11.2.0.2
+    - ORACLE_SID=XE
+    - DATABASE_NAME=XE
+    - ORA_SDTZ='Europe/London' #Needed as a client parameter
+    - TZ='Europe/London'       #Needed as a DB Server parameter
+
+before_install:
+  - chmod +x .travis/oracle/download.sh
+  - chmod +x .travis/oracle/install.sh
+  - chmod +x .travis/setup_accounts.sh
+  - gem install bundler
+
+install:
+  - .travis/oracle/download.sh
+  - .travis/oracle/install.sh
+  - .travis/setup_accounts.sh
+  - bundle install --without=development
+
+language: ruby
+rvm:
+  - 2.4.1
+  - 2.3.3
+  - 2.2.6
+  - 1.9.3
+  - jruby-1.7.26
+  - jruby-9.0.5.0
+  - jruby-9.1.8.0
+
+gemfile:
+    - Gemfile
+    - gemfiles/Gemfile.activerecord-4.1
+    - gemfiles/Gemfile.activerecord-4.2
+    - gemfiles/Gemfile.activerecord-5.0
+    - gemfiles/Gemfile.activerecord-5.1
+
+matrix:
+    exclude:
+      - gemfile: Gemfile
+        rvm: 1.9.3
+      - gemfile: Gemfile
+        rvm: jruby-1.7.26
+      - gemfile: gemfiles/Gemfile.activerecord-5.0
+        rvm: 1.9.3
+      - gemfile: gemfiles/Gemfile.activerecord-5.0
+        rvm: jruby-1.7.26
+      - gemfile: gemfiles/Gemfile.activerecord-5.1
+        rvm: 1.9.3
+      - gemfile: gemfiles/Gemfile.activerecord-5.1
+        rvm: jruby-1.7.26
+      - gemfile: gemfiles/Gemfile.activerecord-5.1
+        rvm: jruby-9.0.5.0

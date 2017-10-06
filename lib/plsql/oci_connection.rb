@@ -68,14 +68,17 @@ module PLSQL
     class Cursor #:nodoc:
       include Connection::CursorCommon
 
-      # stack of open cursors
-      @@open_cursors = []
       attr_reader :raw_cursor
+
+      # stack of open cursors per thread
+      def self.open_cursors
+        Thread.current[:plsql_oci_cursor_stack] ||= []
+      end
 
       def initialize(conn, raw_cursor)
         @connection = conn
         @raw_cursor = raw_cursor
-        @@open_cursors.push self
+        self.class.open_cursors.push self
       end
 
       def self.new_from_parse(conn, sql)
@@ -125,7 +128,7 @@ module PLSQL
 
       def close
         # close all cursors that were created after this one
-        while (open_cursor = @@open_cursors.pop) && !open_cursor.equal?(self)
+        while (open_cursor = self.class.open_cursors.pop) && !open_cursor.equal?(self)
           open_cursor.close_raw_cursor
         end
         close_raw_cursor
@@ -144,19 +147,19 @@ module PLSQL
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
-      when "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
+      when "VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR2", "NCHAR"
         [String, data_length || 32767]
       when "CLOB", "NCLOB"
         [OCI8::CLOB, nil]
       when "BLOB"
         [OCI8::BLOB, nil]
-      when "NUMBER", "PLS_INTEGER", "BINARY_INTEGER"
+      when "NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"
         [OraNumber, nil]
       when "DATE"
         [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
-      when "TABLE", "VARRAY", "OBJECT"
+      when "TABLE", "VARRAY", "OBJECT", "XMLTYPE"
         # create Ruby class for collection
         klass = OCI8::Object::Base.get_class_by_typename(metadata[:sql_type_name])
         unless klass
@@ -174,13 +177,11 @@ module PLSQL
     def ruby_value_to_ora_value(value, type=nil)
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :BigDecimal, :String
+      when :Integer, :BigDecimal, :String
         value
       when :OraNumber
         # pass parameters as OraNumber to avoid rounding errors
         case value
-        when Bignum
-          OraNumber.new(value.to_s)
         when BigDecimal
           OraNumber.new(value.to_s('F'))
         when TrueClass
@@ -215,7 +216,7 @@ module PLSQL
             raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
             elem_list = value.map do |elem|
               if (attr_tdo = tdo.coll_attr.typeinfo)
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
               else
                 attr_type = elem.class
               end
@@ -234,7 +235,7 @@ module PLSQL
               case attr.datatype
               when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
                 # nested object type or collection
-                attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
                 object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
               end
             end
