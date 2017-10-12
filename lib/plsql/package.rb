@@ -48,8 +48,8 @@ module PLSQL
     end
 
     def [](object_name)
-      object_name = object_name.to_s.downcase
-      @package_objects[object_name] ||= [Procedure, Variable].inject(nil) do |res, object_type|
+      object_name = object_name.to_s
+      @package_objects[object_name] ||= [Procedure, Variable, PipelinedFunction].inject(nil) do |res, object_type|
         res || object_type.find(@schema, object_name, @package, @override_schema_name)
       end
     end
@@ -61,7 +61,7 @@ module PLSQL
       method.chop! if (assignment = method[/=$/])
 
       case (object = self[method])
-        when Procedure
+        when Procedure, PipelinedFunction
           if assignment
             raise ArgumentError, "Cannot assign value to package procedure '#{method.upcase}'"
           end

@@ -8,6 +8,7 @@ module PLSQL
             FROM all_procedures p, all_objects o
             WHERE p.owner = :owner
               AND p.object_name = :object_name
+              AND p.pipelined    = 'NO'
               AND o.owner = p.owner
               AND o.object_name = p.object_name
               AND o.object_type in ('PROCEDURE', 'FUNCTION')",
@@ -24,6 +25,7 @@ module PLSQL
               AND o.object_type IN ('PROCEDURE','FUNCTION')
               AND o.owner = p.owner
               AND o.object_name = p.object_name
+              AND p.pipelined    = 'NO'
               ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
             schema.schema_name, procedure.to_s.upcase))
           new(schema, row[1], nil, row[0], row[2])
@@ -37,6 +39,7 @@ module PLSQL
             WHERE p.owner = :owner
               AND p.object_name = :object_name
               AND p.procedure_name = :procedure_name
+              AND p.pipelined = 'NO'
               AND o.owner = p.owner
               AND o.object_name = p.object_name
               AND o.object_type = 'PACKAGE'",
@@ -263,10 +266,28 @@ module PLSQL
     end
 
     def exec(*args, &block)
-      call = ProcedureCall.new(self, args)
-      call.exec(&block)
+      if defined? ActiveSupport::Notifications
+        ActiveSupport::Notifications.instrument("procedure_call.plsql", :procedure => self, :arguments => args) do |payload|
+          call = call_class.new(self, args)
+          payload[:sql] = call.sql
+
+          begin
+            call.exec(&block)
+          rescue Exception => e
+            # save original error object (:exception key stores only class_name and message)
+            payload[:error] = e
+            raise e
+            end
+          end
+      else
+          call = call_class.new(self, args)
+          call.exec(&block)
+      end
     end
 
+    def call_class
+      ProcedureCall
+    end
   end
 
 end

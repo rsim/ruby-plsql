@@ -20,7 +20,6 @@ module PLSQL
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @original_schema = original_schema
-      @dbms_output_stream = nil
     end
 
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
@@ -42,7 +41,7 @@ module PLSQL
     # or
     #
     #   plsql.connection = java.sql.DriverManager.getConnection(
-    #     "jdbc:oracle:thin:@#{database_host}:#{database_port}/#{database_service_name}",
+    #     "jdbc:oracle:thin:@#{database_host}:#{database_port}:#{database_name}",
     #     database_user, database_password)
     #
     def connection=(conn)
@@ -91,7 +90,7 @@ module PLSQL
     # Current Oracle schema name
     def schema_name
       return nil unless connection
-      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','current_schema') FROM dual")[0]
+      @schema_name ||= select_first("SELECT SYS_CONTEXT('userenv','session_user') FROM dual")[0]
     end
 
     # Default timezone to which database values will be converted - :utc or :local
@@ -195,12 +194,22 @@ module PLSQL
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
-          "SELECT o.object_type, o.object_id
+          "SELECT o.object_type, o.object_id,
+                (CASE
+                 WHEN o.object_type = 'FUNCTION' THEN
+                  (SELECT p.pipelined
+                   FROM   all_procedures p
+                   WHERE  p.owner = o.owner
+                   AND    p.object_name = o.object_name
+                   AND    p.object_type = 'FUNCTION')
+                 ELSE 'NO'
+                 END) pipelined
           FROM all_objects o
           WHERE owner = :owner AND object_name = :object_name
           AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
           object_schema_name, object_name)
-        object_type, object_id = row
+        object_type, object_id, pipelined = row
+
         case object_type
         when 'PROCEDURE', 'FUNCTION'
           if (connection.database_version <=> [11, 1, 0, 0]) >= 0
@@ -216,7 +225,12 @@ module PLSQL
                 _errors(object_schema_name, object_name, object_type)}"
             end
           end
-          Procedure.new(self, name, nil, override_schema_name, object_id)
+
+          if pipelined == 'NO'
+            Procedure.new(self, name, nil, override_schema_name, object_id)
+          else
+            PipelinedFunction.new(self, name, nil, override_schema_name, object_id)
+          end
         when 'PACKAGE'
           Package.new(self, name, override_schema_name)
         when 'TABLE'
