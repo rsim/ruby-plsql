@@ -1,15 +1,15 @@
 require 'spec_helper'
 
 describe "Schema" do
-  
+
   it "should create Schema object" do
     expect(plsql.class).to eq(PLSQL::Schema)
   end
-  
+
 end
 
 describe "Schema connection" do
-  
+
   before(:each) do
     @conn = get_connection
   end
@@ -31,7 +31,7 @@ describe "Schema connection" do
     plsql(:hr).connection = @conn
     expect(plsql(:hr).connection.raw_connection).to eq(@conn)
   end
-  
+
   it "should return schema name" do
     plsql.connection = @conn
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)

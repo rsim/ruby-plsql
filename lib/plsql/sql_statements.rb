@@ -16,7 +16,7 @@ module PLSQL
     end
 
     # Select :first or :all values. Examples:
-    # 
+    #
     #   plsql.select :first, "SELECT * FROM employees WHERE employee_id = :1", 1
     #   plsql.select :all, "SELECT * FROM employees ORDER BY employee_id"
     def select(*args)
@@ -43,9 +43,9 @@ module PLSQL
 
     # Execute COMMIT in current database session.
     # Use beforehand
-    # 
+    #
     #   plsql.connection.autocommit = false
-    # 
+    #
     # to turn off automatic commits after each statement.
     def commit
       @connection.commit
@@ -53,9 +53,9 @@ module PLSQL
 
     # Execute ROLLBACK in current database session.
     # Use beforehand
-    # 
+    #
     #   plsql.connection.autocommit = false
-    # 
+    #
     # to turn off automatic commits after each statement.
     def rollback
       @connection.rollback
@@ -64,9 +64,9 @@ module PLSQL
     # Create SAVEPOINT with specified name. Later use +rollback_to+ method to roll changes back
     # to specified savepoint.
     # Use beforehand
-    # 
+    #
     #   plsql.connection.autocommit = false
-    # 
+    #
     # to turn off automatic commits after each statement.
     def savepoint(name)
       execute "SAVEPOINT #{name}"
@@ -74,9 +74,9 @@ module PLSQL
 
     # Roll back changes to specified savepoint (that was created using +savepoint+ method)
     # Use beforehand
-    # 
+    #
     #   plsql.connection.autocommit = false
-    # 
+    #
     # to turn off automatic commits after each statement.
     def rollback_to(name)
       execute "ROLLBACK TO #{name}"
@@ -84,4 +84,3 @@ module PLSQL
 
   end
 end
-

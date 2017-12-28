@@ -17,12 +17,12 @@ describe "Parameter type mapping /" do
         END test_uppercase;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_uppercase"
       plsql.logoff
     end
-  
+
     it "should find existing procedure" do
       expect(PLSQL::Procedure.find(plsql, :test_uppercase)).not_to be_nil
     end
@@ -46,7 +46,7 @@ describe "Parameter type mapping /" do
     it "should raise error if wrong named argument is passed" do
       expect { plsql.test_uppercase(:p_string2 => 'xxx') }.to raise_error(ArgumentError)
     end
-  
+
     it "should execute function with schema name specified" do
       expect(plsql.hr.test_uppercase('xxx')).to eq('XXX')
     end
@@ -76,12 +76,12 @@ describe "Parameter type mapping /" do
         END test_sum;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_sum"
       plsql.logoff
     end
-  
+
     it "should get #{ora_data_type} variable type mapped to #{class_.to_s}" do
       expect(plsql.test_sum(num1, num2)).to be_a class_
     end
@@ -140,7 +140,7 @@ describe "Parameter type mapping /" do
   end
 
   describe "Function with date parameters" do
-  
+
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
       plsql.execute <<-SQL
@@ -153,7 +153,7 @@ describe "Parameter type mapping /" do
         END test_date;
       SQL
     end
-  
+
     before(:each) do
       plsql.default_timezone = :local
     end
@@ -162,7 +162,7 @@ describe "Parameter type mapping /" do
       plsql.execute "DROP FUNCTION test_date"
       plsql.logoff
     end
-  
+
     it "should process Time parameters" do
       now = Time.local(2008,8,12,14,28,0)
       expect(plsql.test_date(now)).to eq(now + 60*60*24)
@@ -180,7 +180,7 @@ describe "Parameter type mapping /" do
       expect(result.class).to eq(Time)
       expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
-  
+
     it "should process old DateTime parameters" do
       now = DateTime.civil(1901,1,1,12,0,0,plsql.local_timezone_offset)
       result = plsql.test_date(now)
@@ -194,14 +194,14 @@ describe "Parameter type mapping /" do
       expect(result.class).to eq(Time)
       expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
-  
+
     it "should process old Date parameters" do
       now = Date.new(1901,1,1)
       result = plsql.test_date(now)
       expect(result.class).to eq(Time)
       expect(result).to eq(Time.parse((now + 1).strftime("%c")))
     end
-  
+
     it "should process nil date parameter as NULL" do
       expect(plsql.test_date(nil)).to be_nil
     end
@@ -221,12 +221,12 @@ describe "Parameter type mapping /" do
         END test_timestamp;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_timestamp"
       plsql.logoff
     end
-  
+
     it "should process timestamp parameters" do
       # now = Time.now
       now = Time.local(2008,8,12,14,28,0)
@@ -295,12 +295,12 @@ describe "Parameter type mapping /" do
         END test_copy;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP PROCEDURE test_copy"
       plsql.logoff
     end
-  
+
     it "should return hash with output parameters" do
       expect(plsql.test_copy("abc", nil, nil)).to eq({ :p_to => "abc", :p_to_double => "abcabc" })
     end
@@ -378,12 +378,12 @@ describe "Parameter type mapping /" do
       SQL
 
     end
-  
+
     after(:all) do
       plsql.execute "DROP PACKAGE test_package2"
       plsql.logoff
     end
-    
+
     it "should find existing package" do
       expect(PLSQL::Package.find(plsql, :test_package2)).not_to be_nil
     end
@@ -413,7 +413,7 @@ describe "Parameter type mapping /" do
     it "should raise exception if procedure cannot be found based on number of arguments" do
       expect { plsql.test_package2.test_procedure() }.to raise_error(/wrong number or types of arguments/i)
     end
-  
+
     it "should find procedure based on types of arguments" do
       expect(plsql.test_package2.test_procedure(111, nil)).to eq({:p_result => '111'})
     end
@@ -444,12 +444,12 @@ describe "Parameter type mapping /" do
         END test_copy_function;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_copy_function"
       plsql.logoff
     end
-  
+
     it "should return array with return value and hash of output parameters" do
       expect(plsql.test_copy_function("abc", nil, nil)).to eq([3, { :p_to => "abc", :p_to_double => "abcabc" }])
     end
@@ -485,7 +485,7 @@ describe "Parameter type mapping /" do
         END test_proc_no_params;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_no_params"
       plsql.execute "DROP PROCEDURE test_proc_no_params"
@@ -531,7 +531,7 @@ describe "Parameter type mapping /" do
           CURSOR clob_cur IS
           SELECT clob_col
           FROM test_clob_table;
-          
+
           v_dummy  CLOB;
         BEGIN
           DELETE FROM test_clob_table;
@@ -540,19 +540,19 @@ describe "Parameter type mapping /" do
           OPEN clob_cur;
           FETCH clob_cur INTO v_dummy;
           CLOSE clob_cur;
-          
+
           RETURN v_dummy;
         END test_clob_insert;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION test_clob"
       plsql.execute "DROP FUNCTION test_clob_insert"
       plsql.execute "DROP TABLE test_clob_table"
       plsql.logoff
     end
-  
+
     it "should find existing procedure" do
       expect(PLSQL::Procedure.find(plsql, :test_clob)).not_to be_nil
     end
@@ -573,14 +573,14 @@ describe "Parameter type mapping /" do
         text = ''
         expect(plsql.test_clob_insert(text)).to be_nil
       end
-    
+
     else
 
       it "should execute function with empty string and return empty string" do
         text = ''
         expect(plsql.test_clob(text)).to eq(text)
       end
-    
+
     end
 
     it "should execute function with nil and return nil" do
@@ -590,7 +590,7 @@ describe "Parameter type mapping /" do
     it "should execute function which inserts the CLOB parameter into a table with nil and return nil" do
       expect(plsql.test_clob_insert(nil)).to be_nil
     end
-    
+
   end
 
   describe "Procedrue with CLOB parameter and return value" do
@@ -606,12 +606,12 @@ describe "Parameter type mapping /" do
         END test_clob_proc;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP PROCEDURE test_clob_proc"
       plsql.logoff
     end
-  
+
     it "should find existing procedure" do
       expect(PLSQL::Procedure.find(plsql, :test_clob_proc)).not_to be_nil
     end
@@ -635,12 +635,12 @@ describe "Parameter type mapping /" do
         END test_blob_proc;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP PROCEDURE test_blob_proc"
       plsql.logoff
     end
-  
+
     it "should find existing procedure" do
       expect(PLSQL::Procedure.find(plsql, :test_blob_proc)).not_to be_nil
     end
@@ -716,7 +716,7 @@ describe "Parameter type mapping /" do
           IS
             CURSOR employees_cur
             IS
-              SELECT 
+              SELECT
                 null employee_id,
                 null first_name,
                 null last_name,
@@ -819,7 +819,7 @@ describe "Parameter type mapping /" do
         expect(plsql.test_full_name(@p_employee.merge :xxx => 'xxx')).to eq('Second Last')
       end.to raise_error(ArgumentError)
     end
-    
+
     it "should return empty table of records" do
       expect(plsql.test_record.test_empty_records()).to eq([])
     end
@@ -1047,7 +1047,7 @@ describe "Parameter type mapping /" do
           END IF;
         END;
       SQL
-      
+
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_increment(p_numbers IN t_numbers, p_increment_by IN NUMBER DEFAULT 1)
           RETURN t_numbers
@@ -1262,7 +1262,7 @@ describe "Parameter type mapping /" do
     it "should execute function with number array parameter" do
       expect(plsql.test_sum([1,2,3,4])).to eq(10)
     end
-    
+
     it "should return number array return value" do
       expect(plsql.test_increment([1,2,3,4], 1)).to eq([2,3,4,5])
     end
@@ -2003,7 +2003,7 @@ describe "Synonyms /" do
   end
 
   describe "Local synonym to function" do
-  
+
     before(:all) do
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION hr.test_uppercase
@@ -2016,12 +2016,12 @@ describe "Synonyms /" do
       SQL
       plsql.execute "CREATE SYNONYM test_synonym FOR hr.test_uppercase"
     end
-  
+
     after(:all) do
       plsql.execute "DROP SYNONYM test_synonym"
       plsql.execute "DROP FUNCTION hr.test_uppercase"
     end
-  
+
     it "should find synonym to function" do
       expect(PLSQL::Procedure.find(plsql, :test_synonym)).not_to be_nil
     end
@@ -2033,7 +2033,7 @@ describe "Synonyms /" do
   end
 
   describe "Public synonym to function" do
-  
+
     before(:all) do
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION hr.test_ora_login_user
@@ -2044,11 +2044,11 @@ describe "Synonyms /" do
         END test_ora_login_user;
       SQL
     end
-  
+
     after(:all) do
       plsql.execute "DROP FUNCTION hr.test_ora_login_user"
     end
-  
+
     it "should find public synonym to function" do
       expect(PLSQL::Procedure.find(plsql, :ora_login_user)).not_to be_nil
     end

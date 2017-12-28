@@ -1,0 +1,14 @@
+# rubocop 0.51.0 requires Ruby 2.1
+# We should not use cops only available for Ruby 2.1 or later
+# since ruby-plsql itself supports Ruby 1.9.3
+AllCops:
+  TargetRubyVersion: 2.1
+  DisabledByDefault: true
+
+# No trailing whitespace.
+Layout/TrailingWhitespace:
+  Enabled: true
+
+# Blank lines should not have any spaces.
+Layout/TrailingBlankLines:
+  Enabled: true

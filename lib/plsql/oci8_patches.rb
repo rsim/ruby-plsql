@@ -21,5 +21,5 @@ if OCI8::VERSION == "2.0.3" &&
     end
     private :datetime_to_array_without_timestamp_patch, :datetime_to_array
   end
-  
+
 end
