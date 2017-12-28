@@ -20,6 +20,9 @@ describe "Package variables /" do
           char_variable char(10) ;
           nvarchar2_variable NVARCHAR2(50);
           nchar_variable NCHAR(10);
+          varchar_with_spaces1 VARCHAR2 (50) := 'a string';
+          varchar_with_spaces2 VARCHAR2( 50 ):= 'a string';
+          varchar_with_spaces3 VARCHAR2 (50  BYTE ) := 'a string';
         END;
       SQL
       plsql.execute <<-SQL
@@ -97,6 +100,14 @@ describe "Package variables /" do
     it "should set and get NCHAR variable" do
       plsql.test_package.nchar_variable = 'abc'
       expect(plsql.test_package.nchar_variable).to eq('abc' + ' '*7)
+    end
+
+    it 'can use package variables with spaces in size' do
+      aggregate_failures 'for different formats' do
+        expect(plsql.test_package.varchar_with_spaces1).to eq('a string')
+        expect(plsql.test_package.varchar_with_spaces2).to eq('a string')
+        expect(plsql.test_package.varchar_with_spaces3).to eq('a string')
+      end
     end
 
   end
