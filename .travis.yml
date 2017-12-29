@@ -37,6 +37,8 @@ rvm:
   - jruby-1.7.27
   - jruby-9.0.5.0
   - jruby-9.1.15.0
+  - ruby-head
+  - jruby-head
 
 gemfile:
     - Gemfile
@@ -68,3 +70,6 @@ matrix:
         rvm: jruby-1.7.27
       - gemfile: gemfiles/Gemfile.activerecord-5.2
         rvm: jruby-9.0.5.0
+    allow_failures:
+      - rvm: ruby-head
+      - rvm: jruby-head
