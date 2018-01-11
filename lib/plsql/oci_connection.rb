@@ -47,7 +47,7 @@ module PLSQL
     def rollback
       raw_connection.rollback
     end
-    
+
     def autocommit?
       raw_connection.autocommit?
     end
@@ -104,7 +104,7 @@ module PLSQL
         ora_value = @connection.ruby_value_to_ora_value(value, type)
         @raw_cursor.bind_param(arg, ora_value, type, length)
       end
-      
+
       def exec(*bindvars)
         @raw_cursor.exec(*bindvars)
       end
@@ -291,12 +291,12 @@ module PLSQL
     end
 
     def database_version
-      @database_version ||= (version = raw_connection.oracle_server_version) && 
+      @database_version ||= (version = raw_connection.oracle_server_version) &&
         [version.major, version.minor, version.update, version.patch]
     end
 
     private
-    
+
     def raw_oci_connection
       if raw_connection.is_a? OCI8
         raw_connection
@@ -306,12 +306,12 @@ module PLSQL
         raw_connection.instance_variable_get(:@connection)
       end
     end
-    
+
     def ora_number_to_ruby_number(num)
       # return BigDecimal instead of Float to avoid rounding errors
       num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
     end
-    
+
     def ora_date_to_ruby_date(val)
       case val
       when DateTime
@@ -336,5 +336,5 @@ module PLSQL
     end
 
   end
-  
+
 end

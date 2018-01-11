@@ -66,7 +66,7 @@ module PLSQL
     def jdbc?
       @raw_driver == :jdbc
     end
-    
+
     def logoff #:nodoc:
       # Rollback any uncommited transactions
       rollback

@@ -131,37 +131,37 @@ module PLSQL
     #   plsql.employees.all
     #   plsql.employees.all(:order_by => :employee_id)
     #   plsql.employees.all("WHERE employee_id > :employee_id", 5)
-    # 
+    #
     def all(sql='', *bindvars)
       select(:all, sql, *bindvars)
     end
 
     # Select first table record using optional conditions. Examples:
-    # 
+    #
     #   plsql.employees.first
     #   plsql.employees.first(:employee_id => 1)
     #   plsql.employees.first("WHERE employee_id = 1")
     #   plsql.employees.first("WHERE employee_id = :employee_id", 1)
-    # 
+    #
     def first(sql='', *bindvars)
       select(:first, sql, *bindvars)
     end
 
     # Count table records using optional conditions. Examples:
-    # 
+    #
     #   plsql.employees.count
     #   plsql.employees.count("WHERE employee_id > :employee_id", 5)
-    # 
+    #
     def count(sql='', *bindvars)
       select(:count, sql, *bindvars)
     end
 
     # Insert record or records in table. Examples:
-    # 
+    #
     #   employee = { :employee_id => 1, :first_name => 'First', :last_name => 'Last', :hire_date => Time.local(2000,01,31) }
     #   plsql.employees.insert employee
     #   # => INSERT INTO employees VALUES (1, 'First', 'Last', ...)
-    # 
+    #
     #   employees = [employee1, employee2, ... ]  # array of many Hashes
     #   plsql.employees.insert employees
     #
@@ -180,15 +180,15 @@ module PLSQL
     end
 
     # Insert record or records in table using array of values. Examples:
-    # 
+    #
     #   # with values for all columns
     #   plsql.employees.insert_values [1, 'First', 'Last', Time.local(2000,01,31)]
     #   # => INSERT INTO employees VALUES (1, 'First', 'Last', ...)
-    # 
+    #
     #   # with values for specified columns
     #   plsql.employees.insert_values [:employee_id, :first_name, :last_name], [1, 'First', 'Last']
     #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
-    # 
+    #
     #   # with values for many records
     #   plsql.employees.insert_values [:employee_id, :first_name, :last_name], [1, 'First', 'Last'], [2, 'Second', 'Last']
     #   # => INSERT INTO employees (employee_id, first_name, last_name) VALUES (1, 'First', 'Last')
@@ -211,14 +211,14 @@ module PLSQL
     end
 
     # Update table records using optional conditions. Example:
-    # 
+    #
     #   plsql.employees.update(:first_name => 'Second', :where => {:employee_id => 1})
     #   # => UPDATE employees SET first_name = 'Second' WHERE employee_id = 1
     #
     def update(params)
       raise ArgumentError, "Only Hash parameter can be passed to table update method" unless params.is_a?(Hash)
       where = params.delete(:where)
-      
+
       table_proc = TableProcedure.new(@schema, self, :update)
       table_proc.add_set_arguments(params)
       table_proc.add_where_arguments(where) if where
@@ -227,10 +227,10 @@ module PLSQL
     end
 
     # Delete table records using optional conditions. Example:
-    # 
+    #
     #   plsql.employees.delete(:employee_id => 1)
     #   # => DELETE FROM employees WHERE employee_id = 1
-    # 
+    #
     def delete(sql_params='', *bindvars)
       delete_sql = "DELETE FROM \"#{@schema_name}\".\"#{@table_name}\" "
       case sql_params
