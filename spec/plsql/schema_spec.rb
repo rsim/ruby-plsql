@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe "Schema" do
 
@@ -37,7 +37,7 @@ describe "Schema connection" do
     expect(plsql.schema_name).to eq(DATABASE_USERS_AND_PASSWORDS[0][0].upcase)
   end
 
-  it 'should match altered current_schema in database session' do
+  it "should match altered current_schema in database session" do
     plsql.connection = @conn
     expected_current_schema = DATABASE_USERS_AND_PASSWORDS[1][0]
     plsql.execute "ALTER SESSION set current_schema=#{expected_current_schema}"
@@ -78,39 +78,38 @@ describe "Connection with connect!" do
   end
 
   it "should connect with username, password, host, port and database name" do
-    plsql.connect! @username, @password, :host => @host, :port => @port, :database => @database_service
+    plsql.connect! @username, @password, host: @host, port: @port, database: @database_service
     expect(plsql.connection).not_to be_nil
     expect(plsql.schema_name).to eq(@username.upcase)
   end
 
   it "should connect with username, password, host, database name and default port" do
     skip "Non-default port used for test database" unless @port == 1521
-    plsql.connect! @username, @password, :host => @host, :database => @database_service
+    plsql.connect! @username, @password, host: @host, database: @database_service
     expect(plsql.connection).not_to be_nil
     expect(plsql.schema_name).to eq(@username.upcase)
   end
 
   it "should not connect with wrong port number" do
     expect {
-      plsql.connect! @username, @password, :host => @host, :port => 9999, :database => @database
+      plsql.connect! @username, @password, host: @host, port: 9999, database: @database
     }.to raise_error(/ORA-12541|could not establish the connection/)
   end
 
   it "should connect with one Hash parameter" do
-    plsql.connect! :username => @username, :password => @password, :database => @database
+    plsql.connect! username: @username, password: @password, database: @database
     expect(plsql.connection).not_to be_nil
     expect(plsql.schema_name).to eq(@username.upcase)
   end
 
   it "should set session time zone from ORA_SDTZ environment variable" do
     plsql.connect! @username, @password, @database
-    expect(plsql.connection.time_zone).to eq(ENV['ORA_SDTZ'])
-  end if ENV['ORA_SDTZ']
-
+    expect(plsql.connection.time_zone).to eq(ENV["ORA_SDTZ"])
+  end if ENV["ORA_SDTZ"]
 
   it "should set session time zone from :time_zone parameter" do
-    plsql.connect! :username => @username, :password => @password, :database => @database, :time_zone => 'EET'
-    expect(plsql.connection.time_zone).to eq('EET')
+    plsql.connect! username: @username, password: @password, database: @database, time_zone: "EET"
+    expect(plsql.connection.time_zone).to eq("EET")
   end
 
 end
@@ -133,7 +132,7 @@ describe "Named Schema" do
   end
 
   it "should return schema name" do
-    expect(plsql.hr.schema_name).to eq('HR')
+    expect(plsql.hr.schema_name).to eq("HR")
   end
 
   it "should not find named schema if specified twice" do
@@ -147,8 +146,8 @@ describe "Schema commit and rollback" do
     plsql.connection = @conn = get_connection
     plsql.connection.autocommit = false
     plsql.execute "CREATE TABLE test_commit (dummy VARCHAR2(100))"
-    @data = {:dummy => 'test'}
-    @data2 = {:dummy => 'test2'}
+    @data = { dummy: "test" }
+    @data2 = { dummy: "test2" }
   end
 
   after(:all) do
@@ -175,10 +174,10 @@ describe "Schema commit and rollback" do
 
   it "should create savepoint and rollback to savepoint" do
     plsql.test_commit.insert @data
-    plsql.savepoint 'test'
+    plsql.savepoint "test"
     plsql.test_commit.insert @data2
     expect(plsql.test_commit.all).to eq([@data, @data2])
-    plsql.rollback_to 'test'
+    plsql.rollback_to "test"
     expect(plsql.test_commit.all).to eq([@data])
   end
 
@@ -207,7 +206,7 @@ describe "ActiveRecord connection" do
   end
 
   it "should return schema name" do
-    expect(plsql.schema_name).to eq('HR')
+    expect(plsql.schema_name).to eq("HR")
   end
 
   it "should use ActiveRecord::Base.default_timezone as default" do
@@ -221,12 +220,12 @@ describe "ActiveRecord connection" do
 
   it "should accept inherited ActiveRecord class" do
     plsql.activerecord_class = TestBaseModel
-    expect(plsql.schema_name).to eq('HR')
+    expect(plsql.schema_name).to eq("HR")
   end
 
   it "should accept subclass of inherited ActiveRecord class" do
     plsql.activerecord_class = TestModel
-    expect(plsql.schema_name).to eq('HR')
+    expect(plsql.schema_name).to eq("HR")
   end
 
   it "should safely close cursors in threaded environment" do

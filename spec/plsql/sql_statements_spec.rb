@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe "SQL statements /" do
   before(:all) do
@@ -35,10 +35,10 @@ describe "SQL statements /" do
       SQL
       @employees = (1..10).map do |i|
         {
-          :employee_id => i,
-          :first_name => "First #{i}",
-          :last_name => "Last #{i}",
-          :hire_date => Time.local(2000,01,i)
+          employee_id: i,
+          first_name: "First #{i}",
+          last_name: "Last #{i}",
+          hire_date: Time.local(2000, 01, i)
         }
       end
       plsql.connection.prefetch_rows = 100

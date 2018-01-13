@@ -18,17 +18,16 @@ require "plsql/oci8_patches"
 
 # check ruby-oci8 version
 required_oci8_version = [2, 0, 3]
-oci8_version_ints = OCI8::VERSION.scan(/\d+/).map{|s| s.to_i}
+oci8_version_ints = OCI8::VERSION.scan(/\d+/).map { |s| s.to_i }
 if (oci8_version_ints <=> required_oci8_version) < 0
   raise LoadError, "ERROR: ruby-oci8 version #{OCI8::VERSION} is too old. Please install ruby-oci8 version #{required_oci8_version.join('.')} or later."
 end
 
 module PLSQL
   class OCIConnection < Connection #:nodoc:
-
     def self.create_raw(params)
       connection_string = if params[:host]
-        "//#{params[:host]}:#{params[:port]||1521}/#{params[:database]}"
+        "//#{params[:host]}:#{params[:port] || 1521}/#{params[:database]}"
       else
         params[:database]
       end
@@ -86,7 +85,7 @@ module PLSQL
         self.new(conn, raw_cursor)
       end
 
-      def self.new_from_query(conn, sql, bindvars=[], options={})
+      def self.new_from_query(conn, sql, bindvars = [], options = {})
         cursor = new_from_parse(conn, sql)
         if prefetch_rows = options[:prefetch_rows]
           cursor.prefetch_rows = prefetch_rows
@@ -115,11 +114,11 @@ module PLSQL
 
       def fetch
         row = @raw_cursor.fetch
-        row && row.map{|v| @connection.ora_value_to_ruby_value(v)}
+        row && row.map { |v| @connection.ora_value_to_ruby_value(v) }
       end
 
       def fields
-        @fields ||= @raw_cursor.get_col_names.map{|c| c.downcase.to_sym}
+        @fields ||= @raw_cursor.get_col_names.map { |c| c.downcase.to_sym }
       end
 
       def close_raw_cursor
@@ -133,14 +132,13 @@ module PLSQL
         end
         close_raw_cursor
       end
-
     end
 
     def parse(sql)
       Cursor.new_from_parse(self, sql)
     end
 
-    def cursor_from_query(sql, bindvars=[], options={})
+    def cursor_from_query(sql, bindvars = [], options = {})
       Cursor.new_from_query(self, sql, bindvars, options)
     end
 
@@ -174,7 +172,7 @@ module PLSQL
       end
     end
 
-    def ruby_value_to_ora_value(value, type=nil)
+    def ruby_value_to_ora_value(value, type = nil)
       type ||= value.class
       case type.to_s.to_sym
       when :Integer, :BigDecimal, :String
@@ -183,7 +181,7 @@ module PLSQL
         # pass parameters as OraNumber to avoid rounding errors
         case value
         when BigDecimal
-          OraNumber.new(value.to_s('F'))
+          OraNumber.new(value.to_s("F"))
         when TrueClass
           OraNumber.new(1)
         when FalseClass
@@ -216,7 +214,7 @@ module PLSQL
             raise ArgumentError, "You should pass Array value for collection type parameter" unless value.is_a?(Array)
             elem_list = value.map do |elem|
               if (attr_tdo = tdo.coll_attr.typeinfo)
-                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr_tdo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(data_type: "OBJECT", sql_type_name: attr_tdo.typename)
               else
                 attr_type = elem.class
               end
@@ -225,7 +223,7 @@ module PLSQL
             # construct collection value
             # TODO: change setting instance variable to appropriate ruby-oci8 method call when available
             collection = type.new(raw_oci_connection)
-            collection.instance_variable_set('@attributes', elem_list)
+            collection.instance_variable_set("@attributes", elem_list)
             collection
           else # object type
             raise ArgumentError, "You should pass Hash value for object type parameter" unless value.is_a?(Hash)
@@ -235,7 +233,7 @@ module PLSQL
               case attr.datatype
               when OCI8::TDO::ATTR_NAMED_TYPE, OCI8::TDO::ATTR_NAMED_COLLECTION
                 # nested object type or collection
-                attr_type, _ = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
+                attr_type, _ = plsql_to_ruby_data_type(data_type: "OBJECT", sql_type_name: attr.typeinfo.typename)
                 object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
               end
             end
@@ -264,7 +262,7 @@ module PLSQL
       when OCI8::Object::Base
         tdo = raw_oci_connection.get_tdo_by_class(value.class)
         if tdo.is_collection?
-          value.to_ary.map{|e| ora_value_to_ruby_value(e)}
+          value.to_ary.map { |e| ora_value_to_ruby_value(e) }
         else # object type
           tdo.attributes.inject({}) do |hash, attr|
             hash[attr.name] = ora_value_to_ruby_value(value.instance_variable_get(:@attributes)[attr.name])
@@ -279,7 +277,7 @@ module PLSQL
     end
 
     def describe_synonym(schema_name, synonym_name)
-      if schema_name == 'PUBLIC'
+      if schema_name == "PUBLIC"
         full_name = synonym_name.to_s
       else
         full_name = "#{schema_name}.#{synonym_name}"
@@ -297,44 +295,42 @@ module PLSQL
 
     private
 
-    def raw_oci_connection
-      if raw_connection.is_a? OCI8
-        raw_connection
-      # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
-      # in this case we need to pass original OCI8 connection
-      else
-        raw_connection.instance_variable_get(:@connection)
-      end
-    end
-
-    def ora_number_to_ruby_number(num)
-      # return BigDecimal instead of Float to avoid rounding errors
-      num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
-    end
-
-    def ora_date_to_ruby_date(val)
-      case val
-      when DateTime
-        # similar implementation as in oracle_enhanced adapter
-        begin
-          Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.min, val.sec)
-        rescue
-          offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
-          DateTime.civil(val.year, val.month, val.day, val.hour, val.min, val.sec, offset)
+      def raw_oci_connection
+        if raw_connection.is_a? OCI8
+          raw_connection
+        # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
+        # in this case we need to pass original OCI8 connection
+        else
+          raw_connection.instance_variable_get(:@connection)
         end
-      when OraDate
-        # similar implementation as in oracle_enhanced adapter
-        begin
-          Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.minute, val.second)
-        rescue
-          offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
-          DateTime.civil(val.year, val.month, val.day, val.hour, val.minute, val.second, offset)
-        end
-      else
-        val
       end
-    end
 
+      def ora_number_to_ruby_number(num)
+        # return BigDecimal instead of Float to avoid rounding errors
+        num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
+      end
+
+      def ora_date_to_ruby_date(val)
+        case val
+        when DateTime
+          # similar implementation as in oracle_enhanced adapter
+          begin
+            Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.min, val.sec)
+          rescue
+            offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
+            DateTime.civil(val.year, val.month, val.day, val.hour, val.min, val.sec, offset)
+          end
+        when OraDate
+          # similar implementation as in oracle_enhanced adapter
+          begin
+            Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.minute, val.second)
+          rescue
+            offset = plsql.default_timezone.to_sym == :local ? plsql.local_timezone_offset : 0
+            DateTime.civil(val.year, val.month, val.day, val.hour, val.minute, val.second, offset)
+          end
+        else
+          val
+        end
+      end
   end
-
 end

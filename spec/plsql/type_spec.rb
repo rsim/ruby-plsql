@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe "Type" do
   before(:all) do
@@ -167,28 +167,22 @@ describe "Type" do
     end
 
     it "should get attributes metadata" do
-      expect(plsql.t_employee.attributes).to eq({
-        :employee_id =>
-          {:position=>1, :data_type=>"NUMBER", :data_length=>nil, :data_precision=>15, :data_scale=>0, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :first_name =>
-          {:position=>2, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :last_name =>
-          {:position=>3, :data_type=>"VARCHAR2", :data_length=>50, :data_precision=>nil, :data_scale=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :hire_date =>
-          {:position=>4, :data_type=>"DATE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>nil, :type_name=>nil, :sql_type_name=>nil},
-        :address =>
-          {:position=>5, :data_type=>"OBJECT", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>"HR", :type_name=>"T_ADDRESS", :sql_type_name=>"HR.T_ADDRESS"},
-        :phones =>
-          {:position=>6, :data_type=>"TABLE", :data_length=>nil, :data_precision=>nil, :data_scale=>nil, :type_owner=>"HR", :type_name=>"T_PHONES", :sql_type_name=>"HR.T_PHONES"}
-      })
+      expect(plsql.t_employee.attributes).to eq(
+        employee_id:           { position: 1, data_type: "NUMBER", data_length: nil, data_precision: 15, data_scale: 0, type_owner: nil, type_name: nil, sql_type_name: nil },
+        first_name:           { position: 2, data_type: "VARCHAR2", data_length: 50, data_precision: nil, data_scale: nil, type_owner: nil, type_name: nil, sql_type_name: nil },
+        last_name:           { position: 3, data_type: "VARCHAR2", data_length: 50, data_precision: nil, data_scale: nil, type_owner: nil, type_name: nil, sql_type_name: nil },
+        hire_date:           { position: 4, data_type: "DATE", data_length: nil, data_precision: nil, data_scale: nil, type_owner: nil, type_name: nil, sql_type_name: nil },
+        address:           { position: 5, data_type: "OBJECT", data_length: nil, data_precision: nil, data_scale: nil, type_owner: "HR", type_name: "T_ADDRESS", sql_type_name: "HR.T_ADDRESS" },
+        phones:           { position: 6, data_type: "TABLE", data_length: nil, data_precision: nil, data_scale: nil, type_owner: "HR", type_name: "T_PHONES", sql_type_name: "HR.T_PHONES" }
+      )
     end
 
   end
 
   describe "object instance" do
     before(:all) do
-      @phone_attributes = {:type => 'mobile', :phone_number => '123456'}
-      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @phone_attributes = { type: "mobile", phone_number: "123456" }
+      @address_attributes = { street: "Street", city: "City", country: "Country" }
       @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
     end
 
@@ -206,7 +200,7 @@ describe "Type" do
 
     it "should get new object instance using custom constructor" do
       expect(plsql.t_address(@full_address)).to eq(@address_attributes)
-      expect(plsql.t_address(:p_full_address => @full_address)).to eq(@address_attributes)
+      expect(plsql.t_address(p_full_address: @full_address)).to eq(@address_attributes)
     end
 
     it "should get new object instance using default constructor when custom constructor exists" do
@@ -230,7 +224,7 @@ describe "Type" do
 
   describe "member procedures" do
     before(:all) do
-      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @address_attributes = { street: "Street", city: "City", country: "Country" }
       @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
     end
 
@@ -239,36 +233,36 @@ describe "Type" do
     end
 
     it "should call object instance member function with parameters" do
-      expect(plsql.t_address(@address_attributes).display_address(',')).to eq(@full_address)
+      expect(plsql.t_address(@address_attributes).display_address(",")).to eq(@full_address)
     end
 
     it "should call object instance member function with named parameters" do
-      expect(plsql.t_address(@address_attributes).display_address(:p_separator => ',')).to eq(@full_address)
+      expect(plsql.t_address(@address_attributes).display_address(p_separator: ",")).to eq(@full_address)
     end
 
     it "should call object overloaded instance member function" do
       expect(plsql.t_address(@address_attributes).display_address(true)).to eq(@full_address.upcase)
-      expect(plsql.t_address(@address_attributes).display_address(true, ',')).to eq(@full_address.upcase)
+      expect(plsql.t_address(@address_attributes).display_address(true, ",")).to eq(@full_address.upcase)
     end
 
     it "should call object instance member function with explicit first SELF parameter" do
-      expect(plsql.t_address.display_address(@address_attributes, ',')).to eq(@full_address)
+      expect(plsql.t_address.display_address(@address_attributes, ",")).to eq(@full_address)
     end
 
     it "should call object instance member function with explicit named SELF parameter" do
-      expect(plsql.t_address.display_address(:self => @address_attributes, :p_separator => ',')).to eq(@full_address)
+      expect(plsql.t_address.display_address(self: @address_attributes, p_separator: ",")).to eq(@full_address)
     end
 
     it "should call object instance member procedure" do
       other_country = "Other"
-      expect(plsql.t_address(@address_attributes).set_country(other_country)).to eq(@address_attributes.merge(:country => other_country))
+      expect(plsql.t_address(@address_attributes).set_country(other_country)).to eq(@address_attributes.merge(country: other_country))
     end
 
     it "should call object instance member procedure with output parameters" do
       other_country = "Other"
       expect(plsql.t_address(@address_attributes).set_country2(other_country)).to eq(
-        [@address_attributes.merge(:country => other_country),
-        {:x_display_address => "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{other_country}"}]
+        [@address_attributes.merge(country: other_country),
+        { x_display_address: "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{other_country}" }]
       )
     end
 
@@ -282,7 +276,7 @@ describe "Type" do
 
   describe "static procedures" do
     before(:all) do
-      @address_attributes = {:street => 'Street', :city => 'City', :country => 'Country'}
+      @address_attributes = { street: "Street", city: "City", country: "Country" }
       @full_address = "#{@address_attributes[:street]}, #{@address_attributes[:city]}, #{@address_attributes[:country]}"
     end
 
@@ -291,7 +285,7 @@ describe "Type" do
     end
 
     it "should call object type static function with named parameters" do
-      expect(plsql.t_address.create_address(:p_full_address => @full_address)).to eq(@address_attributes)
+      expect(plsql.t_address.create_address(p_full_address: @full_address)).to eq(@address_attributes)
     end
 
     it "should raise error if invalid static procedure is called" do

@@ -47,10 +47,9 @@ end
 
 module PLSQL
   class JDBCConnection < Connection  #:nodoc:
-
     def self.create_raw(params)
       database = params[:database]
-      url = if ENV['TNS_ADMIN'] && database && !params[:host] && !params[:url]
+      url = if ENV["TNS_ADMIN"] && database && !params[:host] && !params[:url]
         "jdbc:oracle:thin:@#{database}"
       else
         database = ":#{database}" unless database.match(/^(\:|\/)/)
@@ -59,7 +58,7 @@ module PLSQL
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
 
-    def set_time_zone(time_zone=nil)
+    def set_time_zone(time_zone = nil)
       raw_connection.setSessionTimeZone(time_zone) if time_zone
     end
 
@@ -100,7 +99,6 @@ module PLSQL
     end
 
     class CallableStatement #:nodoc:
-
       def initialize(conn, sql)
         @sql = sql
         @connection = conn
@@ -117,11 +115,11 @@ module PLSQL
         if metadata[:in_out] =~ /OUT/
           @out_types[arg] = type || ora_value.class
           @out_index[arg] = bind_param_index(arg)
-          if ['TABLE','VARRAY','OBJECT','XMLTYPE'].include?(metadata[:data_type])
-            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value,type),
+          if ["TABLE", "VARRAY", "OBJECT", "XMLTYPE"].include?(metadata[:data_type])
+            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value, type),
               metadata[:sql_type_name])
           else
-            @statement.registerOutParameter(@out_index[arg],@connection.get_java_sql_type(ora_value,type))
+            @statement.registerOutParameter(@out_index[arg], @connection.get_java_sql_type(ora_value, type))
           end
         end
       end
@@ -140,11 +138,11 @@ module PLSQL
 
       private
 
-      def bind_param_index(key)
-        return key if key.kind_of? Integer
-        key = ":#{key.to_s}" unless key.to_s =~ /^:/
-        @params.index(key)+1
-      end
+        def bind_param_index(key)
+          return key if key.kind_of? Integer
+          key = ":#{key.to_s}" unless key.to_s =~ /^:/
+          @params.index(key) + 1
+        end
     end
 
     class Cursor #:nodoc:
@@ -160,11 +158,11 @@ module PLSQL
         @column_count = @metadata.getColumnCount
         @column_type_names = [nil] # column numbering starts at 1
         (1..@column_count).each do |i|
-          @column_type_names << {:type_name => @metadata.getColumnTypeName(i), :sql_type => @metadata.getColumnType(i)}
+          @column_type_names << { type_name: @metadata.getColumnTypeName(i), sql_type: @metadata.getColumnType(i) }
         end
       end
 
-      def self.new_from_query(conn, sql, bindvars=[], options={})
+      def self.new_from_query(conn, sql, bindvars = [], options = {})
         stmt = conn.prepare_statement(sql, *bindvars)
         if prefetch_rows = options[:prefetch_rows]
           stmt.setRowPrefetch(prefetch_rows)
@@ -204,14 +202,14 @@ module PLSQL
       CallableStatement.new(self, sql)
     end
 
-    def cursor_from_query(sql, bindvars=[], options={})
+    def cursor_from_query(sql, bindvars = [], options = {})
       Cursor.new_from_query(self, sql, bindvars, options)
     end
 
     def prepare_statement(sql, *bindvars)
       stmt = raw_connection.prepareStatement(sql)
       bindvars.each_with_index do |bv, i|
-        set_bind_variable(stmt, i+1, ruby_value_to_ora_value(bv))
+        set_bind_variable(stmt, i + 1, ruby_value_to_ora_value(bv))
       end
       stmt
     end
@@ -219,7 +217,7 @@ module PLSQL
     def prepare_call(sql, *bindvars)
       stmt = raw_connection.prepareCall(sql)
       bindvars.each_with_index do |bv, i|
-        set_bind_variable(stmt, i+1, bv)
+        set_bind_variable(stmt, i + 1, bv)
       end
       stmt
     end
@@ -266,8 +264,8 @@ module PLSQL
       RUBY_CLASS_TO_SQL_TYPE[type || value.class] || java.sql.Types::VARCHAR
     end
 
-    def set_bind_variable(stmt, i, value, type=nil, length=nil, metadata={})
-      key = i.kind_of?(Integer) ? nil : i.to_s.gsub(':','')
+    def set_bind_variable(stmt, i, value, type = nil, length = nil, metadata = {})
+      key = i.kind_of?(Integer) ? nil : i.to_s.gsub(":", "")
       type_symbol = (!value.nil? && type ? type : value.class).to_s.to_sym
       case type_symbol
       when :Fixnum, :Bignum, :Integer
@@ -287,10 +285,10 @@ module PLSQL
       when :Time, :'Java::JavaSql::Timestamp'
         stmt.send("setTimestamp#{key && "AtName"}", key || i, value)
       when :NilClass
-        if ['TABLE', 'VARRAY', 'OBJECT','XMLTYPE'].include?(metadata[:data_type])
+        if ["TABLE", "VARRAY", "OBJECT", "XMLTYPE"].include?(metadata[:data_type])
           stmt.send("setNull#{key && "AtName"}", key || i, get_java_sql_type(value, type),
             metadata[:sql_type_name])
-        elsif metadata[:data_type] == 'REF CURSOR'
+        elsif metadata[:data_type] == "REF CURSOR"
           # TODO: cannot bind NULL value to cursor parameter, getting error
           # java.sql.SQLException: Unsupported feature: sqlType=-10
           # Currently do nothing and assume that NULL values will not be passed to IN parameters
@@ -346,7 +344,6 @@ module PLSQL
     end
 
     def result_set_to_ruby_data_type(column_type, column_type_name)
-
     end
 
     def plsql_to_ruby_data_type(metadata)
@@ -377,7 +374,7 @@ module PLSQL
       end
     end
 
-    def ruby_value_to_ora_value(value, type=nil, metadata={})
+    def ruby_value_to_ora_value(value, type = nil, metadata = {})
       type ||= value.class
       case type.to_s.to_sym
       when :Integer
@@ -429,9 +426,9 @@ module PLSQL
           elem_list = value.map do |elem|
             case elem_type
             when Java::oracle.jdbc.OracleTypes::ARRAY
-              ruby_value_to_ora_value(elem, Java::OracleSql::ARRAY, :sql_type_name => elem_type_name)
+              ruby_value_to_ora_value(elem, Java::OracleSql::ARRAY, sql_type_name: elem_type_name)
             when Java::oracle.jdbc.OracleTypes::STRUCT
-              ruby_value_to_ora_value(elem, Java::OracleSql::STRUCT, :sql_type_name => elem_type_name)
+              ruby_value_to_ora_value(elem, Java::OracleSql::STRUCT, sql_type_name: elem_type_name)
             else
               ruby_value_to_ora_value(elem)
             end
@@ -445,7 +442,7 @@ module PLSQL
           struct_metadata = descriptor.getMetaData
           struct_fields = (1..descriptor.getLength).inject({}) do |hash, i|
             hash[struct_metadata.getColumnName(i).downcase.to_sym] =
-              {:type => struct_metadata.getColumnType(i), :type_name => struct_metadata.getColumnTypeName(i)}
+              { type: struct_metadata.getColumnType(i), type_name: struct_metadata.getColumnTypeName(i) }
             hash
           end
           object_attrs = java.util.HashMap.new
@@ -454,10 +451,10 @@ module PLSQL
             case field[:type]
             when Java::oracle.jdbc.OracleTypes::ARRAY
               # nested collection
-              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::ARRAY, :sql_type_name => field[:type_name]))
+              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::ARRAY, sql_type_name: field[:type_name]))
             when Java::oracle.jdbc.OracleTypes::STRUCT
               # nested object type
-              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::STRUCT, :sql_type_name => field[:type_name]))
+              object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value, Java::OracleSql::STRUCT, sql_type_name: field[:type_name]))
             else
               object_attrs.put(key.to_s.upcase, ruby_value_to_ora_value(attr_value))
             end
@@ -503,12 +500,12 @@ module PLSQL
           String.from_java_bytes(value.getBytes(1, value.length))
         end
       when Java::OracleSql::ARRAY
-        value.getArray.map{|e| ora_value_to_ruby_value(e)}
+        value.getArray.map { |e| ora_value_to_ruby_value(e) }
       when Java::OracleSql::STRUCT
         descriptor = value.getDescriptor
         struct_metadata = descriptor.getMetaData
-        field_names = (1..descriptor.getLength).map {|i| struct_metadata.getColumnName(i).downcase.to_sym}
-        field_values = value.getAttributes.map{|e| ora_value_to_ruby_value(e)}
+        field_names = (1..descriptor.getLength).map { |i| struct_metadata.getColumnName(i).downcase.to_sym }
+        field_values = value.getAttributes.map { |e| ora_value_to_ruby_value(e) }
         ArrayHelpers::to_hash(field_names, field_values)
       when Java::java.sql.ResultSet
         Cursor.new(self, value)
@@ -533,23 +530,21 @@ module PLSQL
 
     private
 
-    def java_date(value)
-      value && Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S"))
-    end
+      def java_date(value)
+        value && Java::oracle.sql.DATE.new(value.strftime("%Y-%m-%d %H:%M:%S"))
+      end
 
-    def java_timestamp(value)
-      value && Java::java.sql.Timestamp.new(value.year-1900, value.month-1, value.day, value.hour, value.min, value.sec, value.usec * 1000)
-    end
+      def java_timestamp(value)
+        value && Java::java.sql.Timestamp.new(value.year - 1900, value.month - 1, value.day, value.hour, value.min, value.sec, value.usec * 1000)
+      end
 
-    def java_bigdecimal(value)
-      value && java.math.BigDecimal.new(value.to_s)
-    end
+      def java_bigdecimal(value)
+        value && java.math.BigDecimal.new(value.to_s)
+      end
 
-    def ora_number_to_ruby_number(num)
-      # return BigDecimal instead of Float to avoid rounding errors
-      num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
-    end
-
+      def ora_number_to_ruby_number(num)
+        # return BigDecimal instead of Float to avoid rounding errors
+        num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
+      end
   end
-
 end

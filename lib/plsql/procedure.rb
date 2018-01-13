@@ -1,45 +1,44 @@
 module PLSQL
-
   module ProcedureClassMethods #:nodoc:
     def find(schema, procedure, package = nil, override_schema_name = nil)
       if package.nil?
         if (row = schema.select_first(
-            "SELECT #{procedure_object_id_src(schema)}.object_id
-            FROM all_procedures p, all_objects o
-            WHERE p.owner = :owner
-              AND p.object_name = :object_name
-              AND o.owner = p.owner
-              AND o.object_name = p.object_name
-              AND o.object_type in ('PROCEDURE', 'FUNCTION')",
+          "SELECT #{procedure_object_id_src(schema)}.object_id
+          FROM all_procedures p, all_objects o
+          WHERE p.owner = :owner
+            AND p.object_name = :object_name
+            AND o.owner = p.owner
+            AND o.object_name = p.object_name
+            AND o.object_type in ('PROCEDURE', 'FUNCTION')",
             schema.schema_name, procedure.to_s.upcase))
           new(schema, procedure, nil, nil, row[0])
         # search for synonym
         elsif (row = schema.select_first(
-            "SELECT o.owner, o.object_name, #{procedure_object_id_src(schema)}.object_id
-            FROM all_synonyms s, all_objects o, all_procedures p
-            WHERE s.owner IN (:owner, 'PUBLIC')
-              AND s.synonym_name = :synonym_name
-              AND o.owner = s.table_owner
-              AND o.object_name = s.table_name
-              AND o.object_type IN ('PROCEDURE','FUNCTION')
-              AND o.owner = p.owner
-              AND o.object_name = p.object_name
-              ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
+          "SELECT o.owner, o.object_name, #{procedure_object_id_src(schema)}.object_id
+          FROM all_synonyms s, all_objects o, all_procedures p
+          WHERE s.owner IN (:owner, 'PUBLIC')
+            AND s.synonym_name = :synonym_name
+            AND o.owner = s.table_owner
+            AND o.object_name = s.table_name
+            AND o.object_type IN ('PROCEDURE','FUNCTION')
+            AND o.owner = p.owner
+            AND o.object_name = p.object_name
+            ORDER BY DECODE(s.owner, 'PUBLIC', 1, 0)",
             schema.schema_name, procedure.to_s.upcase))
           new(schema, row[1], nil, row[0], row[2])
         else
           nil
         end
       elsif package && (row = schema.select_first(
-            # older Oracle versions do not have object_id column in all_procedures
-            "SELECT #{procedure_object_id_src(schema)}.object_id
-            FROM all_procedures p, all_objects o
-            WHERE p.owner = :owner
-              AND p.object_name = :object_name
-              AND p.procedure_name = :procedure_name
-              AND o.owner = p.owner
-              AND o.object_name = p.object_name
-              AND o.object_type = 'PACKAGE'",
+        # older Oracle versions do not have object_id column in all_procedures
+        "SELECT #{procedure_object_id_src(schema)}.object_id
+        FROM all_procedures p, all_objects o
+        WHERE p.owner = :owner
+          AND p.object_name = :object_name
+          AND p.procedure_name = :procedure_name
+          AND o.owner = p.owner
+          AND o.object_name = p.object_name
+          AND o.object_type = 'PACKAGE'",
             override_schema_name || schema.schema_name, package, procedure.to_s.upcase))
         new(schema, procedure, package, override_schema_name, row[0])
       else
@@ -49,9 +48,9 @@ module PLSQL
 
     private
 
-    def procedure_object_id_src(schema)
-      (schema.connection.database_version <=> [11, 1, 0, 0]) >= 0 ? "p" : "o"
-    end
+      def procedure_object_id_src(schema)
+        (schema.connection.database_version <=> [11, 1, 0, 0]) >= 0 ? "p" : "o"
+      end
   end
 
   module ProcedureCommon #:nodoc:
@@ -61,21 +60,21 @@ module PLSQL
     # return type string from metadata that can be used in DECLARE block or table definition
     def self.type_to_sql(metadata) #:nodoc:
       case metadata[:data_type]
-      when 'NUMBER'
+      when "NUMBER"
         precision, scale = metadata[:data_precision], metadata[:data_scale]
-        "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}": ""})" : ""}"
-      when 'VARCHAR', 'VARCHAR2', 'CHAR'
+        "NUMBER#{precision ? "(#{precision}#{scale ? ",#{scale}" : ""})" : ""}"
+      when "VARCHAR", "VARCHAR2", "CHAR"
         length = case metadata[:char_used]
-        when 'C' then "#{metadata[:char_length]} CHAR"
-        when 'B' then "#{metadata[:data_length]} BYTE"
+                 when "C" then "#{metadata[:char_length]} CHAR"
+                 when "B" then "#{metadata[:data_length]} BYTE"
         else
-          metadata[:data_length]
+                   metadata[:data_length]
         end
         "#{metadata[:data_type]}#{length && "(#{length})"}"
-      when 'NVARCHAR2', 'NCHAR'
+      when "NVARCHAR2", "NCHAR"
         length = metadata[:char_length]
         "#{metadata[:data_type]}#{length && "(#{length})"}"
-      when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'OBJECT', 'XMLTYPE'
+      when "PL/SQL TABLE", "TABLE", "VARRAY", "OBJECT", "XMLTYPE"
         metadata[:sql_type_name]
       else
         metadata[:data_type]
@@ -99,9 +98,9 @@ module PLSQL
       @tmp_tables_created = {}
 
       # subprogram_id column is available just from version 10g
-      subprogram_id_column = (@schema.connection.database_version <=> [10, 2, 0, 2]) >= 0 ? 'subprogram_id' : 'NULL'
+      subprogram_id_column = (@schema.connection.database_version <=> [10, 2, 0, 2]) >= 0 ? "subprogram_id" : "NULL"
       # defaulted is available just from version 11g
-      defaulted_column = (@schema.connection.database_version <=> [11, 0, 0, 0]) >= 0 ? 'defaulted' : 'NULL'
+      defaulted_column = (@schema.connection.database_version <=> [11, 0, 0, 0]) >= 0 ? "defaulted" : "NULL"
 
       @schema.select_all(
         "SELECT #{subprogram_id_column}, object_name, TO_NUMBER(overload), argument_name, position, data_level,
@@ -138,7 +137,7 @@ module PLSQL
             # then generate unique ID from object_name and overload
             subprogram_id ||= "#{object_name.hash % 10000}#{overload}"
             tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{position}"
-          elsif data_type != 'PL/SQL RECORD'
+          elsif data_type != "PL/SQL RECORD"
             # raise exception only when there are no overloaded procedure definitions
             # (as probably this overload will not be used at all)
             raise ArgumentError, "Parameter type #{sql_type_name} definition inside package is not supported, use CREATE TYPE outside package" if overload == 0
@@ -146,19 +145,19 @@ module PLSQL
         end
 
         argument_metadata = {
-          :position => position && position.to_i,
-          :data_type => data_type,
-          :in_out => in_out,
-          :data_length => data_length && data_length.to_i,
-          :data_precision => data_precision && data_precision.to_i,
-          :data_scale => data_scale && data_scale.to_i,
-          :char_used => char_used,
-          :char_length => char_length && char_length.to_i,
-          :type_owner => type_owner,
-          :type_name => type_name,
-          :type_subname => type_subname,
-          :sql_type_name => sql_type_name,
-          :defaulted => defaulted
+          position: position && position.to_i,
+          data_type: data_type,
+          in_out: in_out,
+          data_length: data_length && data_length.to_i,
+          data_precision: data_precision && data_precision.to_i,
+          data_scale: data_scale && data_scale.to_i,
+          char_used: char_used,
+          char_length: char_length && char_length.to_i,
+          type_owner: type_owner,
+          type_name: type_name,
+          type_subname: type_subname,
+          sql_type_name: sql_type_name,
+          defaulted: defaulted
         }
         if tmp_table_name
           @tmp_table_names[overload] << [(argument_metadata[:tmp_table_name] = tmp_table_name), argument_metadata]
@@ -166,14 +165,14 @@ module PLSQL
 
         if composite_type?(data_type)
           case data_type
-          when 'PL/SQL RECORD'
+          when "PL/SQL RECORD"
             argument_metadata[:fields] = {}
           end
           previous_level_argument_metadata[data_level] = argument_metadata
         end
 
         # if function has return value
-        if argument_name.nil? && data_level == 0 && in_out == 'OUT'
+        if argument_name.nil? && data_level == 0 && in_out == "OUT"
           @return[overload] = argument_metadata
         # if parameter
         else
@@ -184,9 +183,9 @@ module PLSQL
           # or lower level part of composite type
           else
             case previous_level_argument_metadata[data_level - 1][:data_type]
-            when 'PL/SQL RECORD'
+            when "PL/SQL RECORD"
               previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-            when 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'REF CURSOR'
+            when "PL/SQL TABLE", "TABLE", "VARRAY", "REF CURSOR"
               previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
             end
           end
@@ -201,8 +200,8 @@ module PLSQL
     def construct_argument_list_for_overloads #:nodoc:
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
-        @argument_list[overload] = @arguments[overload].keys.sort {|k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position]}
-        @out_list[overload] = @argument_list[overload].select {|k| @arguments[overload][k][:in_out] =~ /OUT/}
+        @argument_list[overload] = @arguments[overload].keys.sort { |k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position] }
+        @out_list[overload] = @argument_list[overload].select { |k| @arguments[overload][k][:in_out] =~ /OUT/ }
       end
     end
 
@@ -210,19 +209,19 @@ module PLSQL
       return if @tmp_tables_created.nil? || @tmp_tables_created[overload]
       @tmp_table_names[overload] && @tmp_table_names[overload].each do |table_name, argument_metadata|
         sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
-          element_metadata = argument_metadata[:element]
-          case element_metadata[:data_type]
-          when 'PL/SQL RECORD'
-            fields_metadata = element_metadata[:fields]
-            fields_sorted_by_position = fields_metadata.keys.sort_by{|k| fields_metadata[k][:position]}
-            sql << fields_sorted_by_position.map do |field|
-              metadata = fields_metadata[field]
-              "#{field} #{ProcedureCommon.type_to_sql(metadata)}"
-            end.join(",\n")
-          else
-            sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}"
-          end
-          sql << ",\ni__ NUMBER(38)\n"
+        element_metadata = argument_metadata[:element]
+        case element_metadata[:data_type]
+        when "PL/SQL RECORD"
+          fields_metadata = element_metadata[:fields]
+          fields_sorted_by_position = fields_metadata.keys.sort_by { |k| fields_metadata[k][:position] }
+          sql << fields_sorted_by_position.map do |field|
+            metadata = fields_metadata[field]
+            "#{field} #{ProcedureCommon.type_to_sql(metadata)}"
+          end.join(",\n")
+        else
+          sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}"
+        end
+        sql << ",\ni__ NUMBER(38)\n"
         sql << ") ON COMMIT PRESERVE ROWS\n"
         sql_block = "DECLARE\nPRAGMA AUTONOMOUS_TRANSACTION;\nBEGIN\nEXECUTE IMMEDIATE :sql;\nEND;\n"
         @schema.execute sql_block, sql
@@ -230,12 +229,12 @@ module PLSQL
       @tmp_tables_created[overload] = true
     end
 
-    PLSQL_COMPOSITE_TYPES = ['PL/SQL RECORD', 'PL/SQL TABLE', 'TABLE', 'VARRAY', 'REF CURSOR'].freeze
+    PLSQL_COMPOSITE_TYPES = ["PL/SQL RECORD", "PL/SQL TABLE", "TABLE", "VARRAY", "REF CURSOR"].freeze
     def composite_type?(data_type) #:nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end
 
-    PLSQL_COLLECTION_TYPES = ['PL/SQL TABLE', 'TABLE', 'VARRAY'].freeze
+    PLSQL_COLLECTION_TYPES = ["PL/SQL TABLE", "TABLE", "VARRAY"].freeze
     def collection_type?(data_type) #:nodoc:
       PLSQL_COLLECTION_TYPES.include? data_type
     end
@@ -266,7 +265,5 @@ module PLSQL
       call = ProcedureCall.new(self, args)
       call.exec(&block)
     end
-
   end
-
 end

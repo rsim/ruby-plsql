@@ -1,12 +1,12 @@
 # encoding: utf-8
 
-require 'spec_helper'
+require "spec_helper"
 
 describe "Connection" do
 
   before(:all) do
     @raw_conn = get_connection
-    @conn = PLSQL::Connection.create( @raw_conn )
+    @conn = PLSQL::Connection.create(@raw_conn)
   end
 
   after(:all) do
@@ -23,7 +23,7 @@ describe "Connection" do
     end
 
     before(:each) do
-      @conn1 = PLSQL::Connection.create( @raw_conn1 )
+      @conn1 = PLSQL::Connection.create(@raw_conn1)
     end
 
     it "should create connection" do
@@ -52,30 +52,30 @@ describe "Connection" do
   unless defined?(JRuby)
     describe "OCI data type conversions" do
       it "should translate PL/SQL VARCHAR to Ruby String" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR", data_length: 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR", data_length: nil)).to eq [String, 32767]
       end
 
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR2", data_length: 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR2", data_length: nil)).to eq [String, 32767]
       end
 
       it "should translate PL/SQL CLOB to Ruby String" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "CLOB", :data_length => 100_000)).to eq [OCI8::CLOB, nil]
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "CLOB", :data_length => nil)).to eq [OCI8::CLOB, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "CLOB", data_length: 100_000)).to eq [OCI8::CLOB, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "CLOB", data_length: nil)).to eq [OCI8::CLOB, nil]
       end
 
       it "should translate PL/SQL NUMBER to Ruby OraNumber" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15)).to eq [OraNumber, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "NUMBER", data_length: 15)).to eq [OraNumber, nil]
       end
 
       it "should translate PL/SQL DATE to Ruby DateTime" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil)).to eq [DateTime, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "DATE", data_length: nil)).to eq [DateTime, nil]
       end
 
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "TIMESTAMP", data_length: nil)).to eq [Time, nil]
       end
 
       it "should not translate small Ruby Integer when OraNumber type specified" do
@@ -87,7 +87,7 @@ describe "Connection" do
         expect(ora_number).to be_an Integer
         expect(ora_number.to_s).to eq "12345678901234567890"
         # OraNumber has more numeric comparison methods in ruby-oci8 2.0
-        expect(ora_number).to eq OraNumber.new("12345678901234567890") if OCI8::VERSION >= '2.0.0'
+        expect(ora_number).to eq OraNumber.new("12345678901234567890") if OCI8::VERSION >= "2.0.0"
       end
 
       it "should translate Ruby String value to OCI8::CLOB when OCI8::CLOB type specified" do
@@ -108,7 +108,7 @@ describe "Connection" do
       end
 
       # ruby-oci8 2.0 returns DATE as Time or DateTime
-      if OCI8::VERSION < '2.0.0'
+      if OCI8::VERSION < "2.0.0"
         it "should translate Oracle OraDate value to Time" do
           now = OraDate.now
           expect(@conn.ora_value_to_ruby_value(now)).to eql(now.to_time)
@@ -128,24 +128,24 @@ describe "Connection" do
 
     describe "JDBC data type conversions" do
       it "should translate PL/SQL VARCHAR to Ruby String" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => 100)).to eq [String, 100]
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR", :data_length => nil)).to eq [String, 32767]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR", data_length: 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR", data_length: nil)).to eq [String, 32767]
       end
       it "should translate PL/SQL VARCHAR2 to Ruby String" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => 100)).to eq [String, 100]
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "VARCHAR2", :data_length => nil)).to eq [String, 32767]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR2", data_length: 100)).to eq [String, 100]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "VARCHAR2", data_length: nil)).to eq [String, 32767]
       end
 
       it "should translate PL/SQL NUMBER to Ruby BigDecimal" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "NUMBER", :data_length => 15)).to eq [BigDecimal, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "NUMBER", data_length: 15)).to eq [BigDecimal, nil]
       end
 
       it "should translate PL/SQL DATE to Ruby DateTime" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "DATE", :data_length => nil)).to eq [DateTime, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "DATE", data_length: nil)).to eq [DateTime, nil]
       end
 
       it "should translate PL/SQL TIMESTAMP to Ruby Time" do
-        expect(@conn.plsql_to_ruby_data_type(:data_type => "TIMESTAMP", :data_length => nil)).to eq [Time, nil]
+        expect(@conn.plsql_to_ruby_data_type(data_type: "TIMESTAMP", data_length: nil)).to eq [Time, nil]
       end
 
       it "should not translate Ruby Integer when BigDecimal type specified" do
@@ -153,7 +153,7 @@ describe "Connection" do
       end
 
       it "should translate Ruby String to string value" do
-        expect(@conn.ruby_value_to_ora_value(1.1, String)).to eq '1.1'
+        expect(@conn.ruby_value_to_ora_value(1.1, String)).to eq "1.1"
       end
 
       it "should translate Ruby Integer value to BigDecimal when BigDecimal type specified" do
@@ -202,87 +202,87 @@ describe "Connection" do
   describe "SQL SELECT statements" do
 
     it "should execute SQL statement and return first result" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_first("SELECT 'abc',123,123.456,
         TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
-        FROM dual")).to eq ["abc",123,123.456,@now]
+        FROM dual")).to eq ["abc", 123, 123.456, @now]
     end
 
     it "should execute SQL statement and return first result as hash" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_hash_first("SELECT 'abc' a, 123 b, 123.456 c,
         TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}', 'YYYY-MM-DD HH24:MI:SS') d
-        FROM dual")).to eq({:a => "abc", :b => 123, :c => 123.456, :d => @now})
+        FROM dual")).to eq(a: "abc", b: 123, c: 123.456, d: @now)
     end
 
     it "should execute SQL statement with bind parameters and return first result" do
       @today = Date.parse("2008-05-31")
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
-        'abc',123,123.456,@now,@today)).to eq ["abc",123,123.456,@now,Time.parse(@today.to_s)]
+        "abc", 123, 123.456, @now, @today)).to eq ["abc", 123, 123.456, @now, Time.parse(@today.to_s)]
     end
 
     it "should execute SQL statement with NULL values and return first result" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_first("SELECT NULL,123,123.456,
         TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
-        FROM dual")).to eq [nil,123,123.456,@now]
+        FROM dual")).to eq [nil, 123, 123.456, @now]
     end
 
     if defined?(JRuby)
 
       it "should execute SQL statement with NULL values as bind parameters and return first result" do
         @today = Date.parse("2008-05-31")
-        @now = Time.local(2008,05,31,23,22,11)
+        @now = Time.local(2008, 05, 31, 23, 22, 11)
         expect(@conn.select_first("SELECT :1,:2,:3,:4,:5 FROM dual",
-          nil,123,123.456,@now,@today)).to eq [nil,123,123.456,@now,Time.parse(@today.to_s)]
+          nil, 123, 123.456, @now, @today)).to eq [nil, 123, 123.456, @now, Time.parse(@today.to_s)]
       end
 
     end
 
     it "should execute SQL statement and return all results" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_all("SELECT 'abc',123,123.456,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
           FROM dual
           UNION ALL SELECT 'abc',123,123.456,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
-          FROM dual")).to eq [["abc",123,123.456,@now],["abc",123,123.456,@now]]
+          FROM dual")).to eq [["abc", 123, 123.456, @now], ["abc", 123, 123.456, @now]]
     end
 
     it "should execute SQL statement and return all results as hash" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_hash_all("SELECT 'abc' a, 123 b, 123.456 c,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d
           FROM dual
           UNION ALL SELECT 'def' a, 123 b, 123.456 c,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS') d
-          FROM dual")).to eq [{:a=>"abc",:b=>123,:c=>123.456,:d=>@now},{:a=>"def",:b=>123,:c=>123.456,:d=>@now}]
+          FROM dual")).to eq [{ a: "abc", b: 123, c: 123.456, d: @now }, { a: "def", b: 123, c: 123.456, d: @now }]
     end
 
     it "should execute SQL statement with bind parameters and return all results" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
-        'abc',123,123.456,@now,'abc',123,123.456,@now)).to eq [["abc",123,123.456,@now],["abc",123,123.456,@now]]
+        "abc", 123, 123.456, @now, "abc", 123, 123.456, @now)).to eq [["abc", 123, 123.456, @now], ["abc", 123, 123.456, @now]]
     end
 
     it "should execute SQL statement and yield all results in block" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_all("SELECT 'abc',123,123.456,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
           FROM dual
           UNION ALL SELECT 'abc',123,123.456,
           TO_DATE('#{@now.strftime("%Y-%m-%d %H:%M:%S")}','YYYY-MM-DD HH24:MI:SS')
           FROM dual") do |r|
-        expect(r).to eq ["abc",123,123.456,@now]
+        expect(r).to eq ["abc", 123, 123.456, @now]
       end).to eq 2
     end
 
     it "should execute SQL statement with bind parameters and yield all results in block" do
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       expect(@conn.select_all("SELECT :1,:2,:3,:4 FROM dual UNION ALL SELECT :1,:2,:3,:4 FROM dual",
-        'abc',123,123.456,@now,'abc',123,123.456,@now) do |r|
-        expect(r).to eq ["abc",123,123.456,@now]
+        "abc", 123, 123.456, @now, "abc", 123, 123.456, @now) do |r|
+        expect(r).to eq ["abc", 123, 123.456, @now]
       end).to eq 2
     end
 
@@ -291,7 +291,7 @@ describe "Connection" do
   describe "PL/SQL procedures" do
     before(:all) do
       @random = rand(1000)
-      @now = Time.local(2008,05,31,23,22,11)
+      @now = Time.local(2008, 05, 31, 23, 22, 11)
       sql = <<-SQL
         CREATE OR REPLACE FUNCTION test_add_random (p_number NUMBER, p_varchar IN OUT VARCHAR2, p_date IN OUT DATE)
           RETURN NUMBER
@@ -314,10 +314,10 @@ describe "Connection" do
         END;
       SQL
       cursor = @conn.parse(sql)
-      cursor.bind_param(":result", nil, :data_type => 'NUMBER', :in_out => 'OUT')
-      cursor.bind_param(":p_number", 100, :data_type => 'NUMBER', :in_out => 'IN')
-      cursor.bind_param(":p_varchar", "abc", :data_type => 'VARCHAR2', :in_out => 'IN/OUT')
-      cursor.bind_param(":p_date", @now, :data_type => 'DATE', :in_out => 'IN/OUT')
+      cursor.bind_param(":result", nil, data_type: "NUMBER", in_out: "OUT")
+      cursor.bind_param(":p_number", 100, data_type: "NUMBER", in_out: "IN")
+      cursor.bind_param(":p_varchar", "abc", data_type: "VARCHAR2", in_out: "IN/OUT")
+      cursor.bind_param(":p_date", @now, data_type: "DATE", in_out: "IN/OUT")
       cursor.exec
       expect(cursor[":result"]).to eq @random + 100
       expect(cursor[":p_varchar"]).to eq "abc"
@@ -401,21 +401,21 @@ describe "Connection" do
     end
 
     it "should describe local synonym" do
-      expect(@conn.describe_synonym('HR','SYNONYM_FOR_DUAL')).to eq ['SYS', 'DUAL']
-      expect(@conn.describe_synonym('hr','synonym_for_dual')).to eq ['SYS', 'DUAL']
-      expect(@conn.describe_synonym(:hr,:synonym_for_dual)).to eq ['SYS', 'DUAL']
+      expect(@conn.describe_synonym("HR", "SYNONYM_FOR_DUAL")).to eq ["SYS", "DUAL"]
+      expect(@conn.describe_synonym("hr", "synonym_for_dual")).to eq ["SYS", "DUAL"]
+      expect(@conn.describe_synonym(:hr, :synonym_for_dual)).to eq ["SYS", "DUAL"]
     end
 
     it "should return nil on non-existing synonym" do
-      expect(@conn.describe_synonym('HR','SYNONYM_FOR_XXX')).to be_nil
-      expect(@conn.describe_synonym('hr','synonym_for_xxx')).to be_nil
-      expect(@conn.describe_synonym(:hr,:synonym_for_xxx)).to be_nil
+      expect(@conn.describe_synonym("HR", "SYNONYM_FOR_XXX")).to be_nil
+      expect(@conn.describe_synonym("hr", "synonym_for_xxx")).to be_nil
+      expect(@conn.describe_synonym(:hr, :synonym_for_xxx)).to be_nil
     end
 
     it "should describe public synonym" do
-      expect(@conn.describe_synonym('PUBLIC','DUAL')).to eq ['SYS', 'DUAL']
-      expect(@conn.describe_synonym('PUBLIC','dual')).to eq ['SYS', 'DUAL']
-      expect(@conn.describe_synonym('PUBLIC',:dual)).to eq ['SYS', 'DUAL']
+      expect(@conn.describe_synonym("PUBLIC", "DUAL")).to eq ["SYS", "DUAL"]
+      expect(@conn.describe_synonym("PUBLIC", "dual")).to eq ["SYS", "DUAL"]
+      expect(@conn.describe_synonym("PUBLIC", :dual)).to eq ["SYS", "DUAL"]
     end
 
   end
@@ -423,7 +423,7 @@ describe "Connection" do
   describe "session information" do
     it "should get database version" do
       # using Oracle version 10.2.0.4 for unit tests
-      expect(@conn.database_version).to eq DATABASE_VERSION.split('.').map{|n| n.to_i}
+      expect(@conn.database_version).to eq DATABASE_VERSION.split(".").map { |n| n.to_i }
     end
 
     it "should get session ID" do
@@ -453,7 +453,7 @@ describe "Connection" do
     end
 
     it "should not drop other session ruby temporary tables" do
-      tmp_table = "ruby_#{@conn.session_id+1}_222_333"
+      tmp_table = "ruby_#{@conn.session_id + 1}_222_333"
       @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
       expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.not_to raise_error
       @conn.drop_session_ruby_temporary_tables
@@ -474,7 +474,7 @@ describe "Connection" do
 
     def reconnect_connection
       @raw_conn = get_connection
-      @conn = PLSQL::Connection.create( @raw_conn )
+      @conn = PLSQL::Connection.create(@raw_conn)
     end
 
     it "should drop current session ruby temporary tables" do

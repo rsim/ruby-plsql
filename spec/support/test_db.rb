@@ -1,5 +1,4 @@
 class TestDb
-
   DATABASE_USERS = %w{hr arunit}
 
   def self.build
@@ -11,8 +10,8 @@ class TestDb
   end
 
   def self.database_version
-     db = self.new
-     db.database_version
+    db = self.new
+    db.database_version
   end
 
   def connection
@@ -21,15 +20,15 @@ class TestDb
         Timeout::timeout(5) {
           if defined?(JRUBY_VERSION)
             @connection = java.sql.DriverManager.get_connection(
-              'jdbc:oracle:thin:@127.0.0.1:1521/XE',
-              'system',
-              'oracle'
-            );
+              "jdbc:oracle:thin:@127.0.0.1:1521/XE",
+              "system",
+              "oracle"
+            )
           else
             @connection = OCI8.new(
-              'system',
-              'oracle',
-              '(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))'
+              "system",
+              "oracle",
+              "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))"
             )
           end
         }
@@ -61,7 +60,7 @@ class TestDb
   end
 
   def database_users
-    DATABASE_USERS.inject([]){|array, user| array << [user.upcase, user]}
+    DATABASE_USERS.inject([]) { |array, user| array << [user.upcase, user] }
   end
 
   def cleanup_database_users
@@ -118,14 +117,14 @@ class TestDb
   end
 
   def database_version
-    query = 'SELECT version FROM V$INSTANCE'
+    query = "SELECT version FROM V$INSTANCE"
 
     if defined?(JRUBY_VERSION)
       statement = connection.create_statement
       resource  = statement.execute_query(query)
 
       resource.next
-      value = resource.get_string('VERSION')
+      value = resource.get_string("VERSION")
 
       resource.close
       statement.close

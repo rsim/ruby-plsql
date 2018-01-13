@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe "Package" do
   before(:all) do
@@ -43,7 +43,7 @@ describe "Package" do
   end
 
   it "should execute package function and return correct value" do
-    expect(plsql.test_package.test_procedure('xxx')).to eq('XXX')
+    expect(plsql.test_package.test_procedure("xxx")).to eq("XXX")
   end
 
   it "should report an existing procedure as existing" do
@@ -57,11 +57,11 @@ describe "Package" do
   it "should search objects via []" do
     package = PLSQL::Package.find(plsql, :test_package)
 
-    [:Test_Procedure, :test_procedure, 'test_procedure', 'TEST_PROCEDURE'].each do |name_variant|
+    [:Test_Procedure, :test_procedure, "test_procedure", "TEST_PROCEDURE"].each do |name_variant|
       expect(package[name_variant]).to be_a PLSQL::Procedure
     end
 
-    [:Test_Variable, :test_variable, 'test_variable', 'TEST_VARIABLE'].each do |name_variant|
+    [:Test_Variable, :test_variable, "test_variable", "TEST_VARIABLE"].each do |name_variant|
       expect(package[name_variant]).to be_a PLSQL::Variable
     end
   end
@@ -146,7 +146,7 @@ describe "Synonym to package" do
   end
 
   it "should execute package function using synonym and return correct value" do
-    expect(plsql.test_pkg_synonym.test_procedure('xxx')).to eq('XXX')
+    expect(plsql.test_pkg_synonym.test_procedure("xxx")).to eq("XXX")
   end
 
 end
@@ -166,7 +166,7 @@ describe "Public synonym to package" do
   end
 
   it "should execute package function using public synonym and return correct value" do
-    expect(plsql.utl_encode.base64_encode('abc')).to eq('4372773D')
+    expect(plsql.utl_encode.base64_encode("abc")).to eq("4372773D")
   end
 
 end
