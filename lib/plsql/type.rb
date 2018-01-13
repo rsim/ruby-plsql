@@ -1,28 +1,27 @@
 module PLSQL
-
   module TypeClassMethods #:nodoc:
     def find(schema, type)
       if schema.select_first(
-            "SELECT type_name FROM all_types
-            WHERE owner = :owner
-              AND type_name = :table_name",
+        "SELECT type_name FROM all_types
+        WHERE owner = :owner
+          AND type_name = :table_name",
             schema.schema_name, type.to_s.upcase)
         new(schema, type)
       # search for synonym
       elsif (row = schema.select_first(
-            "SELECT t.owner, t.type_name
-            FROM all_synonyms s, all_types t
-            WHERE s.owner = :owner
-              AND s.synonym_name = :synonym_name
-              AND t.owner = s.table_owner
-              AND t.type_name = s.table_name
-            UNION ALL
-            SELECT t.owner, t.type_name
-            FROM all_synonyms s, all_types t
-            WHERE s.owner = 'PUBLIC'
-              AND s.synonym_name = :synonym_name
-              AND t.owner = s.table_owner
-              AND t.type_name = s.table_name",
+        "SELECT t.owner, t.type_name
+        FROM all_synonyms s, all_types t
+        WHERE s.owner = :owner
+          AND s.synonym_name = :synonym_name
+          AND t.owner = s.table_owner
+          AND t.type_name = s.table_name
+        UNION ALL
+        SELECT t.owner, t.type_name
+        FROM all_synonyms s, all_types t
+        WHERE s.owner = 'PUBLIC'
+          AND s.synonym_name = :synonym_name
+          AND t.owner = s.table_owner
+          AND t.type_name = s.table_name",
             schema.schema_name, type.to_s.upcase, type.to_s.upcase))
         new(schema, row[1], row[0])
       else
@@ -69,26 +68,26 @@ module PLSQL
               data_type, data_length, data_precision, data_scale,
               data_type_owner, _, typecode = r
         @attributes[attr_name.downcase.to_sym] = {
-          :position => position && position.to_i,
-          :data_type => data_type_owner && (typecode == 'COLLECTION' ? 'TABLE' : 'OBJECT' ) || data_type,
-          :data_length => data_type_owner ? nil : data_length && data_length.to_i,
-          :data_precision => data_precision && data_precision.to_i,
-          :data_scale => data_scale && data_scale.to_i,
-          :type_owner => data_type_owner,
-          :type_name => data_type_owner && data_type,
-          :sql_type_name => data_type_owner && "#{data_type_owner}.#{data_type}"
+          position: position && position.to_i,
+          data_type: data_type_owner && (typecode == "COLLECTION" ? "TABLE" : "OBJECT") || data_type,
+          data_length: data_type_owner ? nil : data_length && data_length.to_i,
+          data_precision: data_precision && data_precision.to_i,
+          data_scale: data_scale && data_scale.to_i,
+          type_owner: data_type_owner,
+          type_name: data_type_owner && data_type,
+          sql_type_name: data_type_owner && "#{data_type_owner}.#{data_type}"
         }
       end
     end
 
     # is type collection?
     def collection?
-      @is_collection ||= @typecode == 'COLLECTION'
+      @is_collection ||= @typecode == "COLLECTION"
     end
 
     # list of object type attribute names
     def attribute_names
-      @attribute_names ||= @attributes.keys.sort_by{|k| @attributes[k][:position]}
+      @attribute_names ||= @attributes.keys.sort_by { |k| @attributes[k][:position] }
     end
 
     # create new PL/SQL object instance
@@ -98,7 +97,7 @@ module PLSQL
       if collection? && !(args.size == 1 && args[0].is_a?(Array))
         args = [args]
       end
-      result = procedure.exec_with_options(args, {:skip_self => true}, &block)
+      result = procedure.exec_with_options(args, { skip_self: true }, &block)
       # TODO: collection constructor should return Array of ObhjectInstance objects
       if collection?
         result
@@ -121,10 +120,10 @@ module PLSQL
         procedure_name = new_or_procedure == :new ? @type_name : new_or_procedure
         # find defined procedure for type
         if @schema.select_first(
-              "SELECT procedure_name FROM all_procedures
-              WHERE owner = :owner
-                AND object_name = :object_name
-                AND procedure_name = :procedure_name",
+          "SELECT procedure_name FROM all_procedures
+          WHERE owner = :owner
+            AND object_name = :object_name
+            AND procedure_name = :procedure_name",
               @schema_name, @type_name, procedure_name.to_s.upcase)
           TypeProcedure.new(@schema, self, procedure_name)
         # call default constructor
@@ -171,7 +170,7 @@ module PLSQL
         @arguments_without_self ||= begin
           hash = {}
           @arguments.each do |ov, args|
-            hash[ov] = args.reject{|key, value| key == :self}
+            hash[ov] = args.reject { |key, value| key == :self }
           end
           hash
         end
@@ -181,7 +180,7 @@ module PLSQL
         @argument_list_without_self ||= begin
           hash = {}
           @argument_list.each do |ov, arg_list|
-            hash[ov] = arg_list.select{|arg| arg != :self}
+            hash[ov] = arg_list.select { |arg| arg != :self }
           end
           hash
         end
@@ -191,13 +190,13 @@ module PLSQL
         @out_list_without_self ||= begin
           hash = {}
           @out_list.each do |ov, out_list|
-            hash[ov] = out_list.select{|arg| arg != :self}
+            hash[ov] = out_list.select { |arg| arg != :self }
           end
           hash
         end
       end
 
-      def exec_with_options(args, options={}, &block)
+      def exec_with_options(args, options = {}, &block)
         call = ProcedureCall.new(self, args, options)
         result = call.exec(&block)
         # if procedure was called then modified object is returned in SELF output parameter
@@ -211,46 +210,44 @@ module PLSQL
 
       private
 
-      def set_default_constructor_arguments
-        @arguments ||= {}
-        @argument_list ||= {}
-        @out_list ||= {}
-        @return ||= {}
-        # either this will be the only overload or it will be additional
-        overload = @arguments.keys.size
-        # if type is collection then expect array of objects as argument
-        if @type.collection?
-          @arguments[overload] = {
-            :value => {
-              :position => 1,
-              :data_type => 'TABLE',
-              :in_out => 'IN',
-              :type_owner => @schema_name,
-              :type_name => @type_name,
-              :sql_type_name => "#{@schema_name}.#{@type_name}"
+        def set_default_constructor_arguments
+          @arguments ||= {}
+          @argument_list ||= {}
+          @out_list ||= {}
+          @return ||= {}
+          # either this will be the only overload or it will be additional
+          overload = @arguments.keys.size
+          # if type is collection then expect array of objects as argument
+          if @type.collection?
+            @arguments[overload] = {
+              value: {
+                position: 1,
+                data_type: "TABLE",
+                in_out: "IN",
+                type_owner: @schema_name,
+                type_name: @type_name,
+                sql_type_name: "#{@schema_name}.#{@type_name}"
+              }
             }
+          # otherwise if type is object type then expect object attributes as argument list
+          else
+            @arguments[overload] = @type.attributes
+          end
+          attributes = @arguments[overload]
+          @argument_list[overload] = attributes.keys.sort { |k1, k2| attributes[k1][:position] <=> attributes[k2][:position] }
+          # returns object or collection
+          @return[overload] = {
+            position: 0,
+            data_type: @type.collection? ? "TABLE" : "OBJECT",
+            in_out: "OUT",
+            type_owner: @schema_name,
+            type_name: @type_name,
+            sql_type_name: "#{@schema_name}.#{@type_name}"
           }
-        # otherwise if type is object type then expect object attributes as argument list
-        else
-          @arguments[overload] = @type.attributes
+          @out_list[overload] = []
+          @overloaded = overload > 0
         end
-        attributes = @arguments[overload]
-        @argument_list[overload] = attributes.keys.sort {|k1, k2| attributes[k1][:position] <=> attributes[k2][:position]}
-        # returns object or collection
-        @return[overload] = {
-          :position => 0,
-          :data_type => @type.collection? ? 'TABLE' : 'OBJECT',
-          :in_out => 'OUT',
-          :type_owner => @schema_name,
-          :type_name => @type_name,
-          :sql_type_name => "#{@schema_name}.#{@type_name}"
-        }
-        @out_list[overload] = []
-        @overloaded = overload > 0
-      end
-
     end
-
   end
 
   class ObjectInstance < Hash #:nodoc:
@@ -264,12 +261,10 @@ module PLSQL
 
     def method_missing(method, *args, &block)
       if procedure = @plsql_type.find_procedure(method)
-        procedure.exec_with_options(args, :self => self, &block)
+        procedure.exec_with_options(args, self: self, &block)
       else
         raise ArgumentError, "No PL/SQL procedure '#{method.to_s.upcase}' found for type '#{@plsql_type.type_name}' object"
       end
     end
-
   end
-
 end

@@ -1,5 +1,5 @@
-require 'rubygems'
-require 'bundler'
+require "rubygems"
+require "bundler"
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
@@ -8,10 +8,10 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 
-require 'rake'
+require "rake"
 
 begin
-  require 'juwelier'
+  require "juwelier"
   Juwelier::Tasks.new do |gem|
     gem.name = "ruby-plsql"
     gem.summary = "Ruby API for calling Oracle PL/SQL procedures."
@@ -24,30 +24,30 @@ begin
     gem.homepage = "http://github.com/rsim/ruby-plsql"
     gem.license = "MIT".freeze
     gem.authors = ["Raimonds Simanovskis"]
-    gem.extra_rdoc_files = ['README.md']
+    gem.extra_rdoc_files = ["README.md"]
   end
   Juwelier::RubygemsDotOrgTasks.new
 rescue LoadError
   # juwelier not installed
 end
 
-require 'rspec/core/rake_task'
+require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new(:spec)
 
 desc "Code coverage detail"
 task :simplecov do
-  ENV['COVERAGE'] = "true"
-  Rake::Task['spec'].execute
+  ENV["COVERAGE"] = "true"
+  Rake::Task["spec"].execute
 end
 
-task :default => :spec
+task default: :spec
 
-require 'rdoc/task'
+require "rdoc/task"
 Rake::RDocTask.new do |rdoc|
-  version = File.exist?('VERSION') ? File.read('VERSION') : ""
+  version = File.exist?("VERSION") ? File.read("VERSION") : ""
 
-  rdoc.rdoc_dir = 'doc'
+  rdoc.rdoc_dir = "doc"
   rdoc.title = "ruby-plsql #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
+  rdoc.rdoc_files.include("README*")
+  rdoc.rdoc_files.include("lib/**/*.rb")
 end

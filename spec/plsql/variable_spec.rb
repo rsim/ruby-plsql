@@ -1,6 +1,6 @@
 # encoding: utf-8
 
-require 'spec_helper'
+require "spec_helper"
 
 describe "Package variables /" do
 
@@ -35,24 +35,24 @@ describe "Package variables /" do
     end
 
     it "should set and get VARCHAR variable" do
-      plsql.test_package.varchar_variable = 'abc'
-      expect(plsql.test_package.varchar_variable).to eq('abc')
+      plsql.test_package.varchar_variable = "abc"
+      expect(plsql.test_package.varchar_variable).to eq("abc")
     end
 
     it "should set and get VARCHAR2 variable" do
-      plsql.test_package.varchar2_variable = 'abc'
-      expect(plsql.test_package.varchar2_variable).to eq('abc')
+      plsql.test_package.varchar2_variable = "abc"
+      expect(plsql.test_package.varchar2_variable).to eq("abc")
     end
 
     it "should set and get VARCHAR2 variable with comment" do
-      plsql.test_package.varchar2_variable2 = 'abc'
-      expect(plsql.test_package.varchar2_variable2).to eq('abc')
+      plsql.test_package.varchar2_variable2 = "abc"
+      expect(plsql.test_package.varchar2_variable2).to eq("abc")
     end
 
     it "should get VARCHAR2 variable default value" do
-      expect(plsql.test_package.varchar2_default).to eq('default')
-      expect(plsql.test_package.varchar2_default2).to eq('default')
-      expect(plsql.test_package.varchar2_default3).to eq('default')
+      expect(plsql.test_package.varchar2_default).to eq("default")
+      expect(plsql.test_package.varchar2_default2).to eq("default")
+      expect(plsql.test_package.varchar2_default3).to eq("default")
     end
 
     describe "with character or byte limit" do
@@ -70,33 +70,33 @@ describe "Package variables /" do
       end
 
       it "should set and get VARCHAR2(n CHAR) variable" do
-        plsql.test_package.varchar2_3_char = 'āčē'
-        expect(plsql.test_package.varchar2_3_char).to eq('āčē')
-        expect { plsql.test_package.varchar2_3_char = 'aceg' }.to raise_error(/buffer too small/)
+        plsql.test_package.varchar2_3_char = "āčē"
+        expect(plsql.test_package.varchar2_3_char).to eq("āčē")
+        expect { plsql.test_package.varchar2_3_char = "aceg" }.to raise_error(/buffer too small/)
       end
 
       it "should set and get VARCHAR2(n BYTE) variable" do
-        plsql.test_package.varchar2_3_byte = 'ace'
-        expect(plsql.test_package.varchar2_3_byte).to eq('ace')
-        expect { plsql.test_package.varchar2_3_byte = 'āce' }.to raise_error(/buffer too small/)
-        expect { plsql.test_package.varchar2_3_byte = 'aceg' }.to raise_error(/buffer too small/)
+        plsql.test_package.varchar2_3_byte = "ace"
+        expect(plsql.test_package.varchar2_3_byte).to eq("ace")
+        expect { plsql.test_package.varchar2_3_byte = "āce" }.to raise_error(/buffer too small/)
+        expect { plsql.test_package.varchar2_3_byte = "aceg" }.to raise_error(/buffer too small/)
       end
 
     end
 
     it "should set and get CHAR variable" do
-      plsql.test_package.char_variable = 'abc'
-      expect(plsql.test_package.char_variable).to eq('abc' + ' '*7)
+      plsql.test_package.char_variable = "abc"
+      expect(plsql.test_package.char_variable).to eq("abc" + " " * 7)
     end
 
     it "should set and get NVARCHAR2 variable" do
-      plsql.test_package.nvarchar2_variable = 'abc'
-      expect(plsql.test_package.nvarchar2_variable).to eq('abc')
+      plsql.test_package.nvarchar2_variable = "abc"
+      expect(plsql.test_package.nvarchar2_variable).to eq("abc")
     end
 
     it "should set and get NCHAR variable" do
-      plsql.test_package.nchar_variable = 'abc'
-      expect(plsql.test_package.nchar_variable).to eq('abc' + ' '*7)
+      plsql.test_package.nchar_variable = "abc"
+      expect(plsql.test_package.nchar_variable).to eq("abc" + " " * 7)
     end
 
   end
@@ -134,22 +134,22 @@ describe "Package variables /" do
   end
 
   [
-      {:ora_data_type => 'INTEGER',        :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'NUMBER(10)',     :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'NUMBER(10)',     :default => 5,   :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'NUMBER',         :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.456},
-      {:ora_data_type => 'NUMBER(15,2)',   :default => nil, :class => BigDecimal, :given => 123.456, :expected => 123.46},
-      {:ora_data_type => 'PLS_INTEGER',    :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'BINARY_INTEGER', :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'SIMPLE_INTEGER', :default => 10,  :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'NATURAL',        :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'NATURALN',       :default => 0,   :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'POSITIVE',       :default => nil, :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'POSITIVEN',      :default => 5,   :class => Integer, :given => 1, :expected => 1},
-      {:ora_data_type => 'SIGNTYPE',       :default => -1,  :class => Integer, :given => 1, :expected => 1},
+      { ora_data_type: "INTEGER",        default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "NUMBER(10)",     default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "NUMBER(10)",     default: 5,   class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "NUMBER",         default: nil, class: BigDecimal, given: 123.456, expected: 123.456 },
+      { ora_data_type: "NUMBER(15,2)",   default: nil, class: BigDecimal, given: 123.456, expected: 123.46 },
+      { ora_data_type: "PLS_INTEGER",    default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "BINARY_INTEGER", default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "SIMPLE_INTEGER", default: 10,  class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "NATURAL",        default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "NATURALN",       default: 0,   class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "POSITIVE",       default: nil, class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "POSITIVEN",      default: 5,   class: Integer, given: 1, expected: 1 },
+      { ora_data_type: "SIGNTYPE",       default: -1,  class: Integer, given: 1, expected: 1 },
   ].each do |row|
     ora_data_type, default, class_, given, expected = row.values
-    describe ora_data_type+(default ? ' with default' : '') do
+    describe ora_data_type + (default ? " with default" : "") do
       include_examples "Numeric", ora_data_type, default, class_, given, expected
     end
   end
@@ -170,8 +170,8 @@ describe "Package variables /" do
         CREATE OR REPLACE PACKAGE BODY test_package IS
         END;
       SQL
-      @date = Time.local(2009,12,21)
-      @timestamp = Time.local(2009,12,21,14,10,30,11)
+      @date = Time.local(2009, 12, 21)
+      @timestamp = Time.local(2009, 12, 21, 14, 10, 30, 11)
     end
 
     after(:all) do
@@ -233,17 +233,17 @@ describe "Package variables /" do
     end
 
     it "should set and get CLOB variable" do
-      plsql.test_package.clob_variable = 'abc'
-      expect(plsql.test_package.clob_variable).to eq('abc')
+      plsql.test_package.clob_variable = "abc"
+      expect(plsql.test_package.clob_variable).to eq("abc")
     end
 
     it "should get CLOB variable default value" do
-      expect(plsql.test_package.clob_default).to eq('default')
+      expect(plsql.test_package.clob_default).to eq("default")
     end
 
     it "should set and get NCLOB variable" do
-      plsql.test_package.nclob_variable = 'abc'
-      expect(plsql.test_package.nclob_variable).to eq('abc')
+      plsql.test_package.nclob_variable = "abc"
+      expect(plsql.test_package.nclob_variable).to eq("abc")
     end
 
     it "should set and get BLOB variable" do
@@ -291,12 +291,12 @@ describe "Package variables /" do
     end
 
     it "should set and get VARCHAR2 variable" do
-      plsql.test_package.first_name = 'First'
-      expect(plsql.test_package.first_name).to eq('First')
+      plsql.test_package.first_name = "First"
+      expect(plsql.test_package.first_name).to eq("First")
     end
 
     it "should set and get DATE variable" do
-      today = Time.local(2009,12,22)
+      today = Time.local(2009, 12, 22)
       plsql.test_package.hire_date = today
       expect(plsql.test_package.hire_date).to eq(today)
     end
@@ -329,7 +329,7 @@ describe "Package variables /" do
     end
 
     it "should get VARCHAR2 constant" do
-      expect(plsql.test_package.string_constant).to eq('constant')
+      expect(plsql.test_package.string_constant).to eq("constant")
     end
 
     it "should raise error when trying to set constant" do
@@ -371,14 +371,14 @@ describe "Package variables /" do
           phones        t_phones
         )
       SQL
-      @phones = [{:type => 'mobile', :phone_number => '123456'}, {:type => 'home', :phone_number => '654321'}]
+      @phones = [{ type: "mobile", phone_number: "123456" }, { type: "home", phone_number: "654321" }]
       @employee = {
-        :employee_id => 1,
-        :first_name => 'First',
-        :last_name => 'Last',
-        :hire_date => Time.local(2000,01,31),
-        :address => {:street => 'Main street 1', :city => 'Riga', :country => 'Latvia'},
-        :phones => @phones
+        employee_id: 1,
+        first_name: "First",
+        last_name: "Last",
+        hire_date: Time.local(2000, 01, 31),
+        address: { street: "Main street 1", city: "Riga", country: "Latvia" },
+        phones: @phones
       }
 
       plsql.execute <<-SQL
@@ -433,10 +433,10 @@ describe "Package variables /" do
         )
       SQL
       @employee = {
-        :employee_id => 1,
-        :first_name => 'First',
-        :last_name => 'Last',
-        :hire_date => Time.local(2000,01,31)
+        employee_id: 1,
+        first_name: "First",
+        last_name: "Last",
+        hire_date: Time.local(2000, 01, 31)
       }
 
       plsql.execute <<-SQL

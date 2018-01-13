@@ -81,6 +81,5 @@ module PLSQL
     def rollback_to(name)
       execute "ROLLBACK TO #{name}"
     end
-
   end
 end

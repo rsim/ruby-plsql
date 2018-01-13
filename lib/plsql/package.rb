@@ -1,5 +1,4 @@
 module PLSQL
-
   module PackageClassMethods #:nodoc:
     def find(schema, package)
       package_name = package.to_s.upcase
@@ -56,11 +55,11 @@ module PLSQL
 
     private
 
-    def method_missing(method, *args, &block)
-      method = method.to_s
-      method.chop! if (assignment = method[/=$/])
+      def method_missing(method, *args, &block)
+        method = method.to_s
+        method.chop! if (assignment = method[/=$/])
 
-      case (object = self[method])
+        case (object = self[method])
         when Procedure
           if assignment
             raise ArgumentError, "Cannot assign value to package procedure '#{method.upcase}'"
@@ -80,11 +79,9 @@ module PLSQL
             end
             object.value
           end
-        else
+          else
           raise ArgumentError, "No PL/SQL procedure or variable '#{method.upcase}' found"
+        end
       end
-    end
-
   end
-
 end
