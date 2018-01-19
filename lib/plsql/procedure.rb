@@ -67,7 +67,7 @@ module PLSQL
         length = case metadata[:char_used]
                  when "C" then "#{metadata[:char_length]} CHAR"
                  when "B" then "#{metadata[:data_length]} BYTE"
-        else
+                 else
                    metadata[:data_length]
         end
         "#{metadata[:data_type]}#{length && "(#{length})"}"
