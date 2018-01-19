@@ -79,7 +79,7 @@ module PLSQL
             end
             object.value
           end
-          else
+        else
           raise ArgumentError, "No PL/SQL procedure or variable '#{method.upcase}' found"
         end
       end

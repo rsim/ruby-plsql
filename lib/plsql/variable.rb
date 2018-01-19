@@ -69,7 +69,7 @@ module PLSQL
             raise ArgumentError unless type.is_a?(PLSQL::Type)
             typecode = case type.typecode
                        when "COLLECTION" then "TABLE"
-            else "OBJECT"
+                       else "OBJECT"
             end
             { data_type: typecode, data_length: nil, sql_type_name: "#{type.schema_name}.#{type.type_name}", in_out: "IN/OUT" }
           rescue ArgumentError

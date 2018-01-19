@@ -319,16 +319,16 @@ module PLSQL
       def add_record_declaration(argument, argument_metadata)
         @declare_sql << if argument_metadata[:type_subname]
                           "l_#{argument} #{argument_metadata[:sql_type_name]};\n"
-        else
-          fields_metadata = argument_metadata[:fields]
-          sql = "TYPE t_#{argument} IS RECORD (\n"
-          sql << record_fields_sorted_by_position(fields_metadata).map do |field|
-            metadata = fields_metadata[field]
-            "#{field} #{type_to_sql(metadata)}"
-          end.join(",\n")
-          sql << ");\n"
-          sql << "l_#{argument} t_#{argument};\n"
-        end
+                        else
+                          fields_metadata = argument_metadata[:fields]
+                          sql = "TYPE t_#{argument} IS RECORD (\n"
+                          sql << record_fields_sorted_by_position(fields_metadata).map do |field|
+                            metadata = fields_metadata[field]
+                            "#{field} #{type_to_sql(metadata)}"
+                          end.join(",\n")
+                          sql << ");\n"
+                          sql << "l_#{argument} t_#{argument};\n"
+                        end
       end
 
       def record_fields_sorted_by_position(fields_metadata)
@@ -430,9 +430,9 @@ module PLSQL
         @return_vars_metadata[argument] = argument_metadata.merge(data_type: "REF CURSOR")
         @return_sql << if is_index_by_table
                          "i__ := l_#{argument}.FIRST;\nLOOP\nEXIT WHEN i__ IS NULL;\n"
-        else
-          "IF l_#{argument}.COUNT > 0 THEN\nFOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
-        end
+                       else
+                         "IF l_#{argument}.COUNT > 0 THEN\nFOR i__ IN l_#{argument}.FIRST..l_#{argument}.LAST LOOP\n"
+                       end
         case argument_metadata[:element][:data_type]
         when "PL/SQL RECORD"
           field_names = record_fields_sorted_by_position(argument_metadata[:element][:fields])

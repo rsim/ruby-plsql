@@ -29,7 +29,7 @@ module PLSQL
                OCIConnection.create_raw(params)
              when :jdbc
                JDBCConnection.create_raw(params)
-      else
+             else
                raise ArgumentError, "Unknown raw driver"
       end
       conn.set_time_zone(params[:time_zone] || ENV["ORA_SDTZ"])
