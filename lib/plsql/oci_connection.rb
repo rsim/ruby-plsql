@@ -277,15 +277,7 @@ module PLSQL
     end
 
     def describe_synonym(schema_name, synonym_name)
-      if schema_name == "PUBLIC"
-        full_name = synonym_name.to_s
-      else
-        full_name = "#{schema_name}.#{synonym_name}"
-      end
-      metadata = raw_connection.describe_synonym(full_name)
-      [metadata.schema_name, metadata.name]
-    rescue OCIError
-      nil
+      super
     end
 
     def database_version
