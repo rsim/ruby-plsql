@@ -276,10 +276,6 @@ module PLSQL
       end
     end
 
-    def describe_synonym(schema_name, synonym_name)
-      super
-    end
-
     def database_version
       @database_version ||= (version = raw_connection.oracle_server_version) &&
         [version.major, version.minor, version.update, version.patch]
