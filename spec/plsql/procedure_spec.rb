@@ -238,6 +238,9 @@ describe "Parameter type mapping /" do
   describe "Function or procedure with XMLType parameters" do
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
+      @oracle12c_or_higher = !! plsql.connection.select_all(
+      "select * from product_component_version where product like 'Oracle%' and to_number(substr(version,1,2)) >= 12")
+      skip "Skip until furtuer investigation for #114" if @oracle12c_or_higher
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_xmltype
           ( p_xml XMLTYPE )
@@ -258,8 +261,8 @@ describe "Parameter type mapping /" do
     end
 
     after(:all) do
-      plsql.execute "DROP FUNCTION test_xmltype"
-      plsql.execute "DROP PROCEDURE test_xmltype2"
+      plsql.execute "DROP FUNCTION test_xmltype" unless @oracle12c_or_higher
+      plsql.execute "DROP PROCEDURE test_xmltype2" unless @oracle12c_or_higher
       plsql.logoff
     end
 
