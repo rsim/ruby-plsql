@@ -317,7 +317,7 @@ module PLSQL
         stmt.getFloat(i)
       when :BigDecimal
         bd = stmt.getBigDecimal(i)
-        bd && BigDecimal.new(bd.to_s)
+        bd && BigDecimal(bd.to_s)
       when :String
         stmt.getString(i)
       when :'Java::OracleSql::CLOB'
@@ -475,7 +475,7 @@ module PLSQL
       when Float, BigDecimal
         ora_number_to_ruby_number(value)
       when Java::JavaMath::BigDecimal
-        value && ora_number_to_ruby_number(BigDecimal.new(value.to_s))
+        value && ora_number_to_ruby_number(BigDecimal(value.to_s))
       when Java::OracleSql::DATE
         if value
           d = value.dateValue
@@ -544,7 +544,7 @@ module PLSQL
 
       def ora_number_to_ruby_number(num)
         # return BigDecimal instead of Float to avoid rounding errors
-        num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal.new(num.to_s))
+        num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal(num.to_s))
       end
   end
 end
