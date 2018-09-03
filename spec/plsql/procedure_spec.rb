@@ -239,7 +239,7 @@ describe "Parameter type mapping /" do
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
       @oracle12c_or_higher = !! plsql.connection.select_all(
-      "select * from product_component_version where product like 'Oracle%' and to_number(substr(version,1,2)) >= 12")
+        "select * from product_component_version where product like 'Oracle%' and to_number(substr(version,1,2)) >= 12")
       skip "Skip until furtuer investigation for #114" if @oracle12c_or_higher
       plsql.execute <<-SQL
         CREATE OR REPLACE FUNCTION test_xmltype
