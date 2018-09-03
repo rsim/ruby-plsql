@@ -1,7 +1,28 @@
-==
+== 0.7.0 2018-09-03
+* Improvements and fixes
 
-* Internal (development) improvements
+  * Support Rails 5.0, 5.1 and 5.2
+  * Drop Rails 4.1 and 4.2 support
+  * Drop JRuby 1.7 support
+  * Drop JRuby 9.0 support
+  * Drop CRuby 2.1 or lower support
+  * Allow calling procedures in INVALID status
+  * Bignum, Fixnum, Integer fixes for Ruby 2.4
+  * Replace deprecated BigDecimal.new() with BigDecimal()
+  * Suppress warning `BigDecimal.new` is deprecated
+  * Avoid using `OCI8#describe_synonym`
+  * Allow ojdbc7.jar when Java version is 1.7 or higher
+  * Fix unguarded OCIError (breaks on JRuby)
+  * Suppress `warning: instance variable @dbms_output_stream not initialized`
+  * Suppress `warning: assigned but unused variable`
+  * Suppress `warning: shadowing outer local variable - column`
+  * Add license to gemspec
   * Migrate from jeweler to juwelier
+  * CI against JRuby 9.1.8 and CRuby 2.4 and 2.5
+  * CI against jruby-head and ruby-head
+  * Enable RuboCop
+  * Set `disk_asynch_io` to `false`
+  * Skip XMLType specs if Oracle Database version is 12c or higher
 
 == 0.6.0 2016-03-13
 * Improvements
