@@ -84,8 +84,8 @@ Gem::Specification.new do |s|
       s.add_development_dependency("rspec_junit_formatter".freeze, [">= 0"])
       s.add_development_dependency("rake".freeze, [">= 10.0"])
       s.add_development_dependency("rspec".freeze, ["~> 3.1"])
-      s.add_development_dependency("activerecord".freeze, ["< 4.3.0", ">= 3.2.3"])
-      s.add_development_dependency("activerecord-oracle_enhanced-adapter".freeze, ["< 1.7.0", ">= 1.4.1"])
+      s.add_development_dependency("activerecord".freeze, "~> 5.0")
+      s.add_development_dependency("activerecord-oracle_enhanced-adapter".freeze, "~> 1.7")
       s.add_development_dependency("simplecov".freeze, [">= 0"])
       s.add_development_dependency("ruby-oci8".freeze, ["~> 2.1"])
     else
@@ -93,8 +93,8 @@ Gem::Specification.new do |s|
       s.add_dependency("rspec_junit_formatter".freeze, [">= 0"])
       s.add_dependency("rake".freeze, [">= 10.0"])
       s.add_dependency("rspec".freeze, ["~> 3.1"])
-      s.add_dependency("activerecord".freeze, ["< 4.3.0", ">= 3.2.3"])
-      s.add_dependency("activerecord-oracle_enhanced-adapter".freeze, ["< 1.7.0", ">= 1.4.1"])
+      s.add_dependency("activerecord".freeze, "~> 5.0")
+      s.add_dependency("activerecord-oracle_enhanced-adapter".freeze, "~> 1.7")
       s.add_dependency("simplecov".freeze, [">= 0"])
       s.add_dependency("ruby-oci8".freeze, ["~> 2.1"])
     end
@@ -103,8 +103,8 @@ Gem::Specification.new do |s|
     s.add_dependency("rspec_junit_formatter".freeze, [">= 0"])
     s.add_dependency("rake".freeze, [">= 10.0"])
     s.add_dependency("rspec".freeze, ["~> 3.1"])
-    s.add_dependency("activerecord".freeze, ["< 4.3.0", ">= 3.2.3"])
-    s.add_dependency("activerecord-oracle_enhanced-adapter".freeze, ["< 1.7.0", ">= 1.4.1"])
+    s.add_dependency("activerecord".freeze, "~> 5.0")
+    s.add_dependency("activerecord-oracle_enhanced-adapter".freeze, "~> 1.7")
     s.add_dependency("simplecov".freeze, [">= 0"])
     s.add_dependency("ruby-oci8".freeze, ["~> 2.1"])
   end
