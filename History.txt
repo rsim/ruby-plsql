@@ -1,3 +1,7 @@
+== 0.7.1 2018-09-03
+* Fix
+  * Address incorrect versions in Gemfile 
+
 == 0.7.0 2018-09-03
 * Improvements and fixes
 
