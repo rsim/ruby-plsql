@@ -10,8 +10,8 @@ group :test, :development do
   gem "rspec", "~> 3.1"
 
   unless ENV["NO_ACTIVERECORD"]
-    gem "activerecord", ">= 3.2.3", "< 5.2.0"
-    gem "activerecord-oracle_enhanced-adapter", ">= 1.4.1", "< 1.9.0"
+    gem "activerecord", "~> 5.0"
+    gem "activerecord-oracle_enhanced-adapter", "~> 1.7"
     gem "simplecov", ">= 0"
   end
 
