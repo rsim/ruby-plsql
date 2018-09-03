@@ -2,7 +2,7 @@
 # We should not use cops only available for Ruby 2.1 or later
 # since ruby-plsql itself supports Ruby 1.9.3
 AllCops:
-  TargetRubyVersion: 2.1
+  TargetRubyVersion: 2.2
   DisabledByDefault: true
 
 # Prefer &&/|| over and/or.
