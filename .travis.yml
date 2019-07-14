@@ -42,8 +42,16 @@ gemfile:
     - gemfiles/Gemfile.activerecord-5.0
     - gemfiles/Gemfile.activerecord-5.1
     - gemfiles/Gemfile.activerecord-5.2
+    - gemfiles/Gemfile.activerecord-6.0
 
 matrix:
+    exclude:
+       - gemfile: gemfiles/Gemfile.activerecord-6.0
+         rvm: 2.4.6
+       - gemfile: gemfiles/Gemfile.activerecord-6.0
+         rvm: 2.3.8
+       - gemfile: gemfiles/Gemfile.activerecord-6.0
+         rvm: 2.2.10
     allow_failures:
       - rvm: ruby-head
       - rvm: jruby-head
