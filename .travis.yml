@@ -1,6 +1,8 @@
 dist: xenial
 sudo: required
 
+jdk:
+  - openjdk8
 env:
   global:
     - ORACLE_COOKIE=sqldev
