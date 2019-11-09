@@ -46,9 +46,16 @@ gemfile:
     - gemfiles/Gemfile.activerecord-5.1
     - gemfiles/Gemfile.activerecord-5.2
     - gemfiles/Gemfile.activerecord-6.0
+    - gemfiles/Gemfile.activerecord-master
 
 matrix:
     exclude:
+       - gemfile: gemfiles/Gemfile.activerecord-master
+         rvm: 2.4.6
+       - gemfile: gemfiles/Gemfile.activerecord-master
+         rvm: 2.3.8
+       - gemfile: gemfiles/Gemfile.activerecord-master
+         rvm: 2.2.10
        - gemfile: gemfiles/Gemfile.activerecord-6.0
          rvm: 2.4.6
        - gemfile: gemfiles/Gemfile.activerecord-6.0
