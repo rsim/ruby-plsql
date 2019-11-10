@@ -1,0 +1,40 @@
+name: RuboCop
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby 2.6
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.6.x
+    - name: Install required package
+      run: |
+        sudo apt-get install alien
+    - name: Download Oracle instant client
+      run: |
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/193000/oracle-instantcli
+ent19.3-basic-19.3.0.0.0-1.x86_64.rpm
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/193000/oracle-instantcli
+ent19.3-sqlplus-19.3.0.0.0-1.x86_64.rpm
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/193000/oracle-instantcli
+ent19.3-devel-19.3.0.0.0-1.x86_64.rpm
+    - name: Install Oracle instant client
+      run: |
+        sudo alien -i oracle-instantclient19.3-basic-19.3.0.0.0-1.x86_64.rpm
+        sudo alien -i oracle-instantclient19.3-sqlplus-19.3.0.0.0-1.x86_64.rpm
+        sudo alien -i oracle-instantclient19.3-devel-19.3.0.0.0-1.x86_64.rpm
+
+    - name: Build and run RuboCop
+      run: |
+        bundle install --jobs 4 --retry 3
+        bundle exec rubocop --parallel

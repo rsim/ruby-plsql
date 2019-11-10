@@ -2,7 +2,7 @@
 # We should not use cops only available for Ruby 2.1 or later
 # since ruby-plsql itself supports Ruby 1.9.3
 AllCops:
-  TargetRubyVersion: 2.2
+  TargetRubyVersion: 2.3
   DisabledByDefault: true
 
 # Prefer &&/|| over and/or.
@@ -45,7 +45,7 @@ Layout/EmptyLinesAroundMethodBody:
 Layout/EmptyLinesAroundModuleBody:
   Enabled: true
 
-Layout/FirstParameterIndentation:
+Layout/IndentFirstArgument:
   Enabled: true
 
 # Use Ruby >= 1.9 syntax for hashes. Prefer { a: :b } over { :a => :b }.
@@ -56,7 +56,7 @@ Style/HashSyntax:
 # extra level of indentation.
 Layout/IndentationConsistency:
   Enabled: true
-  EnforcedStyle: rails
+  EnforcedStyle: indented_internal_methods
 
 # Two spaces, no tabs (for indentation).
 Layout/IndentationWidth:
@@ -130,7 +130,7 @@ Layout/TrailingWhitespace:
   Enabled: true
 
 # Use quotes for string literals when they are enough.
-Style/UnneededPercentQ:
+Style/RedundantPercentQ:
   Enabled: true
 
 # Align `end` with the matching keyword or starting expression except for
