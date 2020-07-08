@@ -172,6 +172,7 @@ module PLSQL
       end
 
       table_proc = TableProcedure.new(@schema, self, :insert)
+      record = record.map { |k, v| [k.downcase.to_sym, v] }.to_h
       table_proc.add_insert_arguments(record)
 
       call = ProcedureCall.new(table_proc, table_proc.argument_values)
