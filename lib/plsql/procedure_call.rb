@@ -6,6 +6,11 @@ module PLSQL
       @dbms_output_stream = @schema.dbms_output_stream
       @skip_self = options[:skip_self]
       @self = options[:self]
+
+      if args.size == 1 && args[0].is_a?(Hash) && args[0].keys.all? { |k| k.is_a?(Symbol) }
+        args[0] = args[0].map { |k, v| [k.downcase, v] }.to_h
+      end
+
       @overload = get_overload_from_arguments_list(args)
       @procedure.ensure_tmp_tables_created(@overload) if @procedure.respond_to?(:ensure_tmp_tables_created)
       construct_sql(args)
