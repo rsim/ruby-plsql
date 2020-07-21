@@ -215,6 +215,11 @@ describe "Table" do
       expect(plsql.test_employees2.all("ORDER BY employee_id")).to eq(@employees2)
     end
 
+    it "should insert with case-insensetive table name" do
+      plsql.test_employees.insert @employees.first.map { |k, v| [k.upcase.to_sym, v] }.to_h
+      expect(plsql.test_employees.all).to eq([@employees.first])
+    end
+
   end
 
   describe "insert values" do
