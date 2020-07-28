@@ -2358,3 +2358,27 @@ describe "#get_argument_metadata" do
     end
   end
 end
+
+describe "case-insensitive params" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_func
+        ( p_string VARCHAR2 )
+        RETURN VARCHAR2
+      IS
+      BEGIN
+        RETURN UPPER(p_string);
+      END test_func;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP FUNCTION test_func"
+    plsql.logoff
+  end
+
+  it "should call procedure/function with case-insensitive param names" do
+    expect { plsql.test_func(p_STRING: "xxx") }.not_to raise_error
+  end
+end
