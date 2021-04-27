@@ -85,7 +85,7 @@ def get_connection(user_number = 0)
       OCI8.new(database_user, database_password, get_connection_url)
     end
   else
-    try_to_connect(NativeException) do
+    try_to_connect(Java::JavaSql::SQLException) do
       java.sql.DriverManager.getConnection(get_connection_url, database_user, database_password)
     end
   end
