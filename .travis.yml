@@ -1,4 +1,4 @@
-dist: focal
+dist: xenial
 sudo: required
 
 jdk:
