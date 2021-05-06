@@ -12,7 +12,7 @@ begin
   elsif java_version >= "1.7"
     # Oracle 11g client ojdbc6.jar is also compatible with Java 1.7
     # Oracle 12c client provides new ojdbc7.jar
-    %w(ojdbc7.jar ojdbc6.jar)
+    %w(ojdbc8.jar ojdbc7.jar ojdbc6.jar)
   else
     []
   end
