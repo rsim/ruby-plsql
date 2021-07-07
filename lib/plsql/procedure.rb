@@ -249,13 +249,7 @@ module PLSQL
         # type defined inside package
         if type_package
           if collection_type?(data_type)
-            #raise ArgumentError, "#{data_type} type #{sql_type_name} definition inside package is not supported as part of other type definition," <<
-            #  " use CREATE TYPE outside package" if data_level > 0
             tmp_table_name = "#{Connection::RUBY_TEMP_TABLE_PREFIX}#{@schema.connection.session_id}_#{@object_id}_#{subprogram_id}_#{position}"
-            #elsif data_type != "PL/SQL RECORD"
-            # raise exception only when there are no overloaded procedure definitions
-            # (as probably this overload will not be used at all)
-            #raise ArgumentError, "Parameter type #{sql_type_name} definition inside package is not supported, use CREATE TYPE outside package" if overload == 0
           end
         end
 
@@ -270,7 +264,10 @@ module PLSQL
           char_length: char_length && char_length.to_i,
           type_owner: type_owner,
           type_name: type_name,
-          type_subname: type_package, #TODO: rename to type_package
+          # TODO: should be renamed to type_package, when support for legacy database versions is dropped
+          # due to the explicit change declaration of types in oracle plsql_type-catalogs (type_package + type_name),
+          # the assignment of type + subtype was switched here for 18c and beyond
+          type_subname: type_package,
           sql_type_name: sql_type_name,
           defaulted: defaulted,
           type_object_type: type_object_type
@@ -286,34 +283,20 @@ module PLSQL
           when "PL/SQL TABLE", "TABLE", "VARRAY"
             argument_metadata[:element] = get_element_definition(argument_metadata)
           end
-          # previous_level_argument_metadata[data_level] = argument_metadata
         end
 
         # if function has return value
         if argument_name.nil? && in_out == "OUT"
           @return[overload] = argument_metadata
-          # if parameter
         else
-          # top level parameter
-          #if data_level == 0
           # sometime there are empty IN arguments in all_arguments view for procedures without arguments (e.g. for DBMS_OUTPUT.DISABLE)
           @arguments[overload][argument_name.downcase.to_sym] = argument_metadata if argument_name
-            # or lower level part of composite type
-          #else
-          #  case previous_level_argument_metadata[data_level - 1][:data_type]
-          #  when "PL/SQL RECORD"
-          #    previous_level_argument_metadata[data_level - 1][:fields][argument_name.downcase.to_sym] = argument_metadata
-          #  when "PL/SQL TABLE", "TABLE", "VARRAY", "REF CURSOR"
-          #    previous_level_argument_metadata[data_level - 1][:element] = argument_metadata
-          #  end
-          #end
         end
       end
       # if procedure is without arguments then create default empty argument list for default overload
       @arguments[0] = {} if @arguments.keys.empty?
 
       construct_argument_list_for_overloads
-      #puts @arguments
     end
 
     def construct_argument_list_for_overloads #:nodoc:
@@ -428,7 +411,6 @@ module PLSQL
 
     def get_element_definition(argument_metadata) #:nodoc:
       element_metadata = {}
-      #puts "argument_metadata for element selection: #{argument_metadata}"
       if collection_type?(argument_metadata[:data_type])
         case argument_metadata[:type_object_type]
         when "PACKAGE"
@@ -514,8 +496,6 @@ module PLSQL
           element_metadata[:fields] = get_field_definitions(element_metadata)
         end
       end
-
-      #puts "element_metadata: #{element_metadata}"
       element_metadata
     end
 
