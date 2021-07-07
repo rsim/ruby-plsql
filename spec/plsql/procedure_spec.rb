@@ -687,7 +687,7 @@ describe "Parameter type mapping /" do
             is_approved  BOOLEAN
           );
 
-          TYPE table_of_records IS TABLE OF t_employee;
+          TYPE table_of_records IS TABLE OF test_record.t_employee;
 
           FUNCTION test_full_name(p_employee t_employee)
             RETURN VARCHAR2;
@@ -1101,7 +1101,7 @@ describe "Parameter type mapping /" do
             last_name     VARCHAR(50),
             hire_date     DATE
           );
-          TYPE t_employees IS TABLE OF t_employee;
+          TYPE t_employees IS TABLE OF test_collections.t_employee;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
           -- these types with tables in lower level are not yet supported
@@ -1110,7 +1110,7 @@ describe "Parameter type mapping /" do
             first_name    VARCHAR2(50),
             last_name     VARCHAR(50),
             hire_date     DATE,
-            numbers       t_numbers
+            numbers       test_collections.t_numbers
           );
           FUNCTION test_employee2 (p_employee IN OUT t_employee2)
             RETURN t_employee2;
@@ -1366,7 +1366,7 @@ describe "Parameter type mapping /" do
             last_name     VARCHAR(50),
             hire_date     DATE
           );
-          TYPE t_employees IS TABLE OF t_employee
+          TYPE t_employees IS TABLE OF test_collections.t_employee
             INDEX BY BINARY_INTEGER;
           FUNCTION test_employees (p_employees IN OUT t_employees)
             RETURN t_employees;
