@@ -229,11 +229,19 @@ describe "ActiveRecord connection" do
   end
 
   it "should safely close cursors in threaded environment" do
-    expect {
-      t1 = Thread.new { plsql.dbms_lock.sleep(1) }.tap { |t| t.abort_on_exception = true }
-      t2 = Thread.new { plsql.dbms_lock.sleep(2) }.tap { |t| t.abort_on_exception = true }
-      [t2, t1].each { |t| t.join }
-    }.not_to raise_error
+    if (plsql.connection.database_version <=> [18, 0, 0, 0]) >= 0
+      expect {
+        t1 = Thread.new { plsql.dbms_session.sleep(1) }.tap { |t| t.abort_on_exception = true }
+        t2 = Thread.new { plsql.dbms_session.sleep(2) }.tap { |t| t.abort_on_exception = true }
+        [t2, t1].each { |t| t.join }
+      }.not_to raise_error
+    else
+      expect {
+        t1 = Thread.new { plsql.dbms_lock.sleep(1) }.tap { |t| t.abort_on_exception = true }
+        t2 = Thread.new { plsql.dbms_lock.sleep(2) }.tap { |t| t.abort_on_exception = true }
+        [t2, t1].each { |t| t.join }
+      }.not_to raise_error
+    end
   end
 
 end if defined?(ActiveRecord)
