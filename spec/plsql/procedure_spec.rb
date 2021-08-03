@@ -1508,6 +1508,12 @@ describe "Parameter type mapping /" do
     end
 
     describe "using Oracle 9.2" do
+      before(:all) do
+        # get actual database_version
+        plsql.connect! CONNECTION_PARAMS
+        skip "Skip if the actual database version is 18c or higher" if (plsql.connection.database_version <=> [18, 0, 0, 0]) >= 0
+      end
+
       before do
         # simulate Oracle 9.2 connection
         plsql(:oracle_9).connection = get_connection
