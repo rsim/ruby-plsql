@@ -3,11 +3,11 @@
 # Instead, edit Juwelier::Tasks in Rakefile, and run 'rake gemspec'
 # -*- encoding: utf-8 -*-
 
-# stub: ruby-plsql 0.7.1 ruby lib
+# stub: ruby-plsql 0.8.0 ruby lib
 
 Gem::Specification.new do |s|
   s.name = "ruby-plsql".freeze
-  s.version = "0.7.1"
+  s.version = "0.8.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
