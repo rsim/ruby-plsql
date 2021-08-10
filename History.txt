@@ -1,3 +1,27 @@
+== 0.8.0 2021-08-10
+* Improvements and fixes
+  * Support Rails 6.1 [#193]
+  * Support Rails 6.0 [#178]
+  * Support Oracle Database 18c or higher [#196]
+  * case-insensitive table names and proc params [#185]
+  * Use OCI driver type for RUBY_ENGINE TruffleRuby [#190]
+  * Replace NativeException with Java::JavaSql::SQLException [#192]
+  * Fixnum and Bignum are deprecated in Ruby 2.4 [#191]
+
+* CI
+  * Run CI with GitHub Actions [#198]
+  * CI against Rails 6.1 [#193]
+  * CI against Rails 6.0 [#178]
+  * CI against Ruby 3.0.2, 2.7.4 and 2.6.8 [#197]
+  * Exclude jruby-head with Rails main [#194]
+  * Exclude jruby-head with Rails main [#194]
+  * Bump RuboCop version to 0.81.0 [#186]
+  * Run RuboCop using GitHub Actions [#180, #182]
+  * Remove .codeclimate.yml [#181]
+  * Fallback to bundler 1.7.13 [#171]
+  * Terminate CI against Ruby 2.2.x [#172]
+  * Use Ubuntu Xenial at Travis CI [#176]
+
 == 0.7.1 2018-09-03
 * Fix
   * Address incorrect versions in Gemfile 
