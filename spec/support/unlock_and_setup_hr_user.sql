@@ -1,2 +1,3 @@
-alter user hr identified by hr account unlock;
+create user hr identified by hr;
+grant dba to hr;
 grant execute on dbms_lock to hr;
