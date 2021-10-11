@@ -219,15 +219,21 @@ module PLSQL
       @tmp_tables_created = {}
 
       @schema.select_all(
-        "SELECT subprogram_id, object_name, TO_NUMBER(overload), argument_name, position,
-              data_type, in_out, data_length, data_precision, data_scale, char_used,
-              char_length, type_owner, nvl(type_subname, type_name),
-              decode(type_object_type, 'PACKAGE', type_name, null), type_object_type, defaulted
-        FROM all_arguments
-        WHERE object_id = :object_id
-        AND owner = :owner
-        AND object_name = :procedure_name
-        ORDER BY overload, sequence",
+        "SELECT a.subprogram_id, a.object_name, TO_NUMBER(a.overload), a.argument_name, a.position,
+        a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used,
+        a.char_length, nvl(o.owner, a.type_owner), nvl(a.type_subname, nvl(o.object_name, a.type_name)) type_name,
+        CASE 
+          WHEN a.type_object_type = 'PACKAGE' THEN a.type_name
+          WHEN o.object_type = 'PACKAGE' THEN o.object_name
+          ELSE null
+        END type_subname, nvl(o.object_type, a.type_object_type), a.defaulted
+        FROM all_arguments a
+        LEFT JOIN all_synonyms s ON a.type_owner = s.owner AND a.type_name = s.synonym_name
+        LEFT JOIN all_objects o ON s.table_owner = o.owner AND s.table_name = o.object_name AND o.object_type = 'PACKAGE'
+        WHERE a.object_id = :object_id
+        AND a.owner = :owner
+        AND a.object_name = :procedure_name
+        ORDER BY a.overload, a.sequence",
         @object_id, @schema_name, @procedure
       ) do |r|
 
