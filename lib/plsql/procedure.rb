@@ -355,7 +355,7 @@ module PLSQL
           WHERE t.OWNER = :owner AND t.type_name = :type_name AND t.package_name = :package_name
           AND ta.OWNER = t.owner AND ta.TYPE_NAME = t.TYPE_NAME AND ta.PACKAGE_NAME = t.PACKAGE_NAME
           ORDER BY attr_no",
-          @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
+          argument_metadata[:type_owner], argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
 
