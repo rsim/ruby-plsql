@@ -221,15 +221,11 @@ module PLSQL
       @schema.select_all(
         "SELECT a.subprogram_id, a.object_name, TO_NUMBER(a.overload), a.argument_name, a.position,
         a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used,
-        a.char_length, nvl(o.owner, a.type_owner), nvl(a.type_subname, nvl(o.object_name, a.type_name)) type_name,
-        CASE 
-          WHEN a.type_object_type = 'PACKAGE' THEN a.type_name
-          WHEN o.object_type = 'PACKAGE' THEN o.object_name
-          ELSE null
-        END type_subname, nvl(o.object_type, a.type_object_type), a.defaulted
+        a.char_length, a.type_owner, nvl(a.type_subname, a.type_name) type_name,
+        case when a.type_object_type = 'PACKAGE' then a.type_name end type_package, a.type_object_type, a.defaulted,
+        s.table_owner synonym_owner, s.table_name synonym_name
         FROM all_arguments a
         LEFT JOIN all_synonyms s ON a.type_owner = s.owner AND a.type_name = s.synonym_name
-        LEFT JOIN all_objects o ON s.table_owner = o.owner AND s.table_name = o.object_name AND o.object_type = 'PACKAGE'
         WHERE a.object_id = :object_id
         AND a.owner = :owner
         AND a.object_name = :procedure_name
@@ -239,7 +235,8 @@ module PLSQL
 
         subprogram_id, object_name, overload, argument_name, position,
           data_type, in_out, data_length, data_precision, data_scale, char_used,
-          char_length, type_owner, type_name, type_package, type_object_type, defaulted = r
+          char_length, type_owner, type_name, type_package, type_object_type, defaulted,
+          synonym_dest_owner, synonym_dest_name = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -247,6 +244,20 @@ module PLSQL
         @arguments[overload] ||= {}
         @return[overload] ||= nil
         @tmp_table_names[overload] ||= []
+
+        unless synonym_dest_owner.nil?
+          puts 'Synonym not nil'
+          @schema.select_all(
+            "SELECT o.owner, o.object_name, o.object_type
+            FROM all_objects o
+            WHERE o.owner = :synonym_owner 
+            AND o.object_name = :synonym_name 
+            AND o.object_type = 'PACKAGE'",
+            synonym_dest_owner, synonym_dest_name
+          ) do |r2|
+            type_owner, type_package, type_object_type = r2
+          end
+        end
 
         sql_type_name = build_sql_type_name(type_owner, type_package, type_name)
 
