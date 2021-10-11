@@ -384,7 +384,7 @@ module PLSQL
           "SELECT column_id, column_name, data_type, data_length, data_precision, data_scale, char_length, char_used
            FROM ALL_TAB_COLS WHERE OWNER = :owner AND TABLE_NAME = :type_name
            ORDER BY column_id",
-          @schema_name, argument_metadata[:type_name]) do |r|
+           argument_metadata[:type_owner], argument_metadata[:type_name]) do |r|
 
           col_no, col_name, col_type_name, col_length, col_precision, col_scale, col_char_length, col_char_used = r
 
@@ -417,7 +417,7 @@ module PLSQL
             "SELECT elem_type_owner, elem_type_name, elem_type_package, length, precision, scale, char_used, index_by
              FROM ALL_PLSQL_COLL_TYPES t
              WHERE t.OWNER = :owner AND t.TYPE_NAME = :type_name AND t.PACKAGE_NAME = :package_name",
-            @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname])
+            argument_metadata[:type_owner], argument_metadata[:type_name], argument_metadata[:type_subname])
 
           elem_type_owner, elem_type_name, elem_type_package, elem_length, elem_precision, elem_scale, elem_char_used, index_by = r
 
@@ -454,7 +454,7 @@ module PLSQL
             "SELECT elem_type_owner, elem_type_name, length, precision, scale, char_used
              FROM ALL_COLL_TYPES t
              WHERE t.owner = :owner AND t.TYPE_NAME = :type_name",
-            @schema_name, argument_metadata[:type_name]
+            argument_metadata[:type_owner], argument_metadata[:type_name]
           )
           elem_type_owner, elem_type_name, elem_length, elem_precision, elem_scale, elem_char_used = r
 
