@@ -220,15 +220,15 @@ module PLSQL
 
       @schema.select_all(
         "SELECT a.subprogram_id, a.object_name, TO_NUMBER(a.overload), a.argument_name, a.position,
-        a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used,
-        a.char_length, a.type_owner, nvl(a.type_subname, a.type_name) type_name,
-        case when a.type_object_type = 'PACKAGE' then a.type_name end type_package, a.type_object_type, a.defaulted,
-        s.table_owner synonym_owner, s.table_name synonym_name
+          a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used,
+          a.char_length, a.type_owner, nvl(a.type_subname, a.type_name) type_name,
+          case when a.type_object_type = 'PACKAGE' then a.type_name end type_package, a.type_object_type, a.defaulted,
+          s.table_owner synonym_owner, s.table_name synonym_name
         FROM all_arguments a
         LEFT JOIN all_synonyms s ON a.type_owner = s.owner AND a.type_name = s.synonym_name
         WHERE a.object_id = :object_id
-        AND a.owner = :owner
-        AND a.object_name = :procedure_name
+          AND a.owner = :owner
+          AND a.object_name = :procedure_name
         ORDER BY a.overload, a.sequence",
         @object_id, @schema_name, @procedure
       ) do |r|
@@ -246,16 +246,21 @@ module PLSQL
         @tmp_table_names[overload] ||= []
 
         unless synonym_dest_owner.nil?
-          puts 'Synonym not nil'
+          #puts 'Synonym not nil'
           @schema.select_all(
             "SELECT o.owner, o.object_name, o.object_type
             FROM all_objects o
-            WHERE o.owner = :synonym_owner 
-            AND o.object_name = :synonym_name 
-            AND o.object_type = 'PACKAGE'",
+            WHERE o.owner = :synonym_owner
+              AND o.object_name = :synonym_name
+              AND o.object_type IN ('PACKAGE', 'TYPE')",
             synonym_dest_owner, synonym_dest_name
           ) do |r2|
-            type_owner, type_package, type_object_type = r2
+            tmp_owner, tmp_name, tmp_type = r2
+            if tmp_type == 'PACKAGE'
+              type_owner, type_package, type_object_type = tmp_owner, tmp_name, tmp_type
+            else
+              type_owner, type_name, type_object_type = tmp_owner, tmp_name, tmp_type
+            end
           end
         end
 
@@ -363,15 +368,22 @@ module PLSQL
     end
 
     def get_field_definitions(argument_metadata) #:nodoc:
+      puts "#### get_field_definitions: #{argument_metadata[:type_object_type]}, #{argument_metadata[:type_owner]}, #{argument_metadata[:type_subname]}, #{argument_metadata[:type_name]}"
       fields = {}
       case argument_metadata[:type_object_type]
       when "PACKAGE"
         @schema.select_all(
-          "SELECT attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, length, precision, scale, char_used
-          FROM ALL_PLSQL_TYPES t, ALL_PLSQL_TYPE_ATTRS ta
-          WHERE t.OWNER = :owner AND t.type_name = :type_name AND t.package_name = :package_name
-          AND ta.OWNER = t.owner AND ta.TYPE_NAME = t.TYPE_NAME AND ta.PACKAGE_NAME = t.PACKAGE_NAME
-          ORDER BY attr_no",
+          "SELECT ta.attr_no, ta.attr_name,
+            nvl(s.table_owner, attr_type_owner) attr_type_owner,
+            CASE WHEN ta.attr_type_package IS NOT NULL THEN ta.attr_type_name ELSE nvl(s.table_name, ta.attr_type_name) END attr_type_name,
+            CASE WHEN ta.attr_type_package IS NOT NULL THEN nvl(s.table_name, ta.attr_type_package) END attr_type_package,
+            ta.length, ta.precision, ta.scale, ta.char_used
+          FROM all_plsql_type_attrs ta
+          LEFT JOIN all_synonyms s ON ta.attr_type_owner = s.owner AND nvl(ta.attr_type_package, ta.attr_type_name) = s.synonym_name
+          WHERE ta.owner = :owner
+            AND ta.type_name = :type_name
+            AND ta.package_name = :package_name
+          ORDER BY ta.attr_no",
           @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
@@ -426,14 +438,21 @@ module PLSQL
     end
 
     def get_element_definition(argument_metadata) #:nodoc:
+      puts "#### get_element_definition: #{argument_metadata[:type_object_type]}, #{argument_metadata[:type_owner]}, #{argument_metadata[:type_subname]}, #{argument_metadata[:type_name]}"
       element_metadata = {}
       if collection_type?(argument_metadata[:data_type])
         case argument_metadata[:type_object_type]
         when "PACKAGE"
           r = @schema.select_first(
-            "SELECT elem_type_owner, elem_type_name, elem_type_package, length, precision, scale, char_used, index_by
-             FROM ALL_PLSQL_COLL_TYPES t
-             WHERE t.OWNER = :owner AND t.TYPE_NAME = :type_name AND t.PACKAGE_NAME = :package_name",
+            "SELECT nvl(s.table_owner, t.elem_type_owner) elem_type_owner,
+              CASE WHEN t.elem_type_package IS NOT NULL THEN t.elem_type_name ELSE nvl(s.table_name, t.elem_type_name) END elem_type_name,
+              CASE WHEN t.elem_type_package IS NOT NULL THEN nvl(s.table_name, t.elem_type_package) END elem_type_package_new,
+              length, precision, scale, char_used, index_by
+            FROM all_plsql_coll_types t
+            LEFT JOIN all_synonyms s ON t.elem_type_owner = s.owner AND nvl(t.elem_type_package, t.elem_type_name) = s.synonym_name
+            WHERE t.owner = :owner
+              AND t.type_name = :type_name
+              AND t.package_name = :package_name",
             @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname])
 
           elem_type_owner, elem_type_name, elem_type_package, elem_length, elem_precision, elem_scale, elem_char_used, index_by = r
@@ -468,9 +487,11 @@ module PLSQL
           end
         when "TYPE"
           r = @schema.select_first(
-            "SELECT elem_type_owner, elem_type_name, length, precision, scale, char_used
-             FROM ALL_COLL_TYPES t
-             WHERE t.owner = :owner AND t.TYPE_NAME = :type_name",
+            "SELECT nvl(s.table_owner, t.elem_type_owner), nvl(s.table_name, t.elem_type_name), t.length, t.precision, t.scale, t.char_used
+            FROM all_coll_types t
+            LEFT JOIN all_synonyms s ON t.elem_type_owner = s.owner AND t.elem_type_name = s.synonym_name
+            WHERE t.owner = :owner
+              AND t.type_name = :type_name",
             @schema_name, argument_metadata[:type_name]
           )
           elem_type_owner, elem_type_name, elem_length, elem_precision, elem_scale, elem_char_used = r
