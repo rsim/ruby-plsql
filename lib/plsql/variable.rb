@@ -9,7 +9,7 @@ module PLSQL
           AND type = 'PACKAGE'
           AND UPPER(text) LIKE :variable_name",
             override_schema_name || schema.schema_name, package, "%#{variable_upcase}%").each do |row|
-        if row[0] =~ /^\s*#{variable_upcase}\s+(CONSTANT\s+)?([A-Z0-9_. %]+(\([\w\s,]+\))?)\s*(NOT\s+NULL)?\s*((:=|DEFAULT).*)?;\s*(--.*)?$/i
+        if row[0] =~ /^\s*#{variable_upcase}\s+(CONSTANT\s+)?([A-Z0-9_. %]+(\([\w\s,]+\))?)\s*(NOT\s+NULL)?\s*((:=|DEFAULT).*)?;?\s*(--.*)?$/i
           return new(schema, variable, package, $2.strip, override_schema_name)
         end
       end
