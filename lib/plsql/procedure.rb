@@ -425,26 +425,74 @@ module PLSQL
             raise ArgumentError, "Index-by Varchar-Table (associative array) #{argument_metadata[:type_name]} is not supported"
           end
 
-          element_metadata = {
-            position: 1,
-            data_type: if elem_type_owner == nil
-                         elem_type_name
-                       else
-                         elem_type_package != nil ? "PL/SQL RECORD" : "OBJECT"
-                       end,
-            in_out: argument_metadata[:in_out],
-            data_length: elem_length && elem_length.to_i,
-            data_precision: elem_precision && elem_precision.to_i,
-            data_scale: elem_scale && elem_scale.to_i,
-            char_used: elem_char_used,
-            char_length: elem_char_used && elem_length && elem_length.to_i,
-            type_owner: elem_type_owner,
-            type_name: elem_type_name,
-            type_subname: elem_type_package,
-            sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
-            type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
-            defaulted: argument_metadata[:defaulted]
-          }
+          if elem_type_name.match('%ROWTYPE')
+            fields = {}
+            @schema.select_all(
+              "select column_id, column_name, data_type, data_length, data_precision, data_scale, char_used, char_length 
+              FROM all_tab_columns 
+              where owner = :owner and table_name = :table_name 
+              order by column_id",
+              elem_type_owner, elem_type_name.sub('%ROWTYPE', '')) do |r|
+              
+              rowtype_column_id, rowtype_column_name, rowtype_data_type, rowtype_data_length, rowtype_data_precision, rowtype_data_scale, rowtype_char_used, rowtype_char_length = r
+
+              fields[rowtype_column_name.downcase.to_sym] = {
+                position: rowtype_column_id.to_i,
+                data_type: rowtype_data_type,
+                in_out: 'OUT',
+                data_length: rowtype_data_length && rowtype_data_length.to_i,
+                data_precision: rowtype_data_precision && rowtype_data_precision.to_i,
+                data_scale: rowtype_data_scale && rowtype_data_scale.to_i,
+                char_used: rowtype_char_used == nil ? "0" : rowtype_char_used,
+                char_length: rowtype_char_length && rowtype_data_length && rowtype_data_length.to_i,
+                type_owner: nil,
+                type_name: nil,
+                type_subname: nil,
+                sql_type_name: nil,
+                defaulted: 'N'
+              }
+            end
+            element_metadata = {
+              position: 1,
+              data_type: "PL/SQL RECORD",
+              in_out: argument_metadata[:in_out],
+              data_length: elem_length && elem_length.to_i,
+              data_precision: elem_precision && elem_precision.to_i,
+              data_scale: elem_scale && elem_scale.to_i,
+              char_used: elem_char_used,
+              char_length: elem_char_used && elem_length && elem_length.to_i,
+              type_owner: elem_type_owner,
+              type_name: elem_type_name,
+              type_subname: elem_type_package,
+              sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
+              type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
+              defaulted: argument_metadata[:defaulted],
+              fields: fields
+            }
+        else
+            element_metadata = {
+              position: 1,
+              data_type: if elem_type_owner == nil
+                          elem_type_name
+                        elsif elem_type_package != nil
+                          "PL/SQL RECORD"
+                        else 
+                          "OBJECT"
+                        end,
+              in_out: argument_metadata[:in_out],
+              data_length: elem_length && elem_length.to_i,
+              data_precision: elem_precision && elem_precision.to_i,
+              data_scale: elem_scale && elem_scale.to_i,
+              char_used: elem_char_used,
+              char_length: elem_char_used && elem_length && elem_length.to_i,
+              type_owner: elem_type_owner,
+              type_name: elem_type_name,
+              type_subname: elem_type_package,
+              sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
+              type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
+              defaulted: argument_metadata[:defaulted]
+            }
+          end
 
           if elem_type_package != nil
             element_metadata[:fields] = get_field_definitions(element_metadata)
