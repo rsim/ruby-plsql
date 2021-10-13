@@ -418,6 +418,9 @@ module PLSQL
 
           col_no, col_name, col_type_name, col_length, col_precision, col_scale, col_char_length, col_char_used = r
 
+          if col_type_name.match('TIMESTAMP\(\d+\) WITH LOCAL TIME ZONE')
+            col_type_name = 'TIMESTAMP WITH LOCAL TIME ZONE'
+          end
           fields[col_name.downcase.to_sym] = {
             position: col_no.to_i,
             data_type: col_type_name,
