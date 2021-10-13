@@ -412,6 +412,7 @@ module PLSQL
         @schema.select_all(
           "SELECT column_id, column_name, data_type, data_length, data_precision, data_scale, char_length, char_used
            FROM ALL_TAB_COLS WHERE OWNER = :owner AND TABLE_NAME = :type_name
+            AND hidden_column != 'YES'
            ORDER BY column_id",
            argument_metadata[:type_owner], argument_metadata[:type_name]) do |r|
 
