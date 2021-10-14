@@ -388,9 +388,17 @@ module PLSQL
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
 
+          composite_type = nil
+          if attr_type_owner != nil
+            if attr_type_package != nil
+              composite_type = get_composite_type(attr_type_owner, attr_type_name, attr_type_package)
+            else
+              composite_type = 'TABLE'
+            end
+          end
           fields[attr_name.downcase.to_sym] = {
             position: attr_no.to_i,
-            data_type: attr_type_owner == nil ? attr_type_name : get_composite_type(attr_type_owner, attr_type_name, attr_type_package),
+            data_type: attr_type_owner == nil ? attr_type_name : composite_type,
             in_out: argument_metadata[:in_out],
             data_length: attr_length && attr_length.to_i,
             data_precision: attr_precision && attr_precision.to_i,
@@ -401,8 +409,12 @@ module PLSQL
             type_name: attr_type_owner && attr_type_name,
             type_subname: attr_type_package,
             sql_type_name: attr_type_owner && build_sql_type_name(attr_type_owner, attr_type_package, attr_type_name),
-            defaulted: argument_metadata[:defaulted]
+            defaulted: argument_metadata[:defaulted],
+            type_object_type: composite_type && composite_type == 'TABLE' ? 'TYPE' : nil
           }
+          if composite_type == 'TABLE'
+            fields[attr_name.downcase.to_sym][:element] = get_element_definition(fields[attr_name.downcase.to_sym])
+          end
 
           if fields[attr_name.downcase.to_sym][:data_type] == "TABLE" && fields[attr_name.downcase.to_sym][:type_subname] != nil
             fields[attr_name.downcase.to_sym][:fields] = get_field_definitions(fields[attr_name.downcase.to_sym])
@@ -509,7 +521,7 @@ module PLSQL
               defaulted: argument_metadata[:defaulted],
               fields: fields
             }
-        else
+          else
             element_metadata = {
               position: 1,
               data_type: if elem_type_owner == nil
