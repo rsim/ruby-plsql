@@ -388,6 +388,9 @@ module PLSQL
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
 
+          attr_type_name = 'PLS_INTEGER' if attr_type_name == 'PL/SQL PLS INTEGER'
+          attr_type_name = 'BINARY_INTEGER' if attr_type_name == 'PL/SQL BINARY INTEGER'
+
           composite_type = nil
           if attr_type_owner != nil
             if attr_type_package != nil
