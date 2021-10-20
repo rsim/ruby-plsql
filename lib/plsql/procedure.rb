@@ -246,7 +246,6 @@ module PLSQL
         @tmp_table_names[overload] ||= []
 
         unless synonym_dest_owner.nil?
-          #puts 'Synonym not nil'
           @schema.select_all(
             "SELECT o.owner, o.object_name, o.object_type
             FROM all_objects o
@@ -368,7 +367,6 @@ module PLSQL
     end
 
     def get_field_definitions(argument_metadata) #:nodoc:
-      puts "#### get_field_definitions: #{argument_metadata[:type_object_type]}, #{argument_metadata[:type_owner]}, #{argument_metadata[:type_subname]}, #{argument_metadata[:type_name]}"
       fields = {}
       case argument_metadata[:type_object_type]
       when "PACKAGE"
@@ -457,7 +455,6 @@ module PLSQL
     end
 
     def get_element_definition(argument_metadata) #:nodoc:
-      puts "#### get_element_definition: #{argument_metadata[:type_object_type]}, #{argument_metadata[:type_owner]}, #{argument_metadata[:type_subname]}, #{argument_metadata[:type_name]}"
       element_metadata = {}
       if collection_type?(argument_metadata[:data_type])
         case argument_metadata[:type_object_type]
