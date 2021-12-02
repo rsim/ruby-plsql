@@ -231,7 +231,7 @@ module PLSQL
         @object_id, @schema_name, @procedure
       ) do |r|
 
-        subprogram_id, object_name, overload, argument_name, position,
+        subprogram_id, _object_name, overload, argument_name, position,
           data_type, in_out, data_length, data_precision, data_scale, char_used,
           char_length, type_owner, type_name, type_package, type_object_type, defaulted = r
 
