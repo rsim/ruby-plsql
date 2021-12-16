@@ -32,9 +32,9 @@ install:
 
 language: ruby
 rvm:
-  - 3.0.2
-  - 2.7.4
-  - 2.6.8
+  - 3.0.3
+  - 2.7.5
+  - 2.6.9
   - 2.5.9
   - 2.4.10
   - 2.3.8
@@ -49,6 +49,7 @@ gemfile:
     - gemfiles/Gemfile.activerecord-5.2
     - gemfiles/Gemfile.activerecord-6.0
     - gemfiles/Gemfile.activerecord-6.1
+    - gemfiles/Gemfile.activerecord-7.0
     - gemfiles/Gemfile.activerecord-main
 
 matrix:
@@ -58,7 +59,7 @@ matrix:
        - gemfile: gemfiles/Gemfile.activerecord-main
          rvm: jruby-9.2.17.0
        - gemfile: gemfiles/Gemfile.activerecord-main
-         rvm: 2.6.8
+         rvm: 2.6.9
        - gemfile: gemfiles/Gemfile.activerecord-main
          rvm: 2.5.9
        - gemfile: gemfiles/Gemfile.activerecord-main
@@ -79,10 +80,24 @@ matrix:
          rvm: 2.3.8
        - gemfile: gemfiles/Gemfile.activerecord-6.1
          rvm: 2.2.10
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: jruby-head
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: jruby-9.2.17.0
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: 2.6.9
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: 2.5.9
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: 2.4.10
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: 2.3.8
+       - gemfile: gemfiles/Gemfile.activerecord-7.0
+         rvm: 2.2.10
     allow_failures:
       - rvm: ruby-head
       - rvm: jruby-head
       - gemfile: gemfiles/Gemfile.activerecord-main
-        rvm: 3.0.2
+        rvm: 3.0.3
       - gemfile: gemfiles/Gemfile.activerecord-main
-        rvm: 2.7.4
+        rvm: 2.7.5
