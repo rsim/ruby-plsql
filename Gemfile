@@ -1,5 +1,7 @@
 source "http://rubygems.org"
 
+git_source(:github) { |repo| "https://github.com/#{repo}.git" }
+
 group :development do
   gem "juwelier", "~> 2.0"
   gem "rspec_junit_formatter"
@@ -19,6 +21,10 @@ group :test, :development do
   end
 
   platforms :ruby, :mswin, :mingw do
-    gem "ruby-oci8", "~> 2.1"
+    if RUBY_VERSION >= "3.2"
+      gem "ruby-oci8", github: "kubo/ruby-oci8", branch: "master"
+    else
+      gem "ruby-oci8", "~> 2.1"
+    end
   end
 end
