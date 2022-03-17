@@ -289,7 +289,11 @@ module PLSQL
         # ActiveRecord Oracle enhanced adapter puts OCI8EnhancedAutoRecover wrapper around OCI8
         # in this case we need to pass original OCI8 connection
         else
-          raw_connection.instance_variable_get(:@connection)
+          if raw_connection.instance_variable_defined?(:@raw_connection)
+            raw_connection.instance_variable_get(:@raw_connection)
+          else
+            raw_connection.instance_variable_get(:@connection)
+          end
         end
       end
 
