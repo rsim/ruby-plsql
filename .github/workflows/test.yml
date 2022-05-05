@@ -18,7 +18,9 @@ jobs:
           '2.6',
           '2.5',
           ruby-head,
-          ruby-debug
+          ruby-debug,
+          truffleruby,
+          truffleruby-head
         ]
     env:
       ORACLE_HOME: /usr/lib/oracle/21/client64
@@ -69,6 +71,10 @@ jobs:
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh
+    - name: Disable ActiveRecord for TruffleRuby
+      run: |
+        echo "NO_ACTIVERECORD=true" >> $GITHUB_ENV
+      if: "contains(matrix.ruby, 'truffleruby')"
     - name: Bundle install
       run: |
         bundle install --jobs 4 --retry 3

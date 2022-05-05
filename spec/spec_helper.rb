@@ -1,15 +1,18 @@
 require "rubygems"
 require "bundler"
 Bundler.setup(:default, :development)
-require "simplecov"
 
-SimpleCov.configure do
-  load_profile "root_filter"
-  load_profile "test_frameworks"
-end
+unless ENV["NO_ACTIVERECORD"]
+  require "simplecov"
 
-ENV["COVERAGE"] && SimpleCov.start do
-  add_filter "/.rvm/"
+  SimpleCov.configure do
+    load_profile "root_filter"
+    load_profile "test_frameworks"
+  end
+
+  ENV["COVERAGE"] && SimpleCov.start do
+    add_filter "/.rvm/"
+  end
 end
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), "..", "lib"))
