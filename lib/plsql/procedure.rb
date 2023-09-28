@@ -160,7 +160,7 @@ module PLSQL
           data_precision: data_precision && data_precision.to_i,
           data_scale: data_scale && data_scale.to_i,
           char_used: char_used,
-          char_length: char_length && char_length.to_i,
+          char_length: char_used && char_length && char_length.to_i,
           type_owner: type_owner,
           type_name: type_name,
           type_subname: type_subname,
@@ -219,21 +219,24 @@ module PLSQL
       @tmp_tables_created = {}
 
       @schema.select_all(
-        "SELECT subprogram_id, object_name, TO_NUMBER(overload), argument_name, position,
-              data_type, in_out, data_length, data_precision, data_scale, char_used,
-              char_length, type_owner, nvl(type_subname, type_name),
-              decode(type_object_type, 'PACKAGE', type_name, null), type_object_type, defaulted
-        FROM all_arguments
-        WHERE object_id = :object_id
-        AND owner = :owner
-        AND object_name = :procedure_name
-        ORDER BY overload, sequence",
+        "SELECT a.subprogram_id, a.object_name, TO_NUMBER(a.overload), a.argument_name, a.position,
+          a.data_type, a.in_out, a.data_length, a.data_precision, a.data_scale, a.char_used,
+          a.char_length, a.type_owner, nvl(a.type_subname, a.type_name) type_name,
+          case when a.type_object_type = 'PACKAGE' then a.type_name end type_package, a.type_object_type, a.defaulted,
+          s.table_owner synonym_owner, s.table_name synonym_name
+        FROM all_arguments a
+        LEFT JOIN all_synonyms s ON a.type_owner = s.owner AND a.type_name = s.synonym_name
+        WHERE a.object_id = :object_id
+          AND a.owner = :owner
+          AND a.object_name = :procedure_name
+        ORDER BY a.overload, a.sequence",
         @object_id, @schema_name, @procedure
       ) do |r|
 
         subprogram_id, _object_name, overload, argument_name, position,
           data_type, in_out, data_length, data_precision, data_scale, char_used,
-          char_length, type_owner, type_name, type_package, type_object_type, defaulted = r
+          char_length, type_owner, type_name, type_package, type_object_type, defaulted,
+          synonym_dest_owner, synonym_dest_name = r
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -241,6 +244,24 @@ module PLSQL
         @arguments[overload] ||= {}
         @return[overload] ||= nil
         @tmp_table_names[overload] ||= []
+
+        unless synonym_dest_owner.nil?
+          @schema.select_all(
+            "SELECT o.owner, o.object_name, o.object_type
+            FROM all_objects o
+            WHERE o.owner = :synonym_owner
+              AND o.object_name = :synonym_name
+              AND o.object_type IN ('PACKAGE', 'TYPE')",
+            synonym_dest_owner, synonym_dest_name
+          ) do |r2|
+            tmp_owner, tmp_name, tmp_type = r2
+            if tmp_type == 'PACKAGE'
+              type_owner, type_package, type_object_type = tmp_owner, tmp_name, tmp_type
+            else
+              type_owner, type_name, type_object_type = tmp_owner, tmp_name, tmp_type
+            end
+          end
+        end
 
         sql_type_name = build_sql_type_name(type_owner, type_package, type_name)
 
@@ -260,7 +281,7 @@ module PLSQL
           data_precision: data_precision && data_precision.to_i,
           data_scale: data_scale && data_scale.to_i,
           char_used: char_used,
-          char_length: char_length && char_length.to_i,
+          char_length: char_used && char_length && char_length.to_i,
           type_owner: type_owner,
           type_name: type_name,
           # TODO: should be renamed to type_package, when support for legacy database versions is dropped
@@ -350,18 +371,35 @@ module PLSQL
       case argument_metadata[:type_object_type]
       when "PACKAGE"
         @schema.select_all(
-          "SELECT attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, length, precision, scale, char_used
-          FROM ALL_PLSQL_TYPES t, ALL_PLSQL_TYPE_ATTRS ta
-          WHERE t.OWNER = :owner AND t.type_name = :type_name AND t.package_name = :package_name
-          AND ta.OWNER = t.owner AND ta.TYPE_NAME = t.TYPE_NAME AND ta.PACKAGE_NAME = t.PACKAGE_NAME
-          ORDER BY attr_no",
-          @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
+          "SELECT ta.attr_no, ta.attr_name,
+            nvl(s.table_owner, attr_type_owner) attr_type_owner,
+            CASE WHEN ta.attr_type_package IS NOT NULL THEN ta.attr_type_name ELSE nvl(s.table_name, ta.attr_type_name) END attr_type_name,
+            CASE WHEN ta.attr_type_package IS NOT NULL THEN nvl(s.table_name, ta.attr_type_package) END attr_type_package,
+            ta.length, ta.precision, ta.scale, ta.char_used
+          FROM all_plsql_type_attrs ta
+          LEFT JOIN all_synonyms s ON ta.attr_type_owner = s.owner AND nvl(ta.attr_type_package, ta.attr_type_name) = s.synonym_name
+          WHERE ta.owner = :owner
+            AND ta.type_name = :type_name
+            AND ta.package_name = :package_name
+          ORDER BY ta.attr_no",
+          argument_metadata[:type_owner], argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
 
+          attr_type_name = 'PLS_INTEGER' if attr_type_name == 'PL/SQL PLS INTEGER'
+          attr_type_name = 'BINARY_INTEGER' if attr_type_name == 'PL/SQL BINARY INTEGER'
+
+          composite_type = nil
+          if attr_type_owner != nil
+            if attr_type_package != nil
+              composite_type = get_composite_type(attr_type_owner, attr_type_name, attr_type_package)
+            else
+              composite_type = 'TABLE'
+            end
+          end
           fields[attr_name.downcase.to_sym] = {
             position: attr_no.to_i,
-            data_type: attr_type_owner == nil ? attr_type_name : get_composite_type(attr_type_owner, attr_type_name, attr_type_package),
+            data_type: attr_type_owner == nil ? attr_type_name : composite_type,
             in_out: argument_metadata[:in_out],
             data_length: attr_length && attr_length.to_i,
             data_precision: attr_precision && attr_precision.to_i,
@@ -372,8 +410,12 @@ module PLSQL
             type_name: attr_type_owner && attr_type_name,
             type_subname: attr_type_package,
             sql_type_name: attr_type_owner && build_sql_type_name(attr_type_owner, attr_type_package, attr_type_name),
-            defaulted: argument_metadata[:defaulted]
+            defaulted: argument_metadata[:defaulted],
+            type_object_type: composite_type && composite_type == 'TABLE' ? 'TYPE' : nil
           }
+          if composite_type == 'TABLE'
+            fields[attr_name.downcase.to_sym][:element] = get_element_definition(fields[attr_name.downcase.to_sym])
+          end
 
           if fields[attr_name.downcase.to_sym][:data_type] == "TABLE" && fields[attr_name.downcase.to_sym][:type_subname] != nil
             fields[attr_name.downcase.to_sym][:fields] = get_field_definitions(fields[attr_name.downcase.to_sym])
@@ -383,11 +425,15 @@ module PLSQL
         @schema.select_all(
           "SELECT column_id, column_name, data_type, data_length, data_precision, data_scale, char_length, char_used
            FROM ALL_TAB_COLS WHERE OWNER = :owner AND TABLE_NAME = :type_name
+            AND hidden_column != 'YES'
            ORDER BY column_id",
-          @schema_name, argument_metadata[:type_name]) do |r|
+           argument_metadata[:type_owner], argument_metadata[:type_name]) do |r|
 
           col_no, col_name, col_type_name, col_length, col_precision, col_scale, col_char_length, col_char_used = r
 
+          if col_type_name.match('TIMESTAMP\(\d+\) WITH LOCAL TIME ZONE')
+            col_type_name = 'TIMESTAMP WITH LOCAL TIME ZONE'
+          end
           fields[col_name.downcase.to_sym] = {
             position: col_no.to_i,
             data_type: col_type_name,
@@ -396,7 +442,7 @@ module PLSQL
             data_precision: col_precision && col_precision.to_i,
             data_scale: col_scale && col_scale.to_i,
             char_used: col_char_used == nil ? "0" : col_char_used,
-            char_length: col_char_length && col_char_length.to_i,
+            char_length: col_char_used && col_char_length && col_char_length.to_i,
             type_owner: nil,
             type_name: nil,
             type_subname: nil,
@@ -414,10 +460,16 @@ module PLSQL
         case argument_metadata[:type_object_type]
         when "PACKAGE"
           r = @schema.select_first(
-            "SELECT elem_type_owner, elem_type_name, elem_type_package, length, precision, scale, char_used, index_by
-             FROM ALL_PLSQL_COLL_TYPES t
-             WHERE t.OWNER = :owner AND t.TYPE_NAME = :type_name AND t.PACKAGE_NAME = :package_name",
-            @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname])
+            "SELECT nvl(s.table_owner, t.elem_type_owner) elem_type_owner,
+              CASE WHEN t.elem_type_package IS NOT NULL THEN t.elem_type_name ELSE nvl(s.table_name, t.elem_type_name) END elem_type_name,
+              CASE WHEN t.elem_type_package IS NOT NULL THEN nvl(s.table_name, t.elem_type_package) END elem_type_package_new,
+              length, precision, scale, char_used, index_by
+            FROM all_plsql_coll_types t
+            LEFT JOIN all_synonyms s ON t.elem_type_owner = s.owner AND nvl(t.elem_type_package, t.elem_type_name) = s.synonym_name
+            WHERE t.owner = :owner
+              AND t.type_name = :type_name
+              AND t.package_name = :package_name",
+            argument_metadata[:type_owner], argument_metadata[:type_name], argument_metadata[:type_subname])
 
           elem_type_owner, elem_type_name, elem_type_package, elem_length, elem_precision, elem_scale, elem_char_used, index_by = r
 
@@ -425,36 +477,86 @@ module PLSQL
             raise ArgumentError, "Index-by Varchar-Table (associative array) #{argument_metadata[:type_name]} is not supported"
           end
 
-          element_metadata = {
-            position: 1,
-            data_type: if elem_type_owner == nil
-                         elem_type_name
-                       else
-                         elem_type_package != nil ? "PL/SQL RECORD" : "OBJECT"
-                       end,
-            in_out: argument_metadata[:in_out],
-            data_length: elem_length && elem_length.to_i,
-            data_precision: elem_precision && elem_precision.to_i,
-            data_scale: elem_scale && elem_scale.to_i,
-            char_used: elem_char_used,
-            char_length: elem_char_used && elem_length && elem_length.to_i,
-            type_owner: elem_type_owner,
-            type_name: elem_type_name,
-            type_subname: elem_type_package,
-            sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
-            type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
-            defaulted: argument_metadata[:defaulted]
-          }
+          if elem_type_name.match('%ROWTYPE')
+            fields = {}
+            @schema.select_all(
+              "select column_id, column_name, data_type, data_length, data_precision, data_scale, char_used, char_length 
+              FROM all_tab_columns 
+              where owner = :owner and table_name = :table_name 
+              order by column_id",
+              elem_type_owner, elem_type_name.sub('%ROWTYPE', '')) do |r|
+              
+              rowtype_column_id, rowtype_column_name, rowtype_data_type, rowtype_data_length, rowtype_data_precision, rowtype_data_scale, rowtype_char_used, rowtype_char_length = r
+
+              fields[rowtype_column_name.downcase.to_sym] = {
+                position: rowtype_column_id.to_i,
+                data_type: rowtype_data_type,
+                in_out: 'OUT',
+                data_length: rowtype_data_length && rowtype_data_length.to_i,
+                data_precision: rowtype_data_precision && rowtype_data_precision.to_i,
+                data_scale: rowtype_data_scale && rowtype_data_scale.to_i,
+                char_used: rowtype_char_used == nil ? "0" : rowtype_char_used,
+                char_length: rowtype_char_used && rowtype_char_length && rowtype_char_length.to_i,
+                type_owner: nil,
+                type_name: nil,
+                type_subname: nil,
+                sql_type_name: nil,
+                defaulted: 'N'
+              }
+            end
+            element_metadata = {
+              position: 1,
+              data_type: "PL/SQL RECORD",
+              in_out: argument_metadata[:in_out],
+              data_length: elem_length && elem_length.to_i,
+              data_precision: elem_precision && elem_precision.to_i,
+              data_scale: elem_scale && elem_scale.to_i,
+              char_used: elem_char_used,
+              char_length: elem_char_used && elem_length && elem_length.to_i,
+              type_owner: elem_type_owner,
+              type_name: elem_type_name,
+              type_subname: elem_type_package,
+              sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
+              type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
+              defaulted: argument_metadata[:defaulted],
+              fields: fields
+            }
+          else
+            element_metadata = {
+              position: 1,
+              data_type: if elem_type_owner == nil
+                          elem_type_name
+                        elsif elem_type_package != nil
+                          "PL/SQL RECORD"
+                        else 
+                          "OBJECT"
+                        end,
+              in_out: argument_metadata[:in_out],
+              data_length: elem_length && elem_length.to_i,
+              data_precision: elem_precision && elem_precision.to_i,
+              data_scale: elem_scale && elem_scale.to_i,
+              char_used: elem_char_used,
+              char_length: elem_char_used && elem_length && elem_length.to_i,
+              type_owner: elem_type_owner,
+              type_name: elem_type_name,
+              type_subname: elem_type_package,
+              sql_type_name: elem_type_owner && build_sql_type_name(elem_type_owner, elem_type_package, elem_type_name),
+              type_object_type: elem_type_package != nil ? "PACKAGE" : nil,
+              defaulted: argument_metadata[:defaulted]
+            }
+          end
 
           if elem_type_package != nil
             element_metadata[:fields] = get_field_definitions(element_metadata)
           end
         when "TYPE"
           r = @schema.select_first(
-            "SELECT elem_type_owner, elem_type_name, length, precision, scale, char_used
-             FROM ALL_COLL_TYPES t
-             WHERE t.owner = :owner AND t.TYPE_NAME = :type_name",
-            @schema_name, argument_metadata[:type_name]
+            "SELECT nvl(s.table_owner, t.elem_type_owner), nvl(s.table_name, t.elem_type_name), t.length, t.precision, t.scale, t.char_used
+            FROM all_coll_types t
+            LEFT JOIN all_synonyms s ON t.elem_type_owner = s.owner AND t.elem_type_name = s.synonym_name
+            WHERE t.owner = :owner
+              AND t.type_name = :type_name",
+            argument_metadata[:type_owner], argument_metadata[:type_name]
           )
           elem_type_owner, elem_type_name, elem_length, elem_precision, elem_scale, elem_char_used = r
 
