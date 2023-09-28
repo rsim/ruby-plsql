@@ -52,8 +52,8 @@ module PLSQL
       url = if ENV["TNS_ADMIN"] && database && !params[:host] && !params[:url]
         "jdbc:oracle:thin:@#{database}"
       else
-        database = ":#{database}" unless database.match(/^(\:|\/)/)
-        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}#{database}"
+        database = "/#{database}" unless database.match(/^(\:|\/)/)
+        params[:url] || "jdbc:oracle:thin:@//#{params[:host] || 'localhost'}:#{params[:port] || 1521}#{database}"
       end
       new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
