@@ -100,7 +100,7 @@ module PLSQL
       else
         @default_timezone ||
           # Use ActiveRecord class default_timezone when ActiveRecord connection is used
-          (@connection && (ar_class = @connection.activerecord_class) && ar_class.default_timezone) ||
+          (@connection && @connection.time_zone == "UTC" ? :utc : nil) ||
           # default to local timezone
           :local
       end
