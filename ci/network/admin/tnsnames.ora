@@ -5,3 +5,11 @@ FREEPDB1 =
       (SERVICE_NAME = FREEPDB1)
     )
   )
+
+XE =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 127.0.0.1)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVICE_NAME = XE)
+    )
+  )
