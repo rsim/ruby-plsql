@@ -115,7 +115,7 @@ module PLSQL
       MATCHING_TYPES = {
         integer: ["NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"],
         decimal: ["NUMBER", "BINARY_FLOAT", "BINARY_DOUBLE"],
-        string: ["VARCHAR", "VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "CLOB", "BLOB", "XMLTYPE"],
+        string: ["VARCHAR", "VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "CLOB", "BLOB", "XMLTYPE", "OPAQUE/XMLTYPE"],
         date: ["DATE"],
         time: ["DATE", "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"],
         boolean: ["PL/SQL BOOLEAN"],
@@ -240,8 +240,8 @@ module PLSQL
           @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
           @bind_metadata[argument] = argument_metadata.merge(data_type: "NUMBER", data_precision: 1)
           "l_#{argument}"
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @declare_sql << "l_#{argument} XMLTYPE;\n"
             @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
             @bind_values[argument] = value if not value.nil?
@@ -395,8 +395,8 @@ module PLSQL
             end
           end
           "l_#{argument} := " if is_return_value
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @declare_sql << "l_#{argument} XMLTYPE;\n" if is_return_value
             bind_variable = :"o_#{argument}"
             @return_vars << bind_variable
@@ -517,8 +517,8 @@ module PLSQL
         when "PL/SQL BOOLEAN"
           numeric_value = @cursor[":o_#{argument}"]
           numeric_value.nil? ? nil : numeric_value == 1
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @cursor[":o_#{argument}"]
           end
         else
