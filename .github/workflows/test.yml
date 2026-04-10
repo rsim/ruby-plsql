@@ -79,4 +79,4 @@ jobs:
         bundle install --jobs 4 --retry 3
     - name: Run RSpec
       run: |
-        bundle exec rspec
+        RUBYOPT=-w bundle exec rspec
