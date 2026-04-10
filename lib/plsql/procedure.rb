@@ -315,7 +315,7 @@ module PLSQL
     def ensure_tmp_tables_created(overload) # :nodoc:
       return if @tmp_tables_created.nil? || @tmp_tables_created[overload]
       @tmp_table_names[overload] && @tmp_table_names[overload].each do |table_name, argument_metadata|
-        sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
+        sql = +"CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
         element_metadata = argument_metadata[:element]
         case element_metadata[:data_type]
         when "PL/SQL RECORD"

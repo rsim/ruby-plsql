@@ -56,7 +56,7 @@ module PLSQL
     private
 
       def method_missing(method, *args, &block)
-        method = method.to_s
+        method = +method.to_s
         method.chop! if (assignment = method[/=$/])
 
         case (object = self[method])

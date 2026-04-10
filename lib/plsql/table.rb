@@ -87,9 +87,9 @@ module PLSQL
     def select(first_or_all, sql_params = "", *bindvars)
       case first_or_all
       when :first, :all
-        select_sql = "SELECT * "
+        select_sql = +"SELECT * "
       when :count
-        select_sql = "SELECT COUNT(*) "
+        select_sql = +"SELECT COUNT(*) "
       else
         raise ArgumentError, "Only :first, :all or :count are supported"
       end

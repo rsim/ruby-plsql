@@ -149,10 +149,10 @@ module PLSQL
       end
 
       def construct_sql(args)
-        @declare_sql = ""
-        @assignment_sql = ""
-        @call_sql = ""
-        @return_sql = ""
+        @declare_sql = +""
+        @assignment_sql = +""
+        @call_sql = +""
+        @return_sql = +""
         @return_vars = []
         @return_vars_metadata = {}
 
@@ -218,7 +218,7 @@ module PLSQL
         end
         add_out_variables
 
-        @sql = @declare_sql.empty? ? "" : "DECLARE\n" << @declare_sql
+        @sql = @declare_sql.empty? ? +"" : +"DECLARE\n" << @declare_sql
         @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << @return_sql << "END;\n"
       end
 
@@ -326,7 +326,7 @@ module PLSQL
           "l_#{argument} #{argument_metadata[:sql_type_name]};\n"
         else
           fields_metadata = argument_metadata[:fields]
-          sql = "TYPE t_#{argument} IS RECORD (\n"
+          sql = +"TYPE t_#{argument} IS RECORD (\n"
           sql << record_fields_sorted_by_position(fields_metadata).map do |field|
             metadata = fields_metadata[field]
             "#{field} #{type_to_sql(metadata)}"
@@ -341,7 +341,7 @@ module PLSQL
       end
 
       def record_assignment_sql_values_metadata(argument, argument_metadata, record_value)
-        sql = ""
+        sql = +""
         bind_values = {}
         bind_metadata = {}
         (record_value || {}).each do |key, value|

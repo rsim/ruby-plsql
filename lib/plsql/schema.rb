@@ -238,7 +238,7 @@ module PLSQL
       end
 
       def _errors(object_schema_name, object_name, object_type)
-        result = ""
+        result = +""
         previous_line = 0
         select_all(
           "SELECT e.line, e.position, e.text error_text, s.text source_text
