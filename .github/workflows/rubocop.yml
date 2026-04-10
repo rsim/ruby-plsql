@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Ruby 3.1
+    - name: Set up Ruby 4.0
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: "3.1"
+        ruby-version: "4.0"
     - name: Create symbolic link for libaio library compatibility
       run: |
         sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
