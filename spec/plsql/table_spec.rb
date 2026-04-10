@@ -239,7 +239,7 @@ describe "Table" do
     end
 
     it "should insert many records with array of values" do
-      plsql.test_employees.insert_values *@employees_all_values
+      plsql.test_employees.insert_values(*@employees_all_values)
       expect(plsql.test_employees.all).to eq(@employees)
     end
 
@@ -332,7 +332,7 @@ describe "Table" do
       plsql.test_employees.update first_name: "Test", where: "employee_id = #{employee_id}"
       expect(plsql.test_employees.first(employee_id: employee_id)[:first_name]).to eq("Test")
       # all other records should not be changed
-      plsql.test_employees.all("WHERE employee_id > :1", employee_id) do |employee|
+      plsql.test_employees.all("WHERE employee_id > :1", employee_id).each do |employee|
         expect(employee[:first_name]).not_to eq("Test")
       end
     end
@@ -340,7 +340,7 @@ describe "Table" do
     it "should update all records in table" do
       plsql.test_employees.insert @employees
       plsql.test_employees.update first_name: "Test"
-      plsql.test_employees.all do |employee|
+      plsql.test_employees.all.each do |employee|
         expect(employee[:first_name]).to eq("Test")
       end
     end

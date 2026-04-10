@@ -1966,7 +1966,7 @@ describe "Parameter type mapping /" do
 
       @fields = [:col1, :col2 ]
       @rows = (1..3).map { |i| ["row #{i}", i] }
-      plsql.typed_ref_cursor_table.insert_values *@rows
+      plsql.typed_ref_cursor_table.insert_values(*@rows)
       plsql.commit
 
     end

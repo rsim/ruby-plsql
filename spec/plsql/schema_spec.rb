@@ -304,7 +304,7 @@ describe "DBMS_OUTPUT logging" do
     end
 
     it "should log output to specified stream in case of exception" do
-      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error /Test Error/
+      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error(/Test Error/)
       expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
     end
 
