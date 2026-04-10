@@ -24,7 +24,7 @@ if (oci8_version_ints <=> required_oci8_version) < 0
 end
 
 module PLSQL
-  class OCIConnection < Connection #:nodoc:
+  class OCIConnection < Connection # :nodoc:
     def self.create_raw(params)
       connection_string = if params[:host]
         "//#{params[:host]}:#{params[:port] || 1521}/#{params[:database]}"
@@ -64,7 +64,7 @@ module PLSQL
       true
     end
 
-    class Cursor #:nodoc:
+    class Cursor # :nodoc:
       include Connection::CursorCommon
 
       attr_reader :raw_cursor

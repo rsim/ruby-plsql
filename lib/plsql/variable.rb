@@ -1,5 +1,5 @@
 module PLSQL
-  module VariableClassMethods #:nodoc:
+  module VariableClassMethods # :nodoc:
     def find(schema, variable, package, override_schema_name = nil)
       variable_upcase = variable.to_s.upcase
       schema.select_all(
@@ -17,10 +17,10 @@ module PLSQL
     end
   end
 
-  class Variable #:nodoc:
+  class Variable # :nodoc:
     extend VariableClassMethods
 
-    attr_reader :schema_name, :package_name, :variable_name #:nodoc:
+    attr_reader :schema_name, :package_name, :variable_name # :nodoc:
 
     def initialize(schema, variable, package, variable_type, override_schema_name = nil)
       @schema = schema
@@ -95,7 +95,7 @@ module PLSQL
       end
 
       # wrapper class to simulate Procedure class for ProcedureClass#exec
-      class VariableProcedure #:nodoc:
+      class VariableProcedure # :nodoc:
         attr_reader :arguments, :argument_list, :return, :out_list, :schema
 
         def initialize(schema, variable, operation, metadata)

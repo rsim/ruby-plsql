@@ -1,5 +1,5 @@
 module PLSQL
-  module SequenceClassMethods #:nodoc:
+  module SequenceClassMethods # :nodoc:
     def find(schema, sequence)
       if schema.select_first(
         "SELECT sequence_name FROM all_sequences
@@ -27,7 +27,7 @@ module PLSQL
   class Sequence
     extend SequenceClassMethods
 
-    def initialize(schema, sequence, override_schema_name = nil) #:nodoc:
+    def initialize(schema, sequence, override_schema_name = nil) # :nodoc:
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @sequence_name = sequence.to_s.upcase

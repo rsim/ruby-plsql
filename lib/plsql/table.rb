@@ -1,5 +1,5 @@
 module PLSQL
-  module TableClassMethods #:nodoc:
+  module TableClassMethods # :nodoc:
     def find(schema, table)
       if schema.select_first(
         "SELECT table_name FROM all_tables
@@ -33,9 +33,9 @@ module PLSQL
   class Table
     extend TableClassMethods
 
-    attr_reader :columns, :schema_name, :table_name #:nodoc:
+    attr_reader :columns, :schema_name, :table_name # :nodoc:
 
-    def initialize(schema, table, override_schema_name = nil) #:nodoc:
+    def initialize(schema, table, override_schema_name = nil) # :nodoc:
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @table_name = table.to_s.upcase
@@ -251,7 +251,7 @@ module PLSQL
     end
 
     # wrapper class to simulate Procedure class for ProcedureClass#exec
-    class TableProcedure #:nodoc:
+    class TableProcedure # :nodoc:
       attr_reader :arguments, :argument_list, :return, :out_list, :schema
 
       def initialize(schema, table, operation)

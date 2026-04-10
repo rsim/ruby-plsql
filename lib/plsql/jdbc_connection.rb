@@ -46,7 +46,7 @@ rescue LoadError, NameError
 end
 
 module PLSQL
-  class JDBCConnection < Connection  #:nodoc:
+  class JDBCConnection < Connection  # :nodoc:
     def self.create_raw(params)
       database = params[:database]
       url = if ENV["TNS_ADMIN"] && database && !params[:host] && !params[:url]
@@ -98,7 +98,7 @@ module PLSQL
       cs.close rescue nil
     end
 
-    class CallableStatement #:nodoc:
+    class CallableStatement # :nodoc:
       def initialize(conn, sql)
         @sql = sql
         @connection = conn
@@ -145,7 +145,7 @@ module PLSQL
         end
     end
 
-    class Cursor #:nodoc:
+    class Cursor # :nodoc:
       include Connection::CursorCommon
 
       attr_reader :result_set

@@ -1,5 +1,5 @@
 module PLSQL
-  class ProcedureCall #:nodoc:
+  class ProcedureCall # :nodoc:
     def initialize(procedure, args = [], options = {})
       @procedure = procedure
       @schema = @procedure.schema

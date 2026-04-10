@@ -4,8 +4,8 @@ module PLSQL
 
     @@schemas = {}
 
-    class <<self
-      def find_or_new(connection_alias) #:nodoc:
+    class << self
+      def find_or_new(connection_alias) # :nodoc:
         connection_alias ||= :default
         if @@schemas[connection_alias]
           @@schemas[connection_alias]
@@ -15,7 +15,7 @@ module PLSQL
       end
     end
 
-    def initialize(raw_conn = nil, schema = nil, original_schema = nil) #:nodoc:
+    def initialize(raw_conn = nil, schema = nil, original_schema = nil) # :nodoc:
       self.connection = raw_conn
       @schema_name = schema ? schema.to_s.upcase : nil
       @original_schema = original_schema
@@ -25,11 +25,11 @@ module PLSQL
     # Returns connection wrapper object (this is not raw OCI8 or JDBC connection!)
     attr_reader :connection
 
-    def root_schema #:nodoc:
+    def root_schema # :nodoc:
       @original_schema || self
     end
 
-    def raw_connection=(raw_conn) #:nodoc:
+    def raw_connection=(raw_conn) # :nodoc:
       @connection = raw_conn ? Connection.create(raw_conn) : nil
       reset_instance_variables
     end
@@ -117,7 +117,7 @@ module PLSQL
 
     # Same implementation as for ActiveRecord
     # DateTimes aren't aware of DST rules, so use a consistent non-DST offset when creating a DateTime with an offset in the local zone
-    def local_timezone_offset #:nodoc:
+    def local_timezone_offset # :nodoc:
       ::Time.local(2007).utc_offset.to_r / 86400
     end
 
