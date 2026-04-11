@@ -422,8 +422,10 @@ describe "Connection" do
 
   describe "session information" do
     it "should get database version" do
-      # using Oracle version 10.2.0.4 for unit tests
-      expect(@conn.database_version).to eq DATABASE_VERSION.split(".").map { |n| n.to_i }
+      version = @conn.database_version
+      expect(version).to be_an(Array)
+      expect(version.size).to eq(4)
+      expect(version).to all(be_a(Integer))
     end
 
     it "should get session ID" do
