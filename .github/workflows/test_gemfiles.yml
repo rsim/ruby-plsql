@@ -1,0 +1,92 @@
+name: test_gemfiles
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gemfile: gemfiles/Gemfile.activerecord-5.0
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-5.1
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-5.2
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-6.0
+            ruby: '2.5'
+          - gemfile: gemfiles/Gemfile.activerecord-6.1
+            ruby: '2.5'
+          - gemfile: gemfiles/Gemfile.activerecord-7.0
+            ruby: '2.7'
+          - gemfile: gemfiles/Gemfile.activerecord-7.1
+            ruby: '2.7'
+          - gemfile: gemfiles/Gemfile.activerecord-7.2
+            ruby: '3.1'
+          - gemfile: gemfiles/Gemfile.activerecord-8.0
+            ruby: '3.2'
+    env:
+      BUNDLE_GEMFILE: ${{ matrix.gemfile }}
+      ORACLE_HOME: /opt/oracle/instantclient_23_26
+      LD_LIBRARY_PATH: /opt/oracle/instantclient_23_26
+      NLS_LANG: AMERICAN_AMERICA.AL32UTF8
+      TNS_ADMIN: ./ci/network/admin
+      DATABASE_NAME: FREEPDB1
+      TZ: Europe/Riga
+      DATABASE_SYS_PASSWORD: Oracle18
+
+    services:
+      oracle:
+        image: gvenzl/oracle-free:latest
+        ports:
+          - 1521:1521
+        env:
+          TZ: Europe/Riga
+          ORACLE_PASSWORD: Oracle18
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+    - name: Create symbolic link for libaio library compatibility
+      run: |
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+    - name: Download Oracle instant client
+      run: |
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-basic-linux.x64-23.26.1.0.0.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sdk-linux.x64-23.26.1.0.0.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sqlplus-linux.x64-23.26.1.0.0.zip
+    - name: Install Oracle instant client
+      run: |
+        sudo unzip -q instantclient-basic-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
+        sudo unzip -qo instantclient-sdk-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
+        sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
+        echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
+    - name: Install JDBC Driver
+      run: |
+        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar -O ./lib/ojdbc11.jar
+    - name: Create database user
+      run: |
+        ./ci/setup_accounts.sh
+    - name: Bundle install
+      run: |
+        bundle install --jobs 4 --retry 3
+    - name: Run RSpec
+      run: |
+        RUBYOPT=-w bundle exec rspec
