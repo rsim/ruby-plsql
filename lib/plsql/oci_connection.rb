@@ -24,7 +24,7 @@ if (oci8_version_ints <=> required_oci8_version) < 0
 end
 
 module PLSQL
-  class OCIConnection < Connection #:nodoc:
+  class OCIConnection < Connection # :nodoc:
     def self.create_raw(params)
       connection_string = if params[:host]
         "//#{params[:host]}:#{params[:port] || 1521}/#{params[:database]}"
@@ -64,7 +64,7 @@ module PLSQL
       true
     end
 
-    class Cursor #:nodoc:
+    class Cursor # :nodoc:
       include Connection::CursorCommon
 
       attr_reader :raw_cursor
@@ -157,7 +157,7 @@ module PLSQL
         [DateTime, nil]
       when "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"
         [Time, nil]
-      when "TABLE", "VARRAY", "OBJECT", "XMLTYPE"
+      when "TABLE", "VARRAY", "OBJECT", "XMLTYPE", "OPAQUE/XMLTYPE"
         # create Ruby class for collection
         klass = OCI8::Object::Base.get_class_by_typename(metadata[:sql_type_name])
         unless klass

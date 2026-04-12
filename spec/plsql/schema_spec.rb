@@ -209,8 +209,12 @@ describe "ActiveRecord connection" do
     expect(plsql.schema_name).to eq("HR")
   end
 
-  it "should use ActiveRecord::Base.default_timezone as default" do
-    ActiveRecord::Base.default_timezone = :utc
+  it "should use ActiveRecord default_timezone as default" do
+    if ActiveRecord.respond_to?(:default_timezone=)
+      ActiveRecord.default_timezone = :utc
+    else
+      ActiveRecord::Base.default_timezone = :utc
+    end
     expect(plsql.default_timezone).to eq(:utc)
   end
 
@@ -300,7 +304,7 @@ describe "DBMS_OUTPUT logging" do
     end
 
     it "should log output to specified stream in case of exception" do
-      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error /Test Error/
+      expect { plsql.test_dbms_output("test_dbms_output", true) }.to raise_error(/Test Error/)
       expect(@buffer.string).to eq("DBMS_OUTPUT: test_dbms_output\n")
     end
 

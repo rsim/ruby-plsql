@@ -19,13 +19,8 @@ Gem::Specification.new do |s|
     "README.md"
   ]
   s.files = [
-    ".codeclimate.yml",
     ".github/stale.yml",
     ".rubocop.yml",
-    ".travis.yml",
-    ".travis/oracle/download.sh",
-    ".travis/oracle/install.sh",
-    ".travis/setup_accounts.sh",
     "Gemfile",
     "History.txt",
     "License.txt",
@@ -36,6 +31,13 @@ Gem::Specification.new do |s|
     "gemfiles/Gemfile.activerecord-5.0",
     "gemfiles/Gemfile.activerecord-5.1",
     "gemfiles/Gemfile.activerecord-5.2",
+    "gemfiles/Gemfile.activerecord-6.0",
+    "gemfiles/Gemfile.activerecord-6.1",
+    "gemfiles/Gemfile.activerecord-7.0",
+    "gemfiles/Gemfile.activerecord-7.1",
+    "gemfiles/Gemfile.activerecord-7.2",
+    "gemfiles/Gemfile.activerecord-8.0",
+    "gemfiles/Gemfile.activerecord-main",
     "lib/plsql/connection.rb",
     "lib/plsql/helpers.rb",
     "lib/plsql/jdbc_connection.rb",

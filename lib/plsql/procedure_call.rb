@@ -1,5 +1,5 @@
 module PLSQL
-  class ProcedureCall #:nodoc:
+  class ProcedureCall # :nodoc:
     def initialize(procedure, args = [], options = {})
       @procedure = procedure
       @schema = @procedure.schema
@@ -115,7 +115,7 @@ module PLSQL
       MATCHING_TYPES = {
         integer: ["NUMBER", "NATURAL", "NATURALN", "POSITIVE", "POSITIVEN", "SIGNTYPE", "SIMPLE_INTEGER", "PLS_INTEGER", "BINARY_INTEGER"],
         decimal: ["NUMBER", "BINARY_FLOAT", "BINARY_DOUBLE"],
-        string: ["VARCHAR", "VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "CLOB", "BLOB", "XMLTYPE"],
+        string: ["VARCHAR", "VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "CLOB", "BLOB", "XMLTYPE", "OPAQUE/XMLTYPE"],
         date: ["DATE"],
         time: ["DATE", "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"],
         boolean: ["PL/SQL BOOLEAN"],
@@ -149,10 +149,10 @@ module PLSQL
       end
 
       def construct_sql(args)
-        @declare_sql = ""
-        @assignment_sql = ""
-        @call_sql = ""
-        @return_sql = ""
+        @declare_sql = +""
+        @assignment_sql = +""
+        @call_sql = +""
+        @return_sql = +""
         @return_vars = []
         @return_vars_metadata = {}
 
@@ -218,7 +218,7 @@ module PLSQL
         end
         add_out_variables
 
-        @sql = @declare_sql.empty? ? "" : "DECLARE\n" << @declare_sql
+        @sql = @declare_sql.empty? ? +"" : +"DECLARE\n" << @declare_sql
         @sql << "BEGIN\n" << @assignment_sql << dbms_output_enable_sql << @call_sql << @return_sql << "END;\n"
       end
 
@@ -240,8 +240,8 @@ module PLSQL
           @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
           @bind_metadata[argument] = argument_metadata.merge(data_type: "NUMBER", data_precision: 1)
           "l_#{argument}"
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @declare_sql << "l_#{argument} XMLTYPE;\n"
             @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
             @bind_values[argument] = value if not value.nil?
@@ -326,7 +326,7 @@ module PLSQL
           "l_#{argument} #{argument_metadata[:sql_type_name]};\n"
         else
           fields_metadata = argument_metadata[:fields]
-          sql = "TYPE t_#{argument} IS RECORD (\n"
+          sql = +"TYPE t_#{argument} IS RECORD (\n"
           sql << record_fields_sorted_by_position(fields_metadata).map do |field|
             metadata = fields_metadata[field]
             "#{field} #{type_to_sql(metadata)}"
@@ -341,7 +341,7 @@ module PLSQL
       end
 
       def record_assignment_sql_values_metadata(argument, argument_metadata, record_value)
-        sql = ""
+        sql = +""
         bind_values = {}
         bind_metadata = {}
         (record_value || {}).each do |key, value|
@@ -395,8 +395,8 @@ module PLSQL
             end
           end
           "l_#{argument} := " if is_return_value
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @declare_sql << "l_#{argument} XMLTYPE;\n" if is_return_value
             bind_variable = :"o_#{argument}"
             @return_vars << bind_variable
@@ -517,8 +517,8 @@ module PLSQL
         when "PL/SQL BOOLEAN"
           numeric_value = @cursor[":o_#{argument}"]
           numeric_value.nil? ? nil : numeric_value == 1
-        when "UNDEFINED"
-          if argument_metadata[:type_name] == "XMLTYPE"
+        when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
+          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @cursor[":o_#{argument}"]
           end
         else

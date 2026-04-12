@@ -1,5 +1,5 @@
 module PLSQL
-  module ProcedureClassMethods #:nodoc:
+  module ProcedureClassMethods # :nodoc:
     def find(schema, procedure, package = nil, override_schema_name = nil)
       if package.nil?
         if (row = schema.select_first(
@@ -53,12 +53,12 @@ module PLSQL
       end
   end
 
-  module ProcedureCommon #:nodoc:
+  module ProcedureCommon # :nodoc:
     attr_reader :arguments, :argument_list, :out_list, :return
     attr_reader :schema, :schema_name, :package, :procedure
 
     # return type string from metadata that can be used in DECLARE block or table definition
-    def self.type_to_sql(metadata) #:nodoc:
+    def self.type_to_sql(metadata) # :nodoc:
       case metadata[:data_type]
       when "NUMBER"
         precision, scale = metadata[:data_precision], metadata[:data_scale]
@@ -82,7 +82,7 @@ module PLSQL
     end
 
     # get procedure argument metadata from data dictionary
-    def get_argument_metadata #:nodoc:
+    def get_argument_metadata # :nodoc:
       if (@schema.connection.database_version <=> [18, 0, 0, 0]) >= 0
         get_argument_metadata_from_18c
       else
@@ -90,7 +90,7 @@ module PLSQL
       end
     end
 
-    def get_argument_metadata_below_18c #:nodoc:
+    def get_argument_metadata_below_18c # :nodoc:
       @arguments = {}
       @argument_list = {}
       @out_list = {}
@@ -125,6 +125,9 @@ module PLSQL
         subprogram_id, object_name, overload, argument_name, position, data_level,
             data_type, in_out, data_length, data_precision, data_scale, char_used,
             char_length, type_owner, type_name, type_subname, defaulted = r
+
+        # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+        data_type = "PL/SQL BOOLEAN" if data_type == "BOOLEAN"
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -206,7 +209,7 @@ module PLSQL
     end
 
     # get procedure argument metadata from data dictionary
-    def get_argument_metadata_from_18c #:nodoc:
+    def get_argument_metadata_from_18c # :nodoc:
       @arguments = {}
       @argument_list = {}
       @out_list = {}
@@ -234,6 +237,9 @@ module PLSQL
         subprogram_id, _object_name, overload, argument_name, position,
           data_type, in_out, data_length, data_precision, data_scale, char_used,
           char_length, type_owner, type_name, type_package, type_object_type, defaulted = r
+
+        # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+        data_type = "PL/SQL BOOLEAN" if data_type == "BOOLEAN"
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -298,7 +304,7 @@ module PLSQL
       construct_argument_list_for_overloads
     end
 
-    def construct_argument_list_for_overloads #:nodoc:
+    def construct_argument_list_for_overloads # :nodoc:
       @overloads = @arguments.keys.sort
       @overloads.each do |overload|
         @argument_list[overload] = @arguments[overload].keys.sort { |k1, k2| @arguments[overload][k1][:position] <=> @arguments[overload][k2][:position] }
@@ -306,10 +312,10 @@ module PLSQL
       end
     end
 
-    def ensure_tmp_tables_created(overload) #:nodoc:
+    def ensure_tmp_tables_created(overload) # :nodoc:
       return if @tmp_tables_created.nil? || @tmp_tables_created[overload]
       @tmp_table_names[overload] && @tmp_table_names[overload].each do |table_name, argument_metadata|
-        sql = "CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
+        sql = +"CREATE GLOBAL TEMPORARY TABLE #{table_name} (\n"
         element_metadata = argument_metadata[:element]
         case element_metadata[:data_type]
         when "PL/SQL RECORD"
@@ -330,7 +336,7 @@ module PLSQL
       @tmp_tables_created[overload] = true
     end
 
-    def build_sql_type_name(type_owner, type_package, type_name) #:nodoc:
+    def build_sql_type_name(type_owner, type_package, type_name) # :nodoc:
       if type_owner == nil || type_owner == "PUBLIC"
         type_owner_res = ""
       else
@@ -345,7 +351,7 @@ module PLSQL
       type_name_res && "#{type_owner_res}#{type_name_res}"
     end
 
-    def get_field_definitions(argument_metadata) #:nodoc:
+    def get_field_definitions(argument_metadata) # :nodoc:
       fields = {}
       case argument_metadata[:type_object_type]
       when "PACKAGE"
@@ -358,6 +364,9 @@ module PLSQL
           @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname]) do |r|
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
+
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          attr_type_name = "PL/SQL BOOLEAN" if attr_type_name == "BOOLEAN"
 
           fields[attr_name.downcase.to_sym] = {
             position: attr_no.to_i,
@@ -408,7 +417,7 @@ module PLSQL
       fields
     end
 
-    def get_element_definition(argument_metadata) #:nodoc:
+    def get_element_definition(argument_metadata) # :nodoc:
       element_metadata = {}
       if collection_type?(argument_metadata[:data_type])
         case argument_metadata[:type_object_type]
@@ -420,6 +429,9 @@ module PLSQL
             @schema_name, argument_metadata[:type_name], argument_metadata[:type_subname])
 
           elem_type_owner, elem_type_name, elem_type_package, elem_length, elem_precision, elem_scale, elem_char_used, index_by = r
+
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          elem_type_name = "PL/SQL BOOLEAN" if elem_type_name == "BOOLEAN"
 
           if index_by == "VARCHAR2"
             raise ArgumentError, "Index-by Varchar-Table (associative array) #{argument_metadata[:type_name]} is not supported"
@@ -457,6 +469,9 @@ module PLSQL
             @schema_name, argument_metadata[:type_name]
           )
           elem_type_owner, elem_type_name, elem_length, elem_precision, elem_scale, elem_char_used = r
+
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          elem_type_name = "PL/SQL BOOLEAN" if elem_type_name == "BOOLEAN"
 
           element_metadata = {
             position: 1,
@@ -510,21 +525,21 @@ module PLSQL
     end
 
     PLSQL_COMPOSITE_TYPES = ["PL/SQL RECORD", "PL/SQL TABLE", "TABLE", "VARRAY", "REF CURSOR"].freeze
-    def composite_type?(data_type) #:nodoc:
+    def composite_type?(data_type) # :nodoc:
       PLSQL_COMPOSITE_TYPES.include? data_type
     end
 
     PLSQL_COLLECTION_TYPES = ["PL/SQL TABLE", "TABLE", "VARRAY"].freeze
-    def collection_type?(data_type) #:nodoc:
+    def collection_type?(data_type) # :nodoc:
       PLSQL_COLLECTION_TYPES.include? data_type
     end
 
-    def overloaded? #:nodoc:
+    def overloaded? # :nodoc:
       @overloaded
     end
   end
 
-  class Procedure #:nodoc:
+  class Procedure # :nodoc:
     extend ProcedureClassMethods
     include ProcedureCommon
 

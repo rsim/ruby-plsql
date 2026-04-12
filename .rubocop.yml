@@ -1,8 +1,9 @@
-# rubocop 0.51.0 requires Ruby 2.1
-# We should not use cops only available for Ruby 2.1 or later
-# since ruby-plsql itself supports Ruby 1.9.3
 AllCops:
-  TargetRubyVersion: 2.3
+  # Match the minimum Ruby exercised by the per-Rails matrix in
+  # .github/workflows/test_gemfiles.yml (AR 5.0-5.2 jobs run on Ruby 2.4)
+  # so RuboCop does not permit syntax/stdlib usage that would break
+  # those supported runtimes.
+  TargetRubyVersion: 2.4
   DisabledByDefault: true
 
 # Prefer &&/|| over and/or.
@@ -112,7 +113,7 @@ Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 # Detect hard tabs, no hard tabs.
-Layout/Tab:
+Layout/IndentationStyle:
   Enabled: true
 
 # Blank lines should not have any spaces.
@@ -132,7 +133,6 @@ Style/RedundantPercentQ:
 Layout/EndAlignment:
   Enabled: true
   EnforcedStyleAlignWith: variable
-  AutoCorrect: true
 
 # Use my_method(my_arg) not my_method( my_arg ) or my_method my_arg.
 Lint/RequireParentheses:

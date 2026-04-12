@@ -1,5 +1,5 @@
 module PLSQL
-  module PackageClassMethods #:nodoc:
+  module PackageClassMethods # :nodoc:
     def find(schema, package)
       package_name = package.to_s.upcase
       find_in_schema(schema, package_name) || find_by_synonym(schema, package_name)
@@ -32,7 +32,7 @@ module PLSQL
     end
   end
 
-  class Package #:nodoc:
+  class Package # :nodoc:
     extend PackageClassMethods
 
     def initialize(schema, package, override_schema_name = nil)
@@ -56,7 +56,7 @@ module PLSQL
     private
 
       def method_missing(method, *args, &block)
-        method = method.to_s
+        method = +method.to_s
         method.chop! if (assignment = method[/=$/])
 
         case (object = self[method])

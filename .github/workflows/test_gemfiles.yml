@@ -1,27 +1,41 @@
-name: test
+name: test_gemfiles
 
 on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
-        ruby: [
-          '4.0',
-          '3.4',
-          '3.3',
-          '3.2',
-          ruby-head,
-          ruby-debug,
-          truffleruby,
-          truffleruby-head
-        ]
+        include:
+          - gemfile: gemfiles/Gemfile.activerecord-5.0
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-5.1
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-5.2
+            ruby: '2.4'
+          - gemfile: gemfiles/Gemfile.activerecord-6.0
+            ruby: '2.5'
+          - gemfile: gemfiles/Gemfile.activerecord-6.1
+            ruby: '2.5'
+          - gemfile: gemfiles/Gemfile.activerecord-7.0
+            ruby: '2.7'
+          - gemfile: gemfiles/Gemfile.activerecord-7.1
+            ruby: '2.7'
+          - gemfile: gemfiles/Gemfile.activerecord-7.2
+            ruby: '3.1'
+          - gemfile: gemfiles/Gemfile.activerecord-8.0
+            ruby: '3.2'
     env:
+      BUNDLE_GEMFILE: ${{ matrix.gemfile }}
       ORACLE_HOME: /opt/oracle/instantclient_23_26
       LD_LIBRARY_PATH: /opt/oracle/instantclient_23_26
       NLS_LANG: AMERICAN_AMERICA.AL32UTF8
@@ -70,10 +84,6 @@ jobs:
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh
-    - name: Disable ActiveRecord for TruffleRuby
-      run: |
-        echo "NO_ACTIVERECORD=true" >> $GITHUB_ENV
-      if: "contains(matrix.ruby, 'truffleruby')"
     - name: Bundle install
       run: |
         bundle install --jobs 4 --retry 3

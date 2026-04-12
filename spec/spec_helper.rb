@@ -19,7 +19,16 @@ $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), "..", "lib"))
 require "rspec"
 
 unless ENV["NO_ACTIVERECORD"]
+  require "logger"
   require "active_record"
+  require "active_record/connection_adapters/oracle_enhanced_adapter"
+  if ActiveRecord::ConnectionAdapters.respond_to?(:register)
+    ActiveRecord::ConnectionAdapters.register(
+      "oracle_enhanced",
+      "ActiveRecord::ConnectionAdapters::OracleEnhancedAdapter",
+      "active_record/connection_adapters/oracle_enhanced_adapter"
+    )
+  end
 else
   puts "Without ActiveRecord"
 end
@@ -44,19 +53,10 @@ DATABASE_USERS_AND_PASSWORDS = [
   [ENV["DATABASE_USER"] || "hr", ENV["DATABASE_PASSWORD"] || "hr"],
   [ENV["DATABASE_USER2"] || "arunit", ENV["DATABASE_PASSWORD2"] || "arunit"]
 ]
-# specify which database version is used (will be verified in one test)
-DATABASE_VERSION = ENV["DATABASE_VERSION"] || "10.2.0.4"
-
 if ENV["USE_VM_DATABASE"] == "Y"
   RSpec.configure do |config|
     config.before(:suite) do
       TestDb.build
-
-      # Set Verbose off to hide warning: already initialized constant DATABASE_VERSION
-      original_verbosity = $VERBOSE
-      $VERBOSE           = nil
-      DATABASE_VERSION   = TestDb.database_version
-      $VERBOSE           = original_verbosity
     end
   end
 end

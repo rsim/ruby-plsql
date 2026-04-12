@@ -10,12 +10,12 @@ group :test, :development do
   gem 'rspec', '~> 3.1'
 
   unless ENV['NO_ACTIVERECORD']
-    gem 'activerecord', '~> 5.2.0.beta'
-    gem 'activerecord-oracle_enhanced-adapter', '~> 5.2.0.beta'
+    gem 'activerecord', '~> 5.2.0'
+    gem 'activerecord-oracle_enhanced-adapter', '~> 5.2.0'
     gem 'simplecov', '>= 0'
   end
 
-  platforms :ruby, :mswin, :mingw do
+  platforms :ruby, :windows do
     gem 'ruby-oci8', '~> 2.1'
   end
 end

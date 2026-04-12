@@ -157,7 +157,7 @@ describe "View" do
     end
 
     it "should insert many records with array of values" do
-      plsql.test_employees_v.insert_values *@employees_all_values
+      plsql.test_employees_v.insert_values(*@employees_all_values)
       expect(plsql.test_employees_v.all).to eq(@employees)
     end
 
@@ -230,7 +230,7 @@ describe "View" do
       plsql.test_employees_v.update first_name: "Test", where: "employee_id = #{employee_id}"
       expect(plsql.test_employees_v.first(employee_id: employee_id)[:first_name]).to eq("Test")
       # all other records should not be changed
-      plsql.test_employees_v.all("WHERE employee_id > :1", employee_id) do |employee|
+      plsql.test_employees_v.all("WHERE employee_id > :1", employee_id).each do |employee|
         expect(employee[:first_name]).not_to eq("Test")
       end
     end
@@ -238,7 +238,7 @@ describe "View" do
     it "should update all records in view" do
       plsql.test_employees_v.insert @employees
       plsql.test_employees_v.update first_name: "Test"
-      plsql.test_employees_v.all do |employee|
+      plsql.test_employees_v.all.each do |employee|
         expect(employee[:first_name]).to eq("Test")
       end
     end

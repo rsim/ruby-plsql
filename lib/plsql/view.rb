@@ -1,5 +1,5 @@
 module PLSQL
-  module ViewClassMethods #:nodoc:
+  module ViewClassMethods # :nodoc:
     def find(schema, view)
       if schema.select_first(
         "SELECT view_name FROM all_views
@@ -33,6 +33,6 @@ module PLSQL
   class View < Table
     extend ViewClassMethods
 
-    alias :view_name :table_name #:nodoc:
+    alias :view_name :table_name # :nodoc:
   end
 end

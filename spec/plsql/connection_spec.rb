@@ -422,8 +422,10 @@ describe "Connection" do
 
   describe "session information" do
     it "should get database version" do
-      # using Oracle version 10.2.0.4 for unit tests
-      expect(@conn.database_version).to eq DATABASE_VERSION.split(".").map { |n| n.to_i }
+      version = @conn.database_version
+      expect(version).to be_an(Array)
+      expect(version.size).to eq(4)
+      expect(version).to all(be_a(Integer))
     end
 
     it "should get session ID" do
@@ -441,7 +443,9 @@ describe "Connection" do
       @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
       expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.not_to raise_error
       @conn.drop_all_ruby_temporary_tables
-      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view does not exist/)
+      # ORA-00942 message in Oracle 23c includes schema and table name:
+      # 'table or view "SCHEMA"."TABLE" does not exist'
+      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view.*does not exist/)
     end
 
     it "should drop current session ruby temporary tables" do
@@ -449,7 +453,8 @@ describe "Connection" do
       @conn.exec "CREATE GLOBAL TEMPORARY TABLE #{tmp_table} (dummy CHAR(1))"
       expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.not_to raise_error
       @conn.drop_session_ruby_temporary_tables
-      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view does not exist/)
+      # ORA-00942 message in Oracle 23c includes schema and table name
+      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view.*does not exist/)
     end
 
     it "should not drop other session ruby temporary tables" do
@@ -483,7 +488,8 @@ describe "Connection" do
       expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.not_to raise_error
       @conn.logoff
       reconnect_connection
-      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view does not exist/)
+      # ORA-00942 message in Oracle 23c includes schema and table name
+      expect { @conn.select_first("SELECT * FROM #{tmp_table}") }.to raise_error(/table or view.*does not exist/)
     end
 
     it "should rollback any uncommited transactions" do

@@ -1,5 +1,5 @@
 module PLSQL
-  module TypeClassMethods #:nodoc:
+  module TypeClassMethods # :nodoc:
     def find(schema, type)
       if schema.select_first(
         "SELECT type_name FROM all_types
@@ -33,9 +33,9 @@ module PLSQL
   class Type
     extend TypeClassMethods
 
-    attr_reader :typecode, :attributes, :schema_name, :type_name, :type_object_id #:nodoc:
+    attr_reader :typecode, :attributes, :schema_name, :type_name, :type_object_id # :nodoc:
 
-    def initialize(schema, type, override_schema_name = nil) #:nodoc:
+    def initialize(schema, type, override_schema_name = nil) # :nodoc:
       @schema = schema
       @schema_name = override_schema_name || schema.schema_name
       @type_name = type.to_s.upcase
@@ -107,7 +107,7 @@ module PLSQL
       end
     end
 
-    def method_missing(method, *args, &block) #:nodoc:
+    def method_missing(method, *args, &block) # :nodoc:
       if procedure = find_procedure(method)
         procedure.exec_with_options(args, {}, &block)
       else
@@ -115,7 +115,7 @@ module PLSQL
       end
     end
 
-    def find_procedure(new_or_procedure) #:nodoc:
+    def find_procedure(new_or_procedure) # :nodoc:
       @type_procedures[new_or_procedure] ||= begin
         procedure_name = new_or_procedure == :new ? @type_name : new_or_procedure
         # find defined procedure for type
@@ -134,7 +134,7 @@ module PLSQL
     end
 
     # wrapper class to simulate Procedure class for ProcedureClass#exec
-    class TypeProcedure #:nodoc:
+    class TypeProcedure # :nodoc:
       include ProcedureCommon
 
       def initialize(schema, type, procedure)
@@ -250,7 +250,7 @@ module PLSQL
     end
   end
 
-  class ObjectInstance < Hash #:nodoc:
+  class ObjectInstance < Hash # :nodoc:
     attr_accessor :plsql_type
 
     def self.create(type, attributes)

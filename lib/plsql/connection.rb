@@ -3,13 +3,13 @@ module PLSQL
     attr_reader :raw_driver
     attr_reader :activerecord_class
 
-    def initialize(raw_conn, ar_class = nil) #:nodoc:
+    def initialize(raw_conn, ar_class = nil) # :nodoc:
       @raw_driver = self.class.driver_type
       @raw_connection = raw_conn
       @activerecord_class = ar_class
     end
 
-    def self.create(raw_conn, ar_class = nil) #:nodoc:
+    def self.create(raw_conn, ar_class = nil) # :nodoc:
       if ar_class && !(defined?(::ActiveRecord) && ar_class.ancestors.include?(::ActiveRecord::Base))
         raise ArgumentError, "Wrong ActiveRecord class"
       end
@@ -23,7 +23,7 @@ module PLSQL
       end
     end
 
-    def self.create_new(params) #:nodoc:
+    def self.create_new(params) # :nodoc:
       conn = case driver_type
              when :oci
                OCIConnection.create_raw(params)
@@ -36,7 +36,7 @@ module PLSQL
       conn
     end
 
-    def self.driver_type #:nodoc:
+    def self.driver_type # :nodoc:
       # MRI 1.8.6 or YARV 1.9.1 or TruffleRuby
       @driver_type ||= if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "truffleruby") && defined?(OCI8)
         :oci
@@ -67,18 +67,18 @@ module PLSQL
       @raw_driver == :jdbc
     end
 
-    def logoff #:nodoc:
+    def logoff # :nodoc:
       # Rollback any uncommited transactions
       rollback
       # Common cleanup activities before logoff, should be called from particular driver method
       drop_session_ruby_temporary_tables
     end
 
-    def commit #:nodoc:
+    def commit # :nodoc:
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
-    def rollback #:nodoc:
+    def rollback # :nodoc:
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
@@ -98,21 +98,21 @@ module PLSQL
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
-    def select_first(sql, *bindvars) #:nodoc:
+    def select_first(sql, *bindvars) # :nodoc:
       cursor = cursor_from_query(sql, bindvars, prefetch_rows: 1)
       cursor.fetch
     ensure
       cursor.close rescue nil
     end
 
-    def select_hash_first(sql, *bindvars) #:nodoc:
+    def select_hash_first(sql, *bindvars) # :nodoc:
       cursor = cursor_from_query(sql, bindvars, prefetch_rows: 1)
       cursor.fetch_hash
     ensure
       cursor.close rescue nil
     end
 
-    def select_all(sql, *bindvars, &block) #:nodoc:
+    def select_all(sql, *bindvars, &block) # :nodoc:
       cursor = cursor_from_query(sql, bindvars)
       results = []
       row_count = 0
@@ -129,7 +129,7 @@ module PLSQL
       cursor.close rescue nil
     end
 
-    def select_hash_all(sql, *bindvars, &block) #:nodoc:
+    def select_hash_all(sql, *bindvars, &block) # :nodoc:
       cursor = cursor_from_query(sql, bindvars)
       results = []
       row_count = 0
@@ -146,11 +146,11 @@ module PLSQL
       cursor.close rescue nil
     end
 
-    def exec(sql, *bindvars) #:nodoc:
+    def exec(sql, *bindvars) # :nodoc:
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
-    def parse(sql) #:nodoc:
+    def parse(sql) # :nodoc:
       raise NoMethodError, "Not implemented for this raw driver"
     end
 
@@ -181,7 +181,7 @@ module PLSQL
 
     # all_synonyms view is quite slow therefore
     # this implementation is overriden in OCI connection with faster native OCI method
-    def describe_synonym(schema_name, synonym_name) #:nodoc:
+    def describe_synonym(schema_name, synonym_name) # :nodoc:
       select_first(
         "SELECT table_owner, table_name FROM all_synonyms WHERE owner = :owner AND synonym_name = :synonym_name",
         schema_name.to_s.upcase, synonym_name.to_s.upcase)
