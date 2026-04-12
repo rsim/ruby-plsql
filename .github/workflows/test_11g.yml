@@ -84,6 +84,9 @@ jobs:
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh
+    - name: Grant execute on DBMS_LOCK for Oracle 11g
+      run: |
+        echo "GRANT EXECUTE ON DBMS_LOCK TO hr;" | sqlplus system/${DATABASE_SYS_PASSWORD}@${DATABASE_NAME}
     - name: Bundle install
       run: |
         bundle install --jobs 4 --retry 3
