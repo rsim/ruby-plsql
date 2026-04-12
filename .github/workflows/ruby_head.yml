@@ -1,8 +1,8 @@
-name: test
+name: ruby_head
 
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: "0 0 * * *" # daily at midnight UTC
 
 jobs:
   build:
@@ -12,10 +12,8 @@ jobs:
     strategy:
       matrix:
         ruby: [
-          '4.0',
-          '3.4',
-          '3.3',
-          '3.2'
+          ruby-head,
+          ruby-debug
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_23_26
@@ -60,9 +58,6 @@ jobs:
         sudo unzip -qo instantclient-sdk-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
-    - name: Install JDBC Driver
-      run: |
-        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar -O ./lib/ojdbc11.jar
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh

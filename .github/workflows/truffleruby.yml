@@ -1,8 +1,8 @@
-name: test
+name: truffleruby
 
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: "0 2 * * *" # daily at 2:00 UTC
 
 jobs:
   build:
@@ -12,10 +12,8 @@ jobs:
     strategy:
       matrix:
         ruby: [
-          '4.0',
-          '3.4',
-          '3.3',
-          '3.2'
+          truffleruby,
+          truffleruby-head
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_23_26
@@ -25,6 +23,7 @@ jobs:
       DATABASE_NAME: FREEPDB1
       TZ: Europe/Riga
       DATABASE_SYS_PASSWORD: Oracle18
+      NO_ACTIVERECORD: true
 
     services:
       oracle:
@@ -60,9 +59,6 @@ jobs:
         sudo unzip -qo instantclient-sdk-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
-    - name: Install JDBC Driver
-      run: |
-        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/233/ojdbc11.jar -O ./lib/ojdbc11.jar
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh

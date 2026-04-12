@@ -1,8 +1,8 @@
-name: test
+name: jruby_head
 
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: "0 1 * * *" # daily at 1:00 UTC
 
 jobs:
   build:
@@ -12,10 +12,7 @@ jobs:
     strategy:
       matrix:
         ruby: [
-          '4.0',
-          '3.4',
-          '3.3',
-          '3.2'
+          jruby-head
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_23_26
@@ -52,12 +49,10 @@ jobs:
     - name: Download Oracle instant client
       run: |
         wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-basic-linux.x64-23.26.1.0.0.zip
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sdk-linux.x64-23.26.1.0.0.zip
         wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sqlplus-linux.x64-23.26.1.0.0.zip
     - name: Install Oracle instant client
       run: |
         sudo unzip -q instantclient-basic-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
-        sudo unzip -qo instantclient-sdk-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
     - name: Install JDBC Driver
