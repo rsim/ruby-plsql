@@ -15,7 +15,7 @@ jobs:
       LD_LIBRARY_PATH: /opt/oracle/instantclient_23_26
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Ruby 4.0
       uses: ruby/setup-ruby@v1
       with:
