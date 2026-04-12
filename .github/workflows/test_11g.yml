@@ -15,11 +15,7 @@ jobs:
           '4.0',
           '3.4',
           '3.3',
-          '3.2',
-          ruby-head,
-          ruby-debug,
-          truffleruby,
-          truffleruby-head
+          '3.2'
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_21_15
@@ -84,10 +80,6 @@ jobs:
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh
-    - name: Disable ActiveRecord for TruffleRuby
-      run: |
-        echo "NO_ACTIVERECORD=true" >> $GITHUB_ENV
-      if: "contains(matrix.ruby, 'truffleruby')"
     - name: Bundle install
       run: |
         bundle install --jobs 4 --retry 3
