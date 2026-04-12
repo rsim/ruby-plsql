@@ -2,7 +2,10 @@ name: test_gemfiles
 
 on:
   push:
+    branches:
+      - master
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -10,6 +13,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
     runs-on: ubuntu-latest
     strategy:
