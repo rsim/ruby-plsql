@@ -126,6 +126,9 @@ module PLSQL
             data_type, in_out, data_length, data_precision, data_scale, char_used,
             char_length, type_owner, type_name, type_subname, defaulted = r
 
+        # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+        data_type = "PL/SQL BOOLEAN" if data_type == "BOOLEAN"
+
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
         overload ||= 0
@@ -234,6 +237,9 @@ module PLSQL
         subprogram_id, _object_name, overload, argument_name, position,
           data_type, in_out, data_length, data_precision, data_scale, char_used,
           char_length, type_owner, type_name, type_package, type_object_type, defaulted = r
+
+        # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+        data_type = "PL/SQL BOOLEAN" if data_type == "BOOLEAN"
 
         @overloaded ||= !overload.nil?
         # if not overloaded then store arguments at key 0
@@ -359,6 +365,9 @@ module PLSQL
 
           attr_no, attr_name, attr_type_owner, attr_type_name, attr_type_package, attr_length, attr_precision, attr_scale, attr_char_used = r
 
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          attr_type_name = "PL/SQL BOOLEAN" if attr_type_name == "BOOLEAN"
+
           fields[attr_name.downcase.to_sym] = {
             position: attr_no.to_i,
             data_type: attr_type_owner == nil ? attr_type_name : get_composite_type(attr_type_owner, attr_type_name, attr_type_package),
@@ -421,6 +430,9 @@ module PLSQL
 
           elem_type_owner, elem_type_name, elem_type_package, elem_length, elem_precision, elem_scale, elem_char_used, index_by = r
 
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          elem_type_name = "PL/SQL BOOLEAN" if elem_type_name == "BOOLEAN"
+
           if index_by == "VARCHAR2"
             raise ArgumentError, "Index-by Varchar-Table (associative array) #{argument_metadata[:type_name]} is not supported"
           end
@@ -457,6 +469,9 @@ module PLSQL
             @schema_name, argument_metadata[:type_name]
           )
           elem_type_owner, elem_type_name, elem_length, elem_precision, elem_scale, elem_char_used = r
+
+          # Oracle 23c reports BOOLEAN as "BOOLEAN" instead of "PL/SQL BOOLEAN"
+          elem_type_name = "PL/SQL BOOLEAN" if elem_type_name == "BOOLEAN"
 
           element_metadata = {
             position: 1,
