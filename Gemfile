@@ -3,6 +3,9 @@ source "http://rubygems.org"
 group :development do
   gem "juwelier", "~> 2.0"
   gem "rspec_junit_formatter"
+end
+
+group :rubocop do
   gem "rubocop", require: false
   gem "rubocop-performance", require: false
   gem "rubocop-rails", require: false
