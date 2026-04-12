@@ -1,7 +1,6 @@
 source "http://rubygems.org"
 
 group :development do
-  gem "juwelier", "~> 2.0"
   gem "rspec_junit_formatter"
 end
 
