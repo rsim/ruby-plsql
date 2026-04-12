@@ -19,6 +19,7 @@ $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), "..", "lib"))
 require "rspec"
 
 unless ENV["NO_ACTIVERECORD"]
+  require "logger"
   require "active_record"
   require "active_record/connection_adapters/oracle_enhanced_adapter"
   if ActiveRecord::ConnectionAdapters.respond_to?(:register)
