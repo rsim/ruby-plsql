@@ -19,7 +19,6 @@ Gem::Specification.new do |s|
     "README.md"
   ]
   s.files = [
-    ".codeclimate.yml",
     ".github/stale.yml",
     ".rubocop.yml",
     "Gemfile",
