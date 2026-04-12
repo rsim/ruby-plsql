@@ -1,0 +1,57 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-cruby:
+    name: Build gem (CRuby)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          rubygems: latest
+      - name: Build gem
+        run: gem build ruby-plsql.gemspec
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gem-cruby
+          path: "*.gem"
+
+  release:
+    name: Push gem to RubyGems
+    needs: [build-cruby]
+    runs-on: ubuntu-latest
+    environment: rubygems
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Download CRuby gem
+        uses: actions/download-artifact@v4
+        with:
+          name: gem-cruby
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          rubygems: latest
+      - name: Configure RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@main
+      - name: Push gem
+        run: |
+          for gem in *.gem; do
+            echo "Pushing $gem"
+            gem push "$gem"
+          done
