@@ -95,7 +95,7 @@ def get_connection(user_number = 0)
         # bypass DriverManager to work in cases where ojdbc*.jar
         # is added to the load path at runtime and not on the
         # system classpath
-        ORACLE_DRIVER.connect(get_connection_url, java.util.Properties.new.tap do |props|
+        PLSQL::JDBCConnection::ORACLE_DRIVER.connect(get_connection_url, java.util.Properties.new.tap do |props|
           props.setProperty("user", database_user)
           props.setProperty("password", database_password)
         end)

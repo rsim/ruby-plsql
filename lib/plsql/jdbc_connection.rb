@@ -1,3 +1,5 @@
+ojdbc_jars = []
+
 begin
   require "java"
   require "jruby"
@@ -11,7 +13,6 @@ begin
     java_version.to_i
   end
 
-  ojdbc_jars = []
   ojdbc_jars << "ojdbc17.jar" if java_major >= 17
   ojdbc_jars << "ojdbc11.jar" if java_major >= 11
   ojdbc_jars << "ojdbc8.jar"  if java_major >= 8
@@ -35,21 +36,27 @@ begin
     end
   end
 
-  ORACLE_DRIVER = Java::oracle.jdbc.OracleDriver.new
-  java.sql.DriverManager.registerDriver ORACLE_DRIVER
-
   # set tns_admin property from TNS_ADMIN environment variable
   if !java.lang.System.get_property("oracle.net.tns_admin") && ENV["TNS_ADMIN"]
     java.lang.System.set_property("oracle.net.tns_admin", ENV["TNS_ADMIN"])
   end
 
-rescue LoadError, NameError
+rescue LoadError
   # JDBC driver is unavailable.
   raise LoadError, "ERROR: ruby-plsql could not load Oracle JDBC driver. Please install #{ojdbc_jars.empty? ? "Oracle JDBC" : ojdbc_jars.join(' or ') } library."
 end
 
 module PLSQL
   class JDBCConnection < Connection  # :nodoc:
+    begin
+      ORACLE_DRIVER = Java::oracle.jdbc.OracleDriver.new
+      java.sql.DriverManager.registerDriver ORACLE_DRIVER
+    rescue NameError
+      raise LoadError, "ERROR: ruby-plsql could not load Oracle JDBC driver. " \
+        "Please install the appropriate Oracle JDBC driver. " \
+        "See https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html"
+    end
+
     def self.create_raw(params)
       url = jdbc_connection_url(params)
       conn = begin
