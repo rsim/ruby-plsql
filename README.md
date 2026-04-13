@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/rsim/ruby-plsql.svg?branch=master)](https://travis-ci.com/rsim/ruby-plsql)
+[![Test](https://github.com/rsim/ruby-plsql/actions/workflows/test.yml/badge.svg)](https://github.com/rsim/ruby-plsql/actions/workflows/test.yml)
 
 ruby-plsql
 ==========
