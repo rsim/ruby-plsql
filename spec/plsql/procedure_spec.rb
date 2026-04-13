@@ -2426,3 +2426,69 @@ describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
     expect(field_names.none? { |name| name.to_s.start_with?("sys_nc") }).to be true
   end
 end
+
+describe "Function with TABLE OF %ROWTYPE parameter defined in package" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute "DROP PACKAGE test_rowtype_pkg" rescue nil
+    plsql.execute "DROP TABLE test_rowtype_tbl" rescue nil
+    plsql.execute "CREATE TABLE test_rowtype_tbl (id NUMBER, name VARCHAR2(50))"
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE test_rowtype_pkg IS
+        TYPE t_tab IS TABLE OF test_rowtype_tbl%ROWTYPE;
+        FUNCTION test_fn(p_tab IN t_tab) RETURN NUMBER;
+      END;
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_rowtype_pkg IS
+        FUNCTION test_fn(p_tab IN t_tab) RETURN NUMBER IS
+        BEGIN
+          RETURN p_tab.COUNT;
+        END;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP PACKAGE test_rowtype_pkg" rescue nil
+    plsql.execute "DROP TABLE test_rowtype_tbl" rescue nil
+    plsql.logoff
+  end
+
+  it "should execute function with TABLE OF %ROWTYPE parameter" do
+    result = plsql.test_rowtype_pkg.test_fn([{ id: 1, name: "test" }])
+    expect(result).to eq(1)
+  end
+end
+
+describe "Function with TABLE OF RECORD parameter defined in package (workaround for %ROWTYPE)" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute "DROP PACKAGE test_record_pkg" rescue nil
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE test_record_pkg IS
+        TYPE t_rec IS RECORD (id NUMBER, name VARCHAR2(50));
+        TYPE t_tab IS TABLE OF t_rec;
+        FUNCTION test_fn(p_tab IN t_tab) RETURN NUMBER;
+      END;
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_record_pkg IS
+        FUNCTION test_fn(p_tab IN t_tab) RETURN NUMBER IS
+        BEGIN
+          RETURN p_tab.COUNT;
+        END;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP PACKAGE test_record_pkg" rescue nil
+    plsql.logoff
+  end
+
+  it "should execute function with TABLE OF RECORD parameter" do
+    result = plsql.test_record_pkg.test_fn([{ id: 1, name: "test" }])
+    expect(result).to eq(1)
+  end
+end

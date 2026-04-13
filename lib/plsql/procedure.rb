@@ -460,6 +460,23 @@ module PLSQL
 
           if elem_type_package != nil
             element_metadata[:fields] = get_field_definitions(element_metadata)
+          elsif elem_type_name && elem_type_name =~ /\A(.+)%ROWTYPE\z/
+            # TABLE OF table%ROWTYPE: Oracle stores elem_type_name as "TABLE_NAME%ROWTYPE"
+            rowtype_table_name = $1
+            check_owner = elem_type_owner || @schema_name
+            object_type_row = @schema.select_first(
+              "SELECT object_type FROM ALL_OBJECTS WHERE owner = :owner AND object_name = :name AND object_type IN ('TABLE', 'VIEW')",
+              check_owner, rowtype_table_name)
+            if object_type_row
+              element_metadata[:type_owner] ||= check_owner
+              element_metadata[:type_name] = rowtype_table_name
+              element_metadata[:sql_type_name] = build_sql_type_name(check_owner, nil, rowtype_table_name)
+              element_metadata[:data_type] = "PL/SQL RECORD"
+              element_metadata[:type_object_type] = object_type_row[0]
+              element_metadata[:fields] = get_field_definitions(element_metadata)
+            else
+              raise ArgumentError, "Could not resolve #{check_owner}.#{rowtype_table_name} to a table or view for #{elem_type_name}"
+            end
           end
         when "TYPE"
           r = @schema.select_first(
