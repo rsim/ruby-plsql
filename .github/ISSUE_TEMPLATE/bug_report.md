@@ -17,4 +17,6 @@ Tell us what happens instead.
 
 **Ruby version**:
 
+**Ruby on Rails version** (if applicable):
+
 **Oracle Database version** (paste the output of `select * from v$version`):
