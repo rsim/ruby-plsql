@@ -48,14 +48,31 @@ end
 module PLSQL
   class JDBCConnection < Connection  # :nodoc:
     def self.create_raw(params)
+      url = jdbc_connection_url(params)
+      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
+    end
+
+    def self.jdbc_connection_url(params)
       database = params[:database]
-      url = if ENV["TNS_ADMIN"] && database && !params[:host] && !params[:url]
+      if ENV["TNS_ADMIN"] && database && database !~ %r{\A[:/]} && !params[:host] && !params[:url]
         "jdbc:oracle:thin:@#{database}"
       else
-        database = ":#{database}" unless database.match(/^(\:|\/)/)
-        params[:url] || "jdbc:oracle:thin:@#{params[:host] || 'localhost'}:#{params[:port] || 1521}#{database}"
+        return params[:url] if params[:url]
+
+        raise ArgumentError, "database or url option is required" if database.nil? || database.empty?
+
+        host = params[:host] || "localhost"
+        port = params[:port] || 1521
+
+        if database =~ /^:/
+          # SID syntax: jdbc:oracle:thin:@host:port:SID
+          "jdbc:oracle:thin:@#{host}:#{port}#{database}"
+        else
+          # service name syntax: jdbc:oracle:thin:@//host:port/service_name
+          database = "/#{database}" unless database =~ /^\//
+          "jdbc:oracle:thin:@//#{host}:#{port}#{database}"
+        end
       end
-      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
     end
 
     def set_time_zone(time_zone = nil)
