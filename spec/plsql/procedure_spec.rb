@@ -2426,3 +2426,43 @@ describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
     expect(field_names.none? { |name| name.to_s.start_with?("sys_nc") }).to be true
   end
 end
+
+describe "Function with TABLE OF RECORD OUT parameter defined in package" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute "DROP PACKAGE test_out_record_pkg" rescue nil
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE test_out_record_pkg IS
+        TYPE rec_customer IS RECORD (
+          customer_id NUMBER(10),
+          name VARCHAR2(255)
+        );
+        TYPE tab_customer IS TABLE OF rec_customer;
+        FUNCTION get_customers(p_id IN NUMBER, p_customers OUT NOCOPY tab_customer) RETURN NUMBER;
+      END;
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_out_record_pkg IS
+        FUNCTION get_customers(p_id IN NUMBER, p_customers OUT NOCOPY tab_customer) RETURN NUMBER IS
+        BEGIN
+          p_customers := tab_customer();
+          p_customers.EXTEND;
+          p_customers(1).customer_id := p_id;
+          p_customers(1).name := 'Test Customer';
+          RETURN 1;
+        END;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP PACKAGE test_out_record_pkg" rescue nil
+    plsql.logoff
+  end
+
+  it "should call function with TABLE OF RECORD OUT NOCOPY parameter" do
+    result = plsql.test_out_record_pkg.get_customers(42)
+    expect(result[0]).to eq(1)
+    expect(result[1][:p_customers]).to eq([{ customer_id: 42, name: "Test Customer" }])
+  end
+end
