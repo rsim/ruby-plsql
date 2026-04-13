@@ -23,5 +23,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rspec", "~> 3.1"
   s.add_development_dependency "rspec_junit_formatter"
   s.add_development_dependency "simplecov"
-  s.add_development_dependency "ruby-oci8", "~> 2.1"
+  if RUBY_PLATFORM =~ /java/
+    s.platform = Gem::Platform.new("java")
+  else
+    s.add_runtime_dependency "ruby-oci8", "~> 2.1"
+  end
 end
