@@ -28,9 +28,27 @@ jobs:
           name: gem-cruby
           path: "*.gem"
 
+  build-jruby:
+    name: Build gem (JRuby)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 'jruby-10.0.5.0'
+          rubygems: latest
+      - name: Build gem
+        run: gem build ruby-plsql.gemspec
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gem-jruby
+          path: "*.gem"
+
   release:
-    name: Push gem to RubyGems
-    needs: [build-cruby]
+    name: Push gems to RubyGems
+    needs: [build-cruby, build-jruby]
     runs-on: ubuntu-latest
     environment: rubygems
     permissions:
@@ -42,6 +60,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gem-cruby
+      - name: Download JRuby gem
+        uses: actions/download-artifact@v4
+        with:
+          name: gem-jruby
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -49,7 +71,7 @@ jobs:
           rubygems: latest
       - name: Configure RubyGems credentials
         uses: rubygems/configure-rubygems-credentials@main
-      - name: Push gem
+      - name: Push gems
         run: |
           for gem in *.gem; do
             echo "Pushing $gem"
