@@ -2530,3 +2530,48 @@ describe "Function with TABLE OF RECORD parameter defined in package (workaround
     expect(result).to eq(1)
   end
 end
+
+describe "Function with cross-schema type reference" do
+  before(:all) do
+    primary_user, _ = DATABASE_USERS_AND_PASSWORDS[0]
+    second_user, second_password = DATABASE_USERS_AND_PASSWORDS[1]
+    @second_schema = second_user.upcase
+
+    plsql.connect! CONNECTION_PARAMS
+
+    # Connect as second user to create type and grant execute to primary user
+    plsql2 = PLSQL::Schema.new
+    plsql2.connect! CONNECTION_PARAMS.merge(username: second_user, password: second_password)
+    plsql2.execute "CREATE OR REPLACE TYPE t_cross_schema_record AS OBJECT (id NUMBER, name VARCHAR2(50))"
+    plsql2.execute "GRANT EXECUTE ON t_cross_schema_record TO #{primary_user}"
+    plsql2.logoff
+
+    plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_cross_schema_fn(p_rec #{@second_schema}.t_cross_schema_record)
+        RETURN NUMBER
+      IS
+      BEGIN
+        RETURN p_rec.id;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    second_user, second_password = DATABASE_USERS_AND_PASSWORDS[1]
+    plsql.execute "DROP FUNCTION test_cross_schema_fn" rescue nil
+    plsql2 = PLSQL::Schema.new
+    plsql2.connect! CONNECTION_PARAMS.merge(username: second_user, password: second_password)
+    plsql2.execute "DROP TYPE t_cross_schema_record" rescue nil
+    plsql2.logoff
+    plsql.logoff
+  end
+
+  it "should resolve type from another schema" do
+    expect(PLSQL::Procedure.find(plsql, :test_cross_schema_fn)).not_to be_nil
+  end
+
+  it "should execute function with cross-schema type parameter" do
+    result = plsql.test_cross_schema_fn(id: 42, name: "test")
+    expect(result).to eq(42)
+  end
+end
