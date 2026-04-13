@@ -340,6 +340,58 @@ describe "Package variables /" do
 
   end
 
+  describe "constants with multiline declaration" do
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute "DROP PACKAGE test_multiline_pkg" rescue nil
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_multiline_pkg IS
+          multiline_constant CONSTANT PLS_INTEGER :=
+            42;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_multiline_pkg IS
+        END;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_multiline_pkg" rescue nil
+      plsql.logoff
+    end
+
+    it "should get constant with multiline assignment" do
+      expect(plsql.test_multiline_pkg.multiline_constant).to eq(42)
+    end
+
+    it "should not match RECORD field as a variable" do
+      begin
+        plsql.execute "DROP PACKAGE test_record_field_pkg" rescue nil
+        plsql.execute <<-SQL
+          CREATE OR REPLACE PACKAGE test_record_field_pkg IS
+            TYPE t_rec IS RECORD (
+              some_field NUMBER,
+              last_field VARCHAR2(50)
+            );
+            rec_var t_rec;
+          END;
+        SQL
+        plsql.execute <<-SQL
+          CREATE OR REPLACE PACKAGE BODY test_record_field_pkg IS
+          END;
+        SQL
+        # last_field is the last field in the RECORD (no trailing comma),
+        # which could falsely match as a variable if the semicolon is optional
+        expect {
+          plsql.test_record_field_pkg.last_field
+        }.to raise_error(/No PL\/SQL procedure or variable 'LAST_FIELD' found/)
+      ensure
+        plsql.execute "DROP PACKAGE test_record_field_pkg" rescue nil
+      end
+    end
+  end
+
   describe "object type" do
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
