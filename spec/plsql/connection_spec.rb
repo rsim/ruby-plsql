@@ -467,6 +467,78 @@ describe "Connection" do
 
   end
 
+  describe "JDBC connection URL" do
+    it "should use service name syntax by default" do
+      url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, database: "MYSERVICENAME")
+      expect(url).to eq "jdbc:oracle:thin:@//myhost:1521/MYSERVICENAME"
+    end
+
+    it "should use default host and port when not specified" do
+      original_tns_admin = ENV.delete("TNS_ADMIN")
+      begin
+        url = PLSQL::JDBCConnection.jdbc_connection_url(database: "/MYSERVICENAME")
+        expect(url).to eq "jdbc:oracle:thin:@//localhost:1521/MYSERVICENAME"
+      ensure
+        ENV["TNS_ADMIN"] = original_tns_admin
+      end
+    end
+
+    it "should use SID syntax when database starts with colon" do
+      url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, database: ":MYSID")
+      expect(url).to eq "jdbc:oracle:thin:@myhost:1521:MYSID"
+    end
+
+    it "should use service name syntax when database starts with slash" do
+      url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, database: "/MYSERVICENAME")
+      expect(url).to eq "jdbc:oracle:thin:@//myhost:1521/MYSERVICENAME"
+    end
+
+    it "should use TNS alias when TNS_ADMIN is set and no host specified" do
+      original_tns_admin = ENV["TNS_ADMIN"]
+      ENV["TNS_ADMIN"] = "/path/to/tns"
+      begin
+        url = PLSQL::JDBCConnection.jdbc_connection_url(database: "MYALIAS")
+        expect(url).to eq "jdbc:oracle:thin:@MYALIAS"
+      ensure
+        ENV["TNS_ADMIN"] = original_tns_admin
+      end
+    end
+
+    it "should use service name syntax when TNS_ADMIN is set and database starts with slash" do
+      original_tns_admin = ENV["TNS_ADMIN"]
+      ENV["TNS_ADMIN"] = "/path/to/tns"
+      begin
+        url = PLSQL::JDBCConnection.jdbc_connection_url(database: "/MYSERVICENAME")
+        expect(url).to eq "jdbc:oracle:thin:@//localhost:1521/MYSERVICENAME"
+      ensure
+        ENV["TNS_ADMIN"] = original_tns_admin
+      end
+    end
+
+    it "should use SID syntax when TNS_ADMIN is set and database starts with colon" do
+      original_tns_admin = ENV["TNS_ADMIN"]
+      ENV["TNS_ADMIN"] = "/path/to/tns"
+      begin
+        url = PLSQL::JDBCConnection.jdbc_connection_url(database: ":MYSID")
+        expect(url).to eq "jdbc:oracle:thin:@localhost:1521:MYSID"
+      ensure
+        ENV["TNS_ADMIN"] = original_tns_admin
+      end
+    end
+
+    it "should raise ArgumentError when database and url are not provided" do
+      expect {
+        PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost")
+      }.to raise_error(ArgumentError, /database or url option is required/)
+    end
+
+    it "should use custom URL when provided" do
+      custom_url = "jdbc:oracle:thin:@//custom:1522/MYSERVICENAME"
+      url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", database: "MYSERVICENAME", url: custom_url)
+      expect(url).to eq custom_url
+    end
+  end if defined?(JRuby)
+
   describe "logoff" do
     before(:each) do
       # restore connection before each test

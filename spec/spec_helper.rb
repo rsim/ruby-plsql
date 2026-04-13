@@ -45,8 +45,7 @@ else
   DATABASE_NAME = ENV["DATABASE_NAME"] || "orcl"
 end
 
-DATABASE_SERVICE_NAME = (defined?(JRUBY_VERSION) ? "/" : "") +
-                        (ENV["DATABASE_SERVICE_NAME"] || DATABASE_NAME)
+DATABASE_SERVICE_NAME = ENV["DATABASE_SERVICE_NAME"] || DATABASE_NAME
 DATABASE_HOST = ENV["DATABASE_HOST"] || "localhost"
 DATABASE_PORT = (ENV["DATABASE_PORT"] || 1521).to_i
 DATABASE_USERS_AND_PASSWORDS = [
@@ -77,7 +76,7 @@ def get_connection_url
   unless defined?(JRUBY_VERSION)
     (ENV["DATABASE_USE_TNS"] == "NO") ? get_eazy_connect_url("/") : DATABASE_NAME
   else
-    "jdbc:oracle:thin:@#{get_eazy_connect_url}"
+    "jdbc:oracle:thin:@//#{get_eazy_connect_url("/")}"
   end
 end
 

@@ -20,7 +20,7 @@ class TestDb
         Timeout::timeout(5) {
           if defined?(JRUBY_VERSION)
             @connection = java.sql.DriverManager.get_connection(
-              "jdbc:oracle:thin:@127.0.0.1:1521/XE",
+              "jdbc:oracle:thin:@//127.0.0.1:1521/XE",
               "system",
               "oracle"
             )

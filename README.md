@@ -120,6 +120,22 @@ plsql.activerecord_class = ActiveRecord::Base
 and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
 
 
+### JRuby JDBC connection:
+
+When using JRuby, the `connect!` method with `:host` and `:database` options uses the thin-style service name syntax by default:
+
+```ruby
+# Connects using service name syntax: jdbc:oracle:thin:@//localhost:1521/MYSERVICENAME
+plsql.connect! username: "hr", password: "hr", host: "localhost", database: "MYSERVICENAME"
+```
+
+If you need to connect using the legacy SID syntax (for Oracle databases older than 12c), prefix the database name with a colon:
+
+```ruby
+# Connects using SID syntax: jdbc:oracle:thin:@localhost:1521:MYSID
+plsql.connect! username: "hr", password: "hr", host: "localhost", database: ":MYSID"
+```
+
 ### Cheat Sheet:
 
 You may have a look at this [Cheat Sheet](http://cheatography.com/jgebal/cheat-sheets/ruby-plsql-cheat-sheet/) for instructions on how to use ruby-plsql
