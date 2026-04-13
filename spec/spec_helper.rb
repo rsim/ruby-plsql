@@ -99,7 +99,7 @@ def get_connection(user_number = 0)
           props.setProperty("user", database_user)
           props.setProperty("password", database_password)
         end)
-      end
+      end.tap { |c| c.setAutoCommit(false) }
     end
   end
 end

@@ -64,6 +64,7 @@ module PLSQL
           props.setProperty("password", params[:password])
         end)
       end
+      conn.setAutoCommit(false)
       new(conn)
     end
 
