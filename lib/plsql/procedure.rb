@@ -397,6 +397,9 @@ module PLSQL
 
           col_no, col_name, col_type_name, col_length, col_precision, col_scale, col_char_length, col_char_used = r
 
+          # remove precision (n) from data_type (returned for TIMESTAMPs and INTERVALs)
+          col_type_name = col_type_name.sub(/\(\d+\)/, "")
+
           fields[col_name.downcase.to_sym] = {
             position: col_no.to_i,
             data_type: col_type_name,

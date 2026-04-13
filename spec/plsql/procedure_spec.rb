@@ -2427,6 +2427,44 @@ describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
   end
 end
 
+describe "Function with TIMESTAMP columns in %ROWTYPE" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute "DROP FUNCTION test_timestamp_fn" rescue nil
+    plsql.execute "DROP TABLE test_timestamp_tbl" rescue nil
+    plsql.execute <<-SQL
+      CREATE TABLE test_timestamp_tbl (
+        id NUMBER,
+        ts TIMESTAMP,
+        ts_tz TIMESTAMP WITH TIME ZONE,
+        ts_ltz TIMESTAMP WITH LOCAL TIME ZONE
+      )
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE FUNCTION test_timestamp_fn(p_rec test_timestamp_tbl%ROWTYPE)
+        RETURN NUMBER
+      IS
+      BEGIN
+        RETURN p_rec.id;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP FUNCTION test_timestamp_fn" rescue nil
+    plsql.execute "DROP TABLE test_timestamp_tbl" rescue nil
+    plsql.logoff
+  end
+
+  it "should strip precision from TIMESTAMP data types in %ROWTYPE fields" do
+    procedure = PLSQL::Procedure.find(plsql, :test_timestamp_fn)
+    fields = procedure.arguments[0][:p_rec][:fields]
+    expect(fields[:ts][:data_type]).to eq("TIMESTAMP")
+    expect(fields[:ts_tz][:data_type]).to eq("TIMESTAMP WITH TIME ZONE")
+    expect(fields[:ts_ltz][:data_type]).to eq("TIMESTAMP WITH LOCAL TIME ZONE")
+  end
+end
+
 describe "Function with TABLE OF %ROWTYPE parameter defined in package" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
