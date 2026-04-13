@@ -2,22 +2,24 @@ begin
   require "java"
   require "jruby"
 
-  # ojdbc6.jar or ojdbc5.jar file should be in JRUBY_HOME/lib or should be in ENV['PATH'] or load path
+  # Oracle JDBC driver jar should be in JRUBY_HOME/lib or should be in ENV['PATH'] or load path
 
   java_version = java.lang.System.getProperty("java.version")
-  ojdbc_jars = if java_version =~ /^1.5/
-    %w(ojdbc5.jar)
-  elsif java_version =~ /^1.6/
-    %w(ojdbc6.jar)
-  elsif java_version >= "1.7"
-    # Oracle 11g client ojdbc6.jar is also compatible with Java 1.7
-    # Oracle 12c client provides new ojdbc7.jar
-    %w(ojdbc7.jar ojdbc6.jar)
+  java_major = if java_version =~ /^1\.(\d+)/
+    $1.to_i
   else
-    []
+    java_version.to_i
   end
 
-  if ENV_JAVA["java.class.path"] !~ Regexp.new(ojdbc_jars.join("|"))
+  ojdbc_jars = []
+  ojdbc_jars << "ojdbc17.jar" if java_major >= 17
+  ojdbc_jars << "ojdbc11.jar" if java_major >= 11
+  ojdbc_jars << "ojdbc8.jar"  if java_major >= 8
+  ojdbc_jars << "ojdbc7.jar"  if java_major >= 7
+  ojdbc_jars << "ojdbc6.jar"  if java_major >= 6
+  ojdbc_jars << "ojdbc5.jar"  if java_major == 5
+
+  if ENV_JAVA["java.class.path"] !~ Regexp.union(ojdbc_jars)
     # On Unix environment variable should be PATH, on Windows it is sometimes Path
     env_path = (ENV["PATH"] || ENV["Path"] || "").split(File::PATH_SEPARATOR)
     # Look for JDBC driver at first in lib subdirectory (application specific JDBC file version)

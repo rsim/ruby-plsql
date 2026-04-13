@@ -154,7 +154,7 @@ In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver t
 If you are using MRI Ruby implementation then you need to install ruby-oci8 gem (version 2.1 or higher)
 as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
 
-If you are using JRuby then you need to download latest [Oracle JDBC driver](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html) - either ojdbc7.jar for Java 8 and 7, ojdbc6.jar for Java 6, 7, 8 or ojdbc5.jar for Java 5. You can refer [the support matrix](http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-faq-090281.html#01_03) for details.
+If you are using JRuby then you need to download the appropriate [Oracle JDBC driver](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html) for your Java version - ojdbc17.jar for Java 17+, ojdbc11.jar for Java 11+, ojdbc8.jar for Java 8+, ojdbc7.jar for Java 7, ojdbc6.jar for Java 6, or ojdbc5.jar for Java 5.
 
 And copy this file to one of these locations. JDBC driver will be searched in this order:
 
