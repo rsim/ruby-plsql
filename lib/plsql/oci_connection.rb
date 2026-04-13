@@ -14,13 +14,9 @@ rescue LoadError
   raise LoadError, "ERROR: ruby-plsql could not load ruby-oci8 library. #{msg}"
 end
 
-require "plsql/oci8_patches"
-
 # check ruby-oci8 version
-required_oci8_version = [2, 0, 3]
-oci8_version_ints = OCI8::VERSION.scan(/\d+/).map { |s| s.to_i }
-if (oci8_version_ints <=> required_oci8_version) < 0
-  raise LoadError, "ERROR: ruby-oci8 version #{OCI8::VERSION} is too old. Please install ruby-oci8 version #{required_oci8_version.join('.')} or later."
+if Gem::Version.new(OCI8::VERSION) < Gem::Version.new("2.1.0")
+  raise LoadError, "ERROR: ruby-oci8 version #{OCI8::VERSION} is too old. Please install ruby-oci8 version 2.1.0 or later."
 end
 
 module PLSQL
