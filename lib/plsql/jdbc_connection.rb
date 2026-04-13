@@ -35,7 +35,8 @@ begin
     end
   end
 
-  java.sql.DriverManager.registerDriver Java::oracle.jdbc.OracleDriver.new
+  ORACLE_DRIVER = Java::oracle.jdbc.OracleDriver.new
+  java.sql.DriverManager.registerDriver ORACLE_DRIVER
 
   # set tns_admin property from TNS_ADMIN environment variable
   if !java.lang.System.get_property("oracle.net.tns_admin") && ENV["TNS_ADMIN"]
@@ -51,7 +52,19 @@ module PLSQL
   class JDBCConnection < Connection  # :nodoc:
     def self.create_raw(params)
       url = jdbc_connection_url(params)
-      new(java.sql.DriverManager.getConnection(url, params[:username], params[:password]))
+      conn = begin
+        java.sql.DriverManager.getConnection(url, params[:username], params[:password])
+      rescue Java::JavaSql::SQLException => e
+        raise unless e.message =~ /no suitable driver/i
+        # bypass DriverManager to work in cases where ojdbc*.jar
+        # is added to the load path at runtime and not on the
+        # system classpath
+        ORACLE_DRIVER.connect(url, java.util.Properties.new.tap do |props|
+          props.setProperty("user", params[:username])
+          props.setProperty("password", params[:password])
+        end)
+      end
+      new(conn)
     end
 
     def self.jdbc_connection_url(params)
