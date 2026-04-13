@@ -61,7 +61,7 @@ jobs:
         with:
           name: gem-cruby
       - name: Download JRuby gem
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gem-jruby
       - name: Set up Ruby
