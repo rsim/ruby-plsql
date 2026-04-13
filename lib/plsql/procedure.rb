@@ -391,7 +391,7 @@ module PLSQL
       when "TABLE", "VIEW"
         @schema.select_all(
           "SELECT column_id, column_name, data_type, data_length, data_precision, data_scale, char_length, char_used
-           FROM ALL_TAB_COLS WHERE OWNER = :owner AND TABLE_NAME = :type_name
+           FROM ALL_TAB_COLUMNS WHERE OWNER = :owner AND TABLE_NAME = :type_name
            ORDER BY column_id",
           @schema_name, argument_metadata[:type_name]) do |r|
 

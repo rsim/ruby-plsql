@@ -2385,3 +2385,44 @@ describe "case-insensitive params" do
     expect { plsql.test_func(p_STRING: "xxx") }.not_to raise_error
   end
 end
+
+describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
+  before(:all) do
+    plsql.connect! CONNECTION_PARAMS
+    plsql.execute "DROP PACKAGE test_hidden_cols_pkg" rescue nil
+    plsql.execute "DROP TABLE test_hidden_cols" rescue nil
+    plsql.execute "CREATE TABLE test_hidden_cols (col1 VARCHAR2(50), col2 VARCHAR2(50))"
+    # Functional index creates a hidden column in ALL_TAB_COLS
+    plsql.execute "CREATE INDEX test_hidden_cols_idx ON test_hidden_cols (UPPER(col1))"
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE test_hidden_cols_pkg IS
+        PROCEDURE test_proc(p_rec IN test_hidden_cols%ROWTYPE);
+      END;
+    SQL
+    plsql.execute <<-SQL
+      CREATE OR REPLACE PACKAGE BODY test_hidden_cols_pkg IS
+        PROCEDURE test_proc(p_rec IN test_hidden_cols%ROWTYPE) IS
+        BEGIN
+          NULL;
+        END;
+      END;
+    SQL
+  end
+
+  after(:all) do
+    plsql.execute "DROP PACKAGE test_hidden_cols_pkg" rescue nil
+    plsql.execute "DROP TABLE test_hidden_cols" rescue nil
+    plsql.logoff
+  end
+
+  it "should not include hidden columns in %ROWTYPE fields" do
+    procedure = PLSQL::Procedure.find(plsql, :test_proc, "TEST_HIDDEN_COLS_PKG")
+    fields = procedure.arguments[0][:p_rec][:fields]
+    field_names = fields.keys
+    expect(field_names).to include(:col1)
+    expect(field_names).to include(:col2)
+    # Use string comparison instead of symbol literal (e.g., :sys_nc00003$)
+    # because $ in symbol literals is a syntax error in the Ruby 2.4 parser
+    expect(field_names.none? { |name| name.to_s.start_with?("sys_nc") }).to be true
+  end
+end
