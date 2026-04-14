@@ -218,6 +218,26 @@ describe "ActiveRecord connection" do
     expect(plsql.default_timezone).to eq(:utc)
   end
 
+  it "should not emit ActiveRecord::Base.default_timezone deprecation warning (#234)" do
+    skip "ActiveRecord.default_timezone is not available" unless ActiveRecord.respond_to?(:default_timezone=)
+
+    original_default_timezone = ActiveRecord.default_timezone
+    ActiveRecord.default_timezone = :utc
+
+    deprecator = ActiveRecord.respond_to?(:deprecator) ? ActiveRecord.deprecator : ActiveSupport::Deprecation
+    original_behavior = deprecator.behavior
+    warnings = []
+    begin
+      deprecator.behavior = ->(message, *) { warnings << message }
+      expect(plsql.default_timezone).to eq(:utc)
+    ensure
+      deprecator.behavior = original_behavior
+      ActiveRecord.default_timezone = original_default_timezone
+    end
+
+    expect(warnings.grep(/default_timezone/)).to be_empty
+  end
+
   it "should have the same connection as default schema" do
     expect(plsql.hr.connection).to eq(plsql.connection)
   end

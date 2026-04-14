@@ -99,12 +99,15 @@ module PLSQL
         @original_schema.default_timezone
       else
         @default_timezone ||
-          # Use ActiveRecord default_timezone when ActiveRecord connection is used,
-          # preferring the connection's activerecord_class so a subclass override
-          # (available in AR < 8.0) is honored before falling back to the
-          # module-level accessor (AR 7.0+; the only one in AR 8.0+).
-          (@connection && (ar_class = @connection.activerecord_class) &&
-            (ar_class.respond_to?(:default_timezone) ? ar_class.default_timezone : ActiveRecord.default_timezone)) ||
+          # Use ActiveRecord default_timezone when ActiveRecord connection is used.
+          # Prefer the module-level accessor (AR 7.0+; the only one in AR 8.0+) so
+          # that AR 7.0/7.1's deprecation warning for ActiveRecord::Base.default_timezone
+          # is not emitted. Fall back to the per-class accessor only on pre-7.0 AR,
+          # where ActiveRecord.default_timezone does not exist.
+          (@connection && @connection.activerecord_class &&
+            (ActiveRecord.respond_to?(:default_timezone) ?
+              ActiveRecord.default_timezone :
+              @connection.activerecord_class.default_timezone)) ||
           # default to local timezone
           :local
       end
