@@ -8,14 +8,15 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     strategy:
       matrix:
         ruby: [
           '4.0',
           '3.4',
           '3.3',
-          '3.2'
+          '3.2',
+          'jruby-10.0.5.0',
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_23_26
@@ -42,6 +43,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+    - name: Set up Java
+      if: startsWith(matrix.ruby, 'jruby')
+      uses: actions/setup-java@v4
+      with:
+        distribution: oracle
+        java-version: '21'
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
@@ -61,6 +68,7 @@ jobs:
         sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
         echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
     - name: Install JDBC Driver
+      if: startsWith(matrix.ruby, 'jruby')
       run: |
         wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/23261/ojdbc17.jar -O ./lib/ojdbc17.jar
     - name: Create database user
