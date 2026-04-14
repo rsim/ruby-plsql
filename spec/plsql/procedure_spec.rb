@@ -1875,7 +1875,7 @@ describe "Parameter type mapping /" do
       expect(plsql.test_cursor do |cursor|
         cursor2 = cursor
       end).to be_nil
-      expect { cursor2.fetch }.to raise_error(/Cursor was already closed|Closed Statement/)
+      expect { cursor2.fetch }.to raise_error(/Cursor was already closed|Closed Statement|Closed ResultSet/)
     end
 
     it "should not raise error if cursor is closed inside block" do

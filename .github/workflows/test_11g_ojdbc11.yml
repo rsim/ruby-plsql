@@ -1,4 +1,4 @@
-name: test_11g
+name: test_11g_ojdbc11
 
 on:
   push:
@@ -16,11 +16,7 @@ jobs:
     strategy:
       matrix:
         ruby: [
-          '4.0',
-          '3.4',
-          '3.3',
-          '3.2',
-          'jruby-10.0.5.0',
+          'jruby-10.0.5.0'
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_21_15
@@ -48,7 +44,6 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Set up Java
-      if: startsWith(matrix.ruby, 'jruby')
       uses: actions/setup-java@v4
       with:
         distribution: oracle
@@ -73,9 +68,8 @@ jobs:
         sudo unzip -qo instantclient-sdk-linux.x64-21.15.0.0.0dbru.zip -d /opt/oracle
         echo "/opt/oracle/instantclient_21_15" >> $GITHUB_PATH
     - name: Install JDBC Driver
-      if: startsWith(matrix.ruby, 'jruby')
       run: |
-        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/23261/ojdbc17.jar -O ./lib/ojdbc17.jar
+        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/23261/ojdbc11.jar -O ./lib/ojdbc11.jar
     - name: Configure ORA_TZFILE to match Oracle 11g server
       run: |
         # Oracle 11g XE uses timezone file v14; Instant Client 21.15 embeds

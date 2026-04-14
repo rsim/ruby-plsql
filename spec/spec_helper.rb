@@ -88,7 +88,18 @@ def get_connection(user_number = 0)
     end
   else
     try_to_connect(Java::JavaSql::SQLException) do
-      java.sql.DriverManager.getConnection(get_connection_url, database_user, database_password)
+      begin
+        java.sql.DriverManager.getConnection(get_connection_url, database_user, database_password)
+      rescue Java::JavaSql::SQLException => e
+        raise unless e.message =~ /no suitable driver/i
+        # bypass DriverManager to work in cases where ojdbc*.jar
+        # is added to the load path at runtime and not on the
+        # system classpath
+        PLSQL::JDBCConnection::ORACLE_DRIVER.connect(get_connection_url, java.util.Properties.new.tap do |props|
+          props.setProperty("user", database_user)
+          props.setProperty("password", database_password)
+        end)
+      end.tap { |c| c.setAutoCommit(false) }
     end
   end
 end
