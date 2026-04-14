@@ -8,7 +8,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     strategy:
       matrix:
         ruby: [
@@ -39,6 +39,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: oracle
+        java-version: '21'
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
