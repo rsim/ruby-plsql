@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         ruby: [
-          'jruby-10.0.5.0'
+          'jruby-10.1.0.0'
         ]
     env:
       ORACLE_HOME: /opt/oracle/instantclient_21_15
