@@ -19,8 +19,6 @@ jobs:
           'jruby-10.0.5.0',
         ]
     env:
-      ORACLE_HOME: /opt/oracle/instantclient_23_26
-      LD_LIBRARY_PATH: /opt/oracle/instantclient_23_26
       NLS_LANG: AMERICAN_AMERICA.AL32UTF8
       TNS_ADMIN: ./ci/network/admin
       DATABASE_NAME: FREEPDB1
@@ -58,19 +56,22 @@ jobs:
         sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
     - name: Download Oracle instant client
       run: |
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-basic-linux.x64-23.26.1.0.0.zip
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sdk-linux.x64-23.26.1.0.0.zip
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2326100/instantclient-sqlplus-linux.x64-23.26.1.0.0.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/instantclient-basic-linuxx64.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/instantclient-sqlplus-linuxx64.zip
     - name: Install Oracle instant client
       run: |
-        sudo unzip -q instantclient-basic-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
-        sudo unzip -qo instantclient-sdk-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
-        sudo unzip -qo instantclient-sqlplus-linux.x64-23.26.1.0.0.zip -d /opt/oracle/
-        echo "/opt/oracle/instantclient_23_26" >> $GITHUB_PATH
+        sudo unzip -q instantclient-basic-linuxx64.zip -d /opt/oracle/
+        sudo unzip -qo instantclient-sdk-linuxx64.zip -d /opt/oracle/
+        sudo unzip -qo instantclient-sqlplus-linuxx64.zip -d /opt/oracle/
+        ORACLE_HOME=$(find /opt/oracle -name "instantclient_*" -type d | head -1)
+        echo "ORACLE_HOME=$ORACLE_HOME" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$ORACLE_HOME" >> $GITHUB_ENV
+        echo "$ORACLE_HOME" >> $GITHUB_PATH
     - name: Install JDBC Driver
       if: startsWith(matrix.ruby, 'jruby')
       run: |
-        wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/23261/ojdbc17.jar -O ./lib/ojdbc17.jar
+        cp "$ORACLE_HOME/ojdbc17.jar" ./lib/ojdbc17.jar
     - name: Create database user
       run: |
         ./ci/setup_accounts.sh
