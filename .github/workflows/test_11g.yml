@@ -23,8 +23,8 @@ jobs:
           'jruby-10.1.0.0',
         ]
     env:
-      ORACLE_HOME: /opt/oracle/instantclient_21_15
-      LD_LIBRARY_PATH: /opt/oracle/instantclient_21_15
+      ORACLE_HOME: /opt/oracle/instantclient_21_21
+      LD_LIBRARY_PATH: /opt/oracle/instantclient_21_21
       NLS_LANG: AMERICAN_AMERICA.AL32UTF8
       TNS_ADMIN: ./ci/network/admin
       DATABASE_NAME: XE
@@ -62,26 +62,26 @@ jobs:
         sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
     - name: Download Oracle instant client
       run: |
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2115000/instantclient-basic-linux.x64-21.15.0.0.0dbru.zip
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2115000/instantclient-sqlplus-linux.x64-21.15.0.0.0dbru.zip
-        wget -q https://download.oracle.com/otn_software/linux/instantclient/2115000/instantclient-sdk-linux.x64-21.15.0.0.0dbru.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2121000/instantclient-basic-linux.x64-21.21.0.0.0dbru.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2121000/instantclient-sqlplus-linux.x64-21.21.0.0.0dbru.zip
+        wget -q https://download.oracle.com/otn_software/linux/instantclient/2121000/instantclient-sdk-linux.x64-21.21.0.0.0dbru.zip
     - name: Install Oracle instant client
       run: |
         sudo mkdir -p /opt/oracle/
-        sudo unzip -q instantclient-basic-linux.x64-21.15.0.0.0dbru.zip -d /opt/oracle
-        sudo unzip -qo instantclient-sqlplus-linux.x64-21.15.0.0.0dbru.zip -d /opt/oracle
-        sudo unzip -qo instantclient-sdk-linux.x64-21.15.0.0.0dbru.zip -d /opt/oracle
-        echo "/opt/oracle/instantclient_21_15" >> $GITHUB_PATH
+        sudo unzip -q instantclient-basic-linux.x64-21.21.0.0.0dbru.zip -d /opt/oracle
+        sudo unzip -qo instantclient-sqlplus-linux.x64-21.21.0.0.0dbru.zip -d /opt/oracle
+        sudo unzip -qo instantclient-sdk-linux.x64-21.21.0.0.0dbru.zip -d /opt/oracle
+        echo "/opt/oracle/instantclient_21_21" >> $GITHUB_PATH
     - name: Install JDBC Driver
       if: startsWith(matrix.ruby, 'jruby')
       run: |
         wget -q https://download.oracle.com/otn-pub/otn_software/jdbc/23261/ojdbc17.jar -O ./lib/ojdbc17.jar
     - name: Configure ORA_TZFILE to match Oracle 11g server
       run: |
-        # Oracle 11g XE uses timezone file v14; Instant Client 21.15 embeds
-        # v35. This mismatch causes ORA-01805 when fetching DATE/TIMESTAMP
-        # values. Copy the v14 files from the 11g container and point the
-        # Instant Client at them via ORA_TZFILE.
+        # Oracle 11g XE uses timezone file v14; the 21.x Instant Client
+        # embeds a newer file. The mismatch causes ORA-01805 when fetching
+        # DATE/TIMESTAMP values. Copy the v14 files from the 11g container
+        # and point the Instant Client at them via ORA_TZFILE.
         ORACLE_CONTAINER="${{ job.services.oracle.id }}"
         sudo mkdir -p "$ORACLE_HOME/oracore/zoneinfo"
         docker cp "$ORACLE_CONTAINER":/u01/app/oracle/product/11.2.0/xe/oracore/zoneinfo/timezlrg_14.dat /tmp/timezlrg_14.dat
