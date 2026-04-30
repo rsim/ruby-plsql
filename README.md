@@ -152,7 +152,7 @@ or include gem in Gemfile if using bundler.
 In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver to $JRUBY_HOME/lib (for JRuby).
 
 If you are using MRI Ruby implementation then you need to install ruby-oci8 gem (version 2.1 or higher)
-as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
+as well as Oracle client, e.g. [Oracle Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html).
 
 If you are using JRuby then you need to download the appropriate [Oracle JDBC driver](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html) for your Java version. CI exercises ojdbc17.jar and ojdbc11.jar on Java 21.
 
