@@ -1,0 +1,31 @@
+{
+  "name": "Ruby PL/SQL",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ruby-plsql",
+  "features": {
+    "ghcr.io/rails/devcontainer/features/ruby:2": {
+      "version": "4.0.2"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "shopify.ruby-lsp"
+      ]
+    }
+  },
+  "initializeCommand": "docker pull gvenzl/oracle-free:latest",
+  "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
+  "remoteEnv": {
+    "DATABASE_NAME": "FREEPDB1",
+    "DATABASE_SYS_PASSWORD": "Oracle18",
+    "NLS_LANG": "American_America.AL32UTF8",
+    "TNS_ADMIN": "/workspaces/ruby-plsql/ci/network/admin",
+    "TWO_TASK": "FREEPDB1"
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localWorkspaceFolder}/.bundle,target=/home/vscode/.bundle,type=bind,consistency=delegated"
+  ]
+}
