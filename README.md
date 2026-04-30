@@ -180,43 +180,7 @@ Make sure you use correct version of Oracle client for database you're connectin
 TESTS
 -----
 
-Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
-
-##### Prepare database
-
-* With local [Vagrant](https://www.vagrantup.com) based Oracle XE database.
-
-    Download Oracle XE database ```oracle-xe-11.2.0-1.0.x86_64.rpm.zip``` from [Oracle Home page](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html) and put it into project home directory.
-
-    From project home directory run ```vagrant up``` command to build fully functioning **Centos 6.6** virtual machine with installed Oracle XE database.
-
-* Within other Oracle Database create Oracle database schema for test purposes.
-
-        SQL> CREATE USER hr IDENTIFIED BY hr;
-        SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
-
-        SQL> CREATE USER arunit IDENTIFIED BY arunit;
-        SQL> GRANT create session TO arunit;
-
-##### Prepare dependencies
-
-* Install bundler with
-
-        gem install bundler
-
-* Install necessary gems with
-
-        bundle install
-
-##### Run tests
-
-* Run tests with local Vagrant based Oracle XE database
-
-        USE_VM_DATABASE=Y rake spec
-
-* Run tests with other Oracle database
-
-        rake spec
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up a development environment and run the spec suite.
 
 LINKS
 -----
@@ -228,13 +192,7 @@ LINKS
 CONTRIBUTORS
 ------------
 
-* Raimonds Simanovskis
-* Edgars Beigarts
-* Oleh Mykytyuk
-* Wiehann Matthysen
-* Dayle Larson
-* Yasuo Honda
-* Yavor Nikolov
+Thanks to everyone who has contributed to ruby-plsql over the years. The up-to-date list is maintained on GitHub: https://github.com/rsim/ruby-plsql/graphs/contributors
 
 LICENSE
 -------

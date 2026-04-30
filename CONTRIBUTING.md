@@ -108,3 +108,39 @@ BUNDLE_ONLY=rubocop bundle exec rubocop --parallel
 ```
 
 These are the same commands CI runs (`.github/workflows/rubocop.yml`).
+
+## Manual setup (without devcontainer)
+
+If you prefer to develop against an existing Oracle Database, review
+`spec/spec_helper.rb` for the default schema/user names and database
+names (override via environment variables as needed).
+
+### Prepare the database
+
+Use any reachable Oracle Database and create the test schemas:
+
+```sql
+CREATE USER hr IDENTIFIED BY hr;
+GRANT unlimited tablespace, create session, create table,
+      create sequence, create procedure, create type,
+      create view, create synonym TO hr;
+
+CREATE USER arunit IDENTIFIED BY arunit;
+GRANT create session TO arunit;
+```
+
+The CI helper `ci/setup_accounts.sh` performs the equivalent setup
+against `${DATABASE_NAME}` using `${DATABASE_SYS_PASSWORD}`.
+
+### Prepare dependencies
+
+```sh
+gem install bundler
+bundle install
+```
+
+### Run the suite
+
+```sh
+bundle exec rake spec
+```
