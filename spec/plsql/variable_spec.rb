@@ -340,6 +340,43 @@ describe "Package variables /" do
 
   end
 
+  describe "package subtypes" do
+    before(:all) do
+      plsql.connect! CONNECTION_PARAMS
+      plsql.execute "DROP PACKAGE test_subtype_pkg" rescue nil
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE test_subtype_pkg IS
+          SUBTYPE num_type IS NUMBER(38,0) NOT NULL;
+          SUBTYPE str_type IS VARCHAR2(100);
+          num_var num_type := 42;
+          str_var str_type := 'hello';
+          qualified_var test_subtype_pkg.num_type := 99;
+        END;
+      SQL
+      plsql.execute <<-SQL
+        CREATE OR REPLACE PACKAGE BODY test_subtype_pkg IS
+        END;
+      SQL
+    end
+
+    after(:all) do
+      plsql.execute "DROP PACKAGE test_subtype_pkg" rescue nil
+      plsql.logoff
+    end
+
+    it "should get variable with unqualified subtype" do
+      expect(plsql.test_subtype_pkg.num_var).to eq(42)
+    end
+
+    it "should get VARCHAR2 variable with unqualified subtype" do
+      expect(plsql.test_subtype_pkg.str_var).to eq("hello")
+    end
+
+    it "should get variable with package-qualified subtype" do
+      expect(plsql.test_subtype_pkg.qualified_var).to eq(99)
+    end
+  end
+
   describe "constants with multiline declaration" do
     before(:all) do
       plsql.connect! CONNECTION_PARAMS
