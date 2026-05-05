@@ -12,7 +12,7 @@ ruby-plsql gem provides simple Ruby API for calling Oracle PL/SQL procedures. It
 
 NUMBER, BINARY_INTEGER, PLS_INTEGER, NATURAL, NATURALN, POSITIVE, POSITIVEN, SIGNTYPE, SIMPLE_INTEGER, VARCHAR, VARCHAR2, NVARCHAR2, CHAR, NCHAR, DATE, TIMESTAMP, CLOB, BLOB, BOOLEAN, PL/SQL RECORD, TABLE, VARRAY, OBJECT and CURSOR types are supported for input and output parameters and return values of PL/SQL procedures and functions.
 
-ruby-plsql supports Ruby 2.2, 2.3, 2.4, 2.5 (ruby-oci8 2.2.3+ is needed for Ruby 2.4) and JRuby 9.1 implementations.
+ruby-plsql is tested on CI against Ruby 2.4, 2.5, 2.7, 3.1, 3.2, 3.3, 3.4, 4.0 and JRuby 10.1.0.0. Ruby 2.4–3.1 remain in CI to verify compatibility with older ActiveRecord releases (see gemfiles/). The CI runs the suite against Oracle Database 23ai Free and Oracle Database XE 11g.
 
 USAGE
 -----
@@ -152,9 +152,9 @@ or include gem in Gemfile if using bundler.
 In addition install either ruby-oci8 (for MRI/YARV) or copy Oracle JDBC driver to $JRUBY_HOME/lib (for JRuby).
 
 If you are using MRI Ruby implementation then you need to install ruby-oci8 gem (version 2.1 or higher)
-as well as Oracle client, e.g. [Oracle Instant Client](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html).
+as well as Oracle client, e.g. [Oracle Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html).
 
-If you are using JRuby then you need to download the appropriate [Oracle JDBC driver](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html) for your Java version - ojdbc17.jar for Java 17+, ojdbc11.jar for Java 11+, ojdbc8.jar for Java 8+, ojdbc7.jar for Java 7, ojdbc6.jar for Java 6, or ojdbc5.jar for Java 5.
+If you are using JRuby then you need to download the appropriate [Oracle JDBC driver](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html) for your Java version. CI exercises ojdbc17.jar and ojdbc11.jar on Java 21.
 
 And copy this file to one of these locations. JDBC driver will be searched in this order:
 
