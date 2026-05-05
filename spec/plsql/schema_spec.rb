@@ -255,14 +255,14 @@ describe "ActiveRecord connection" do
   it "should safely close cursors in threaded environment" do
     if (plsql.connection.database_version <=> [18, 0, 0, 0]) >= 0
       expect {
-        t1 = Thread.new { plsql.dbms_session.sleep(1) }.tap { |t| t.abort_on_exception = true }
-        t2 = Thread.new { plsql.dbms_session.sleep(2) }.tap { |t| t.abort_on_exception = true }
+        t1 = Thread.new { plsql.dbms_session.sleep(0.1) }.tap { |t| t.abort_on_exception = true }
+        t2 = Thread.new { plsql.dbms_session.sleep(0.2) }.tap { |t| t.abort_on_exception = true }
         [t2, t1].each { |t| t.join }
       }.not_to raise_error
     else
       expect {
-        t1 = Thread.new { plsql.dbms_lock.sleep(1) }.tap { |t| t.abort_on_exception = true }
-        t2 = Thread.new { plsql.dbms_lock.sleep(2) }.tap { |t| t.abort_on_exception = true }
+        t1 = Thread.new { plsql.dbms_lock.sleep(0.1) }.tap { |t| t.abort_on_exception = true }
+        t2 = Thread.new { plsql.dbms_lock.sleep(0.2) }.tap { |t| t.abort_on_exception = true }
         [t2, t1].each { |t| t.join }
       }.not_to raise_error
     end
