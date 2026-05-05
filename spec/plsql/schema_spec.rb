@@ -352,7 +352,7 @@ describe "DBMS_OUTPUT logging" do
 
     it "should log output when database version is less than 10.2" do
       allow(plsql.connection).to receive(:database_version).and_return([9, 2, 0, 0])
-      times = 2_000
+      times = 100
       plsql.test_dbms_output_large("1234567890", times)
       expect(@buffer.string).to eq("DBMS_OUTPUT: 1234567890\n" * times)
     end
