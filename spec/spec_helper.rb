@@ -39,12 +39,7 @@ require "ruby-plsql"
 # in spec/support/ and its subdirectories.
 Dir[File.join(File.dirname(__FILE__), "support/**/*.rb")].each { |f| require f }
 
-if ENV["USE_VM_DATABASE"] == "Y"
-  DATABASE_NAME = "XE"
-else
-  DATABASE_NAME = ENV["DATABASE_NAME"] || "orcl"
-end
-
+DATABASE_NAME = ENV["DATABASE_NAME"] || "orcl"
 DATABASE_SERVICE_NAME = ENV["DATABASE_SERVICE_NAME"] || DATABASE_NAME
 DATABASE_HOST = ENV["DATABASE_HOST"] || "localhost"
 DATABASE_PORT = (ENV["DATABASE_PORT"] || 1521).to_i
@@ -52,13 +47,6 @@ DATABASE_USERS_AND_PASSWORDS = [
   [ENV["DATABASE_USER"] || "hr", ENV["DATABASE_PASSWORD"] || "hr"],
   [ENV["DATABASE_USER2"] || "arunit", ENV["DATABASE_PASSWORD2"] || "arunit"]
 ]
-if ENV["USE_VM_DATABASE"] == "Y"
-  RSpec.configure do |config|
-    config.before(:suite) do
-      TestDb.build
-    end
-  end
-end
 
 def oracle_error_class
   unless defined?(JRUBY_VERSION)
