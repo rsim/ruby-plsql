@@ -180,31 +180,7 @@ Make sure you use correct version of Oracle client for database you're connectin
 TESTS
 -----
 
-Review `spec/spec_helper.rb` to see default schema/user names and database names (use environment variables to override defaults)
-
-##### Prepare database
-
-In an Oracle Database create the following schemas for test purposes.
-
-        SQL> CREATE USER hr IDENTIFIED BY hr;
-        SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
-
-        SQL> CREATE USER arunit IDENTIFIED BY arunit;
-        SQL> GRANT create session TO arunit;
-
-##### Prepare dependencies
-
-* Install bundler with
-
-        gem install bundler
-
-* Install necessary gems with
-
-        bundle install
-
-##### Run tests
-
-        rake spec
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up a development environment and run the spec suite.
 
 LINKS
 -----
@@ -216,13 +192,7 @@ LINKS
 CONTRIBUTORS
 ------------
 
-* Raimonds Simanovskis
-* Edgars Beigarts
-* Oleh Mykytyuk
-* Wiehann Matthysen
-* Dayle Larson
-* Yasuo Honda
-* Yavor Nikolov
+Thanks to everyone who has contributed to ruby-plsql over the years. The up-to-date list is maintained on GitHub: https://github.com/rsim/ruby-plsql/graphs/contributors
 
 LICENSE
 -------
