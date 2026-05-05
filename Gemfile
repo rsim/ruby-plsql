@@ -2,6 +2,7 @@ source "https://rubygems.org"
 
 group :development do
   gem "rspec_junit_formatter"
+  gem "rdoc"
 end
 
 group :rubocop do
