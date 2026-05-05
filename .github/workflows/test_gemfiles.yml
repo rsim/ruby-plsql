@@ -38,6 +38,8 @@ jobs:
             ruby: '3.1'
           - gemfile: gemfiles/Gemfile.activerecord-8.0
             ruby: '3.2'
+          - gemfile: gemfiles/Gemfile.activerecord-8.1
+            ruby: '3.3'
     env:
       BUNDLE_GEMFILE: ${{ matrix.gemfile }}
       NLS_LANG: AMERICAN_AMERICA.AL32UTF8
