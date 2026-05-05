@@ -179,8 +179,6 @@ module PLSQL
       end
     end
 
-    # all_synonyms view is quite slow therefore
-    # this implementation is overriden in OCI connection with faster native OCI method
     def describe_synonym(schema_name, synonym_name) # :nodoc:
       select_first(
         "SELECT table_owner, table_name FROM all_synonyms WHERE owner = :owner AND synonym_name = :synonym_name",
