@@ -184,13 +184,7 @@ Review `spec/spec_helper.rb` to see default schema/user names and database names
 
 ##### Prepare database
 
-* With local [Vagrant](https://www.vagrantup.com) based Oracle XE database.
-
-    Download Oracle XE database ```oracle-xe-11.2.0-1.0.x86_64.rpm.zip``` from [Oracle Home page](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html) and put it into project home directory.
-
-    From project home directory run ```vagrant up``` command to build fully functioning **Centos 6.6** virtual machine with installed Oracle XE database.
-
-* Within other Oracle Database create Oracle database schema for test purposes.
+In an Oracle Database create the following schemas for test purposes.
 
         SQL> CREATE USER hr IDENTIFIED BY hr;
         SQL> GRANT unlimited tablespace, create session, create table, create sequence, create procedure, create type, create view, create synonym TO hr;
@@ -209,12 +203,6 @@ Review `spec/spec_helper.rb` to see default schema/user names and database names
         bundle install
 
 ##### Run tests
-
-* Run tests with local Vagrant based Oracle XE database
-
-        USE_VM_DATABASE=Y rake spec
-
-* Run tests with other Oracle database
 
         rake spec
 

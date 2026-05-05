@@ -10,6 +10,5 @@ tmp
 sqlnet.log
 Gemfile.lock
 *.zip
-.vagrant
 .idea
 spec/support/custom_config.rb
