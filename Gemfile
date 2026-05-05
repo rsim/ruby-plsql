@@ -16,8 +16,8 @@ group :test, :development do
   gem "rspec", "~> 3.1"
 
   unless ENV["NO_ACTIVERECORD"]
-    gem "activerecord", "~> 8.0"
-    gem "activerecord-oracle_enhanced-adapter", "~> 8.0"
+    gem "activerecord", github: "rails/rails", branch: "main"
+    gem "activerecord-oracle_enhanced-adapter", github: "rsim/oracle-enhanced", branch: "master"
     gem "simplecov", ">= 0"
   end
 
