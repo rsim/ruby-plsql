@@ -120,7 +120,7 @@ describe "Named Schema" do
   end
 
   after(:all) do
-    plsql.connection.logoff
+    plsql.logoff
   end
 
   it "should find existing schema" do
