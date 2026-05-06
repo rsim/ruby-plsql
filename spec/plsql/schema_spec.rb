@@ -193,6 +193,10 @@ describe "ActiveRecord connection" do
     end
   end
 
+  after(:all) do
+    plsql.activerecord_class = nil
+  end
+
   before(:each) do
     plsql.activerecord_class = ActiveRecord::Base
   end
