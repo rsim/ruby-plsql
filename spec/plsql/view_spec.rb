@@ -196,9 +196,10 @@ describe "View" do
     end
 
     it "should select record in view using :column => nil condition" do
-      employee = @employees.last
-      employee[:employee_id] = employee[:employee_id] + 1
-      employee[:hire_date] = nil
+      employee = @employees.last.merge(
+        employee_id: @employees.last[:employee_id] + 1,
+        hire_date: nil
+      )
       plsql.test_employees_v.insert employee
       expect(plsql.test_employees_v.first("WHERE hire_date IS NULL")).to eq(employee)
       expect(plsql.test_employees_v.first(hire_date: nil)).to eq(employee)

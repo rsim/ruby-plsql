@@ -112,6 +112,10 @@ describe "Package variables /" do
       SQL
     end
 
+    before(:each) do
+      plsql.execute "BEGIN DBMS_SESSION.RESET_PACKAGE; END;"
+    end
+
     after(:all) do
       plsql.execute "DROP PACKAGE test_package"
       plsql.logoff

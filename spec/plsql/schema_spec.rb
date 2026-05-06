@@ -120,7 +120,7 @@ describe "Named Schema" do
   end
 
   after(:all) do
-    plsql.connection.logoff
+    plsql.logoff
   end
 
   it "should find existing schema" do
@@ -191,6 +191,10 @@ describe "ActiveRecord connection" do
     end
     class TestModel < TestBaseModel
     end
+  end
+
+  after(:all) do
+    plsql.activerecord_class = nil
   end
 
   before(:each) do

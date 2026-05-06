@@ -120,3 +120,8 @@ class Hash
     self.reject { |key, value| !whitelist.include?(key) }
   end unless method_defined?(:only)
 end
+
+RSpec.configure do |config|
+  config.order = :random
+  Kernel.srand config.seed
+end

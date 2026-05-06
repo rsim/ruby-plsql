@@ -1506,8 +1506,9 @@ describe "Parameter type mapping /" do
 
     describe "using Oracle 9.2" do
       before(:all) do
-        # get actual database_version
-        plsql.connect! CONNECTION_PARAMS
+        # get actual database_version using the outer describe's connection;
+        # calling plsql.connect! here would orphan the outer session, leaking
+        # ruby_<outer_sid>_* temporary tables when this skip fires.
         skip "Skip if the actual database version is 18c or higher" if (plsql.connection.database_version <=> [18, 0, 0, 0]) >= 0
       end
 
