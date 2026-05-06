@@ -81,7 +81,7 @@ Specs run in randomized order. The seed is printed at the start of the
 run, e.g.:
 
 ```
-==> Randomized with seed 12345 (reproduce: bundle exec rspec --seed 12345)
+Randomized with seed 12345
 ```
 
 To reproduce that exact run:
