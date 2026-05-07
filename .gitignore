@@ -8,6 +8,7 @@ pkg
 log
 tmp
 sqlnet.log
+debug.log
 Gemfile.lock
 *.zip
 .idea
