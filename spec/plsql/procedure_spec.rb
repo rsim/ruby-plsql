@@ -59,7 +59,7 @@ RSpec.describe "Parameter type mapping /" do
 
   ["VARCHAR", "VARCHAR2"].each do |datatype|
     describe "Function with #{datatype} parameters" do
-      it_should_behave_like "Function with string parameters", datatype
+      it_behaves_like "Function with string parameters", datatype
     end
   end
 
