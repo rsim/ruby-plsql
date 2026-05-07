@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe "Parameter type mapping /" do
+RSpec.describe "Parameter type mapping /" do
 
   shared_examples "Function with string parameters" do |datatype|
     before(:all) do
@@ -1997,7 +1997,7 @@ describe "Parameter type mapping /" do
 
 end
 
-describe "Synonyms /" do
+RSpec.describe "Synonyms /" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
   end
@@ -2177,7 +2177,7 @@ describe "Synonyms /" do
 
 end
 
-describe "SYS.STANDARD procedures /" do
+RSpec.describe "SYS.STANDARD procedures /" do
 
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
@@ -2210,7 +2210,7 @@ describe "SYS.STANDARD procedures /" do
 
 end
 
-describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
+RSpec.describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
 
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
@@ -2309,7 +2309,7 @@ describe "PLS_INTEGER/SIMPLE_INTEGER should be nullable" do
 
 end
 
-describe "#get_argument_metadata" do
+RSpec.describe "#get_argument_metadata" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
   end
@@ -2363,7 +2363,7 @@ describe "#get_argument_metadata" do
   end
 end
 
-describe "case-insensitive params" do
+RSpec.describe "case-insensitive params" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
     plsql.execute <<-SQL
@@ -2387,7 +2387,7 @@ describe "case-insensitive params" do
   end
 end
 
-describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
+RSpec.describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
     plsql.execute "DROP PACKAGE test_hidden_cols_pkg" rescue nil
@@ -2428,7 +2428,7 @@ describe "Procedure with %ROWTYPE parameter on table that has hidden columns" do
   end
 end
 
-describe "Function with TIMESTAMP columns in %ROWTYPE" do
+RSpec.describe "Function with TIMESTAMP columns in %ROWTYPE" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
     plsql.execute "DROP FUNCTION test_timestamp_fn" rescue nil
@@ -2466,7 +2466,7 @@ describe "Function with TIMESTAMP columns in %ROWTYPE" do
   end
 end
 
-describe "Function with TABLE OF %ROWTYPE parameter defined in package" do
+RSpec.describe "Function with TABLE OF %ROWTYPE parameter defined in package" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
     plsql.execute "DROP PACKAGE test_rowtype_pkg" rescue nil
@@ -2500,7 +2500,7 @@ describe "Function with TABLE OF %ROWTYPE parameter defined in package" do
   end
 end
 
-describe "Function with TABLE OF RECORD parameter defined in package (workaround for %ROWTYPE)" do
+RSpec.describe "Function with TABLE OF RECORD parameter defined in package (workaround for %ROWTYPE)" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS
     plsql.execute "DROP PACKAGE test_record_pkg" rescue nil
@@ -2532,7 +2532,7 @@ describe "Function with TABLE OF RECORD parameter defined in package (workaround
   end
 end
 
-describe "Function with cross-schema type reference" do
+RSpec.describe "Function with cross-schema type reference" do
   before(:all) do
     primary_user, _ = DATABASE_USERS_AND_PASSWORDS[0]
     second_user, second_password = DATABASE_USERS_AND_PASSWORDS[1]

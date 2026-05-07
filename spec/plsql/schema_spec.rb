@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe "Schema" do
+RSpec.describe "Schema" do
 
   it "should create Schema object" do
     expect(plsql.class).to eq(PLSQL::Schema)
@@ -8,7 +8,7 @@ describe "Schema" do
 
 end
 
-describe "Schema connection" do
+RSpec.describe "Schema connection" do
 
   before(:each) do
     @conn = get_connection
@@ -57,7 +57,7 @@ describe "Schema connection" do
 
 end
 
-describe "Connection with connect!" do
+RSpec.describe "Connection with connect!" do
 
   before(:all) do
     @username, @password = DATABASE_USERS_AND_PASSWORDS[0]
@@ -114,7 +114,7 @@ describe "Connection with connect!" do
 
 end
 
-describe "Named Schema" do
+RSpec.describe "Named Schema" do
   before(:all) do
     plsql.connection = @conn = get_connection
   end
@@ -141,7 +141,7 @@ describe "Named Schema" do
 
 end
 
-describe "Schema commit and rollback" do
+RSpec.describe "Schema commit and rollback" do
   before(:all) do
     plsql.connection = @conn = get_connection
     plsql.connection.autocommit = false
@@ -183,7 +183,7 @@ describe "Schema commit and rollback" do
 
 end
 
-describe "ActiveRecord connection" do
+RSpec.describe "ActiveRecord connection" do
   before(:all) do
     ActiveRecord::Base.establish_connection(CONNECTION_PARAMS)
     class TestBaseModel < ActiveRecord::Base
@@ -274,7 +274,7 @@ describe "ActiveRecord connection" do
 
 end if defined?(ActiveRecord)
 
-describe "DBMS_OUTPUT logging" do
+RSpec.describe "DBMS_OUTPUT logging" do
 
   before(:all) do
     plsql.connection = get_connection

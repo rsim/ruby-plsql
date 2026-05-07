@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe "Package" do
+RSpec.describe "Package" do
   before(:all) do
     plsql.connection = get_connection
     plsql.execute <<-SQL
@@ -113,7 +113,7 @@ describe "Package" do
 
 end
 
-describe "Synonym to package" do
+RSpec.describe "Synonym to package" do
 
   before(:all) do
     plsql.connection = get_connection
@@ -151,7 +151,7 @@ describe "Synonym to package" do
 
 end
 
-describe "Public synonym to package" do
+RSpec.describe "Public synonym to package" do
 
   before(:all) do
     plsql.connection = get_connection

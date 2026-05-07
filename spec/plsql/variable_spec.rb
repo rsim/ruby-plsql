@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe "Package variables /" do
+RSpec.describe "Package variables /" do
 
   describe "String" do
     before(:all) do
