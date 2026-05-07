@@ -14,6 +14,7 @@ end
 group :test, :development do
   gem "rake", ">= 10.0"
   gem "rspec", "~> 3.1"
+  gem "logger"
 
   unless ENV["NO_ACTIVERECORD"]
     gem "activerecord", github: "rails/rails", branch: "main"
