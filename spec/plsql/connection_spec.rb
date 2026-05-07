@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe "Connection" do
+RSpec.describe "Connection" do
 
   before(:all) do
     @raw_conn = get_connection

@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe "Table" do
+RSpec.describe "Table" do
   before(:all) do
     plsql.connection = get_connection
     plsql.connection.autocommit = false

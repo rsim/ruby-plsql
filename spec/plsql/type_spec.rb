@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe "Type" do
+RSpec.describe "Type" do
   before(:all) do
     plsql.connection = get_connection
     plsql.execute "DROP TYPE t_employee" rescue nil
