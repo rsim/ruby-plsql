@@ -120,21 +120,27 @@ plsql.activerecord_class = ActiveRecord::Base
 and then you do not need to specify plsql.connection (this is also safer when ActiveRecord reestablishes connection to database).
 
 
-### JRuby JDBC connection:
+### Connection options: `:database`, `:service_name`, `:sid`
 
-When using JRuby, the `connect!` method with `:host` and `:database` options uses the thin-style service name syntax by default:
+`connect!` accepts three mutually-exclusive ways to identify the target Oracle instance, matching the [oracle-enhanced adapter](https://github.com/rsim/oracle-enhanced):
 
 ```ruby
-# Connects using service name syntax: jdbc:oracle:thin:@//localhost:1521/MYSERVICENAME
+# By service name (recommended for 12c+ / PDBs)
+plsql.connect! username: "hr", password: "hr", host: "localhost", service_name: "MYSERVICENAME"
+
+# By SID (legacy single-instance, e.g. Oracle 11g XE)
+plsql.connect! username: "hr", password: "hr", host: "localhost", sid: "MYSID"
+
+# `:database` is still accepted and is treated as a service name
 plsql.connect! username: "hr", password: "hr", host: "localhost", database: "MYSERVICENAME"
 ```
 
-If you need to connect using the legacy SID syntax (for Oracle databases older than 12c), prefix the database name with a colon:
+Supplying more than one of `:database`, `:service_name`, `:sid` raises `ArgumentError`. Both `:service_name` and `:sid` work under the OCI driver (MRI) and the JDBC driver (JRuby). Under JRuby:
 
-```ruby
-# Connects using SID syntax: jdbc:oracle:thin:@localhost:1521:MYSID
-plsql.connect! username: "hr", password: "hr", host: "localhost", database: ":MYSID"
-```
+* `:service_name` builds `jdbc:oracle:thin:@//host:port/service_name`
+* `:sid` builds `jdbc:oracle:thin:@host:port:SID`
+
+The legacy `database: ":MYSID"` colon-prefix overload still works for one release but is deprecated; use `sid: "MYSID"` instead.
 
 ### Cheat Sheet:
 

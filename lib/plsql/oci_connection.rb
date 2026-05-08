@@ -22,7 +22,15 @@ end
 module PLSQL
   class OCIConnection < Connection # :nodoc:
     def self.create_raw(params)
-      connection_string = if params[:host]
+      Connection.resolve_database_aliases!(params)
+
+      connection_string = if (sid = params[:sid])
+        # OCI has no SID form for EZCONNECT; build a TNS connect descriptor
+        # so :sid works without requiring a tnsnames.ora entry.
+        host = params[:host] || "localhost"
+        port = params[:port] || 1521
+        "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=#{host})(PORT=#{port}))(CONNECT_DATA=(SID=#{sid})))"
+      elsif params[:host]
         "//#{params[:host]}:#{params[:port] || 1521}/#{params[:database]}"
       else
         params[:database]

@@ -483,9 +483,11 @@ RSpec.describe "Connection" do
       end
     end
 
-    it "should use SID syntax when database starts with colon" do
-      url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, database: ":MYSID")
-      expect(url).to eq "jdbc:oracle:thin:@myhost:1521:MYSID"
+    it "should use SID syntax when database starts with colon (deprecated)" do
+      expect {
+        url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, database: ":MYSID")
+        expect(url).to eq "jdbc:oracle:thin:@myhost:1521:MYSID"
+      }.to output(/deprecated/).to_stderr
     end
 
     it "should use service name syntax when database starts with slash" do
@@ -515,12 +517,14 @@ RSpec.describe "Connection" do
       end
     end
 
-    it "should use SID syntax when TNS_ADMIN is set and database starts with colon" do
+    it "should use SID syntax when TNS_ADMIN is set and database starts with colon (deprecated)" do
       original_tns_admin = ENV["TNS_ADMIN"]
       ENV["TNS_ADMIN"] = "/path/to/tns"
       begin
-        url = PLSQL::JDBCConnection.jdbc_connection_url(database: ":MYSID")
-        expect(url).to eq "jdbc:oracle:thin:@localhost:1521:MYSID"
+        expect {
+          url = PLSQL::JDBCConnection.jdbc_connection_url(database: ":MYSID")
+          expect(url).to eq "jdbc:oracle:thin:@localhost:1521:MYSID"
+        }.to output(/deprecated/).to_stderr
       ensure
         ENV["TNS_ADMIN"] = original_tns_admin
       end
@@ -537,7 +541,138 @@ RSpec.describe "Connection" do
       url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", database: "MYSERVICENAME", url: custom_url)
       expect(url).to eq custom_url
     end
+
+    context ":sid option" do
+      it "builds SID URL form" do
+        url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, sid: "MYSID")
+        expect(url).to eq "jdbc:oracle:thin:@myhost:1521:MYSID"
+      end
+
+      it "defaults host and port when not specified" do
+        url = PLSQL::JDBCConnection.jdbc_connection_url(sid: "MYSID")
+        expect(url).to eq "jdbc:oracle:thin:@localhost:1521:MYSID"
+      end
+
+      it "rejects values starting with '/'" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(sid: "/MYSID")
+        }.to raise_error(ArgumentError, /Invalid :sid value/)
+      end
+
+      it "rejects values starting with ':'" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(sid: ":MYSID")
+        }.to raise_error(ArgumentError, /Invalid :sid value/)
+      end
+
+      it "rejects TNS connect descriptors" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(
+            sid: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=foo)(PORT=1521))(CONNECT_DATA=(SID=XE)))"
+          )
+        }.to raise_error(ArgumentError, /Invalid :sid value/)
+      end
+    end
+
+    context ":service_name option" do
+      it "builds service-name URL form" do
+        url = PLSQL::JDBCConnection.jdbc_connection_url(host: "myhost", port: 1521, service_name: "MYSVC")
+        expect(url).to eq "jdbc:oracle:thin:@//myhost:1521/MYSVC"
+      end
+
+      it "rejects values starting with '/'" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(service_name: "/MYSVC")
+        }.to raise_error(ArgumentError, /Invalid :service_name value/)
+      end
+    end
+
+    context "mutual exclusion" do
+      it "raises when :database and :service_name are both set" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(database: "X", service_name: "Y")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :database, :service_name/)
+      end
+
+      it "raises when :database and :sid are both set" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(database: "X", sid: "Y")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :database, :sid/)
+      end
+
+      it "raises when :service_name and :sid are both set" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(service_name: "X", sid: "Y")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :service_name, :sid/)
+      end
+
+      it "raises when all three are set" do
+        expect {
+          PLSQL::JDBCConnection.jdbc_connection_url(database: "X", service_name: "Y", sid: "Z")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :database, :service_name, :sid/)
+      end
+    end
   end if defined?(JRuby)
+
+  describe "OCI connection string" do
+    def captured_connection_string(params)
+      captured = nil
+      stub_oci8 = Class.new do
+        define_singleton_method(:new) do |_user, _password, conn_str|
+          captured = conn_str
+          Object.new
+        end
+      end
+      stub_const("OCI8", stub_oci8)
+      PLSQL::OCIConnection.create_raw({ username: "u", password: "p" }.merge(params))
+      captured
+    end
+
+    context ":sid option" do
+      it "builds an inline TNS connect descriptor" do
+        conn_str = captured_connection_string(host: "myhost", port: 1521, sid: "MYSID")
+        expect(conn_str).to eq "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=myhost)(PORT=1521))(CONNECT_DATA=(SID=MYSID)))"
+      end
+
+      it "defaults host and port when not specified" do
+        conn_str = captured_connection_string(sid: "MYSID")
+        expect(conn_str).to eq "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SID=MYSID)))"
+      end
+
+      it "rejects values starting with ':'" do
+        expect {
+          captured_connection_string(sid: ":MYSID")
+        }.to raise_error(ArgumentError, /Invalid :sid value/)
+      end
+    end
+
+    context ":service_name option" do
+      it "builds the EZCONNECT-style connection string" do
+        conn_str = captured_connection_string(host: "myhost", port: 1521, service_name: "MYSVC")
+        expect(conn_str).to eq "//myhost:1521/MYSVC"
+      end
+
+      it "rejects values starting with '/'" do
+        expect {
+          captured_connection_string(service_name: "/MYSVC")
+        }.to raise_error(ArgumentError, /Invalid :service_name value/)
+      end
+    end
+
+    context "mutual exclusion" do
+      it "raises when :database and :sid are both set" do
+        expect {
+          captured_connection_string(database: "X", sid: "Y")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :database, :sid/)
+      end
+
+      it "raises when :service_name and :sid are both set" do
+        expect {
+          captured_connection_string(service_name: "X", sid: "Y")
+        }.to raise_error(ArgumentError, /Cannot specify more than one of :service_name, :sid/)
+      end
+    end
+  end unless defined?(JRuby)
 
   describe "logoff" do
     before(:each) do
