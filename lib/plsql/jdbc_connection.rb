@@ -76,6 +76,14 @@ module PLSQL
     end
 
     def self.jdbc_connection_url(params)
+      Connection.resolve_database_aliases!(params)
+
+      if (sid = params[:sid])
+        host = params[:host] || "localhost"
+        port = params[:port] || 1521
+        return "jdbc:oracle:thin:@#{host}:#{port}:#{sid}"
+      end
+
       database = params[:database]
       if ENV["TNS_ADMIN"] && database && database !~ %r{\A[:/]} && !params[:host] && !params[:url]
         "jdbc:oracle:thin:@#{database}"
@@ -88,6 +96,7 @@ module PLSQL
         port = params[:port] || 1521
 
         if database =~ /^:/
+          warn "[ruby-plsql] database: \":...\" (SID via colon prefix) is deprecated; use sid: \"...\" instead"
           # SID syntax: jdbc:oracle:thin:@host:port:SID
           "jdbc:oracle:thin:@#{host}:#{port}#{database}"
         else

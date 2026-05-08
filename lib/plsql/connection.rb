@@ -3,6 +3,48 @@ module PLSQL
     attr_reader :raw_driver
     attr_reader :activerecord_class
 
+    # `:database` is the primary option and is treated as a service name.
+    # `:service_name` is provided for compatibility with the
+    # oracle-enhanced adapter (rsim/oracle-enhanced#2669) and is treated
+    # as an alias of `:database`. `:sid` selects the legacy SID URL form
+    # for single-instance Oracle deployments (e.g. 11g XE), and exists to
+    # replace the deprecated `database: ":SID"` colon-prefix entry. The
+    # three options are mutually exclusive.
+    #
+    # SID character set matches the oracle-enhanced adapter: alphanumeric,
+    # underscore, `$`, `#`. No length cap — INSTANCE_NAME allows up to 255
+    # characters in 19c+; the historical 8-char limit applies to DB_NAME,
+    # not to the SID/INSTANCE_NAME the listener registers under.
+    SID_IDENTIFIER_PATTERN = /\A[\w$#]+\z/
+
+    # Validates :database / :service_name / :sid in `params` and folds
+    # :service_name into :database so downstream URL builders only need to
+    # branch on :database vs :sid. Raises ArgumentError on conflicts or
+    # invalid values.
+    def self.resolve_database_aliases!(params)
+      provided_keys = []
+      provided_keys << ":database"     if params[:database]
+      provided_keys << ":service_name" if params[:service_name]
+      provided_keys << ":sid"          if params[:sid]
+      if provided_keys.size > 1
+        raise ArgumentError,
+          "Cannot specify more than one of #{provided_keys.join(', ')}; they are mutually exclusive."
+      end
+
+      if (svc = params[:service_name])
+        if svc.to_s.start_with?("/")
+          raise ArgumentError,
+            "Invalid :service_name value #{svc.inspect}; must not start with '/'."
+        end
+        params[:database] = svc
+      end
+
+      if (sid = params[:sid]) && !sid.to_s.match?(SID_IDENTIFIER_PATTERN)
+        raise ArgumentError,
+          "Invalid :sid value #{sid.inspect}; must be an Oracle SID (alphanumeric, underscore, $, #)."
+      end
+    end
+
     def initialize(raw_conn, ar_class = nil) # :nodoc:
       @raw_driver = self.class.driver_type
       @raw_connection = raw_conn
