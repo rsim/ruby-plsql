@@ -390,9 +390,6 @@ module PLSQL
       ora_value_to_ruby_value(ora_value)
     end
 
-    def result_set_to_ruby_data_type(column_type, column_type_name)
-    end
-
     def plsql_to_ruby_data_type(metadata)
       data_type, data_length = metadata[:data_type], metadata[:data_length]
       case data_type
