@@ -1,7 +1,5 @@
 # encoding: utf-8
 
-require "spec_helper"
-
 RSpec.describe "Parameter type mapping /" do
 
   shared_examples "Function with string parameters" do |datatype|

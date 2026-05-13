@@ -1,5 +1,3 @@
-require "spec_helper"
-
 RSpec.describe "Schema" do
 
   it "should create Schema object" do
