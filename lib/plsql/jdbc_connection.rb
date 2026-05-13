@@ -588,10 +588,5 @@ module PLSQL
       def java_bigdecimal(value)
         value && java.math.BigDecimal.new(value.to_s)
       end
-
-      def ora_number_to_ruby_number(num)
-        # return BigDecimal instead of Float to avoid rounding errors
-        num == (num_to_i = num.to_i) ? num_to_i : (num.is_a?(BigDecimal) ? num : BigDecimal(num.to_s))
-      end
   end
 end
