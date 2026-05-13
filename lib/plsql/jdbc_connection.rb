@@ -189,7 +189,7 @@ module PLSQL
 
         def bind_param_index(key)
           return key if key.kind_of? Integer
-          key = ":#{key.to_s}" unless key.to_s =~ /^:/
+          key = ":#{key}" unless key.to_s =~ /^:/
           @params.index(key) + 1
         end
     end
