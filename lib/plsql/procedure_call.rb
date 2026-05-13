@@ -243,8 +243,8 @@ module PLSQL
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
           if xmltype_argument?(argument_metadata)
             @declare_sql << "l_#{argument} XMLTYPE;\n"
-            @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
-            @bind_values[argument] = value if not value.nil?
+            @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" unless value.nil?
+            @bind_values[argument] = value unless value.nil?
             @bind_metadata[argument] = argument_metadata.merge(data_type: "CLOB")
             "l_#{argument}"
           end
