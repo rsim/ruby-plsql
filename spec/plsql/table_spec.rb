@@ -1,5 +1,3 @@
-require "spec_helper"
-
 RSpec.describe "Table" do
   before(:all) do
     plsql.connect! CONNECTION_PARAMS

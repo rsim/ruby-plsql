@@ -1,5 +1,3 @@
-require "spec_helper"
-
 RSpec.describe "Type" do
   before(:all) do
     plsql.connection = get_connection

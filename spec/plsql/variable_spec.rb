@@ -1,7 +1,5 @@
 # encoding: utf-8
 
-require "spec_helper"
-
 RSpec.describe "Package variables /" do
 
   describe "String" do
