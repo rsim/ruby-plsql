@@ -241,7 +241,7 @@ module PLSQL
           @bind_metadata[argument] = plsql_boolean_metadata(argument_metadata)
           "l_#{argument}"
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
-          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
+          if xmltype_argument?(argument_metadata)
             @declare_sql << "l_#{argument} XMLTYPE;\n"
             @assignment_sql << "l_#{argument} := XMLTYPE(:#{argument});\n" if not value.nil?
             @bind_values[argument] = value if not value.nil?
@@ -250,7 +250,7 @@ module PLSQL
           end
         else
           # TABLE or PL/SQL TABLE type defined inside package
-          if argument_metadata[:tmp_table_name]
+          if tmp_table_argument?(argument_metadata)
             add_table_declaration_and_assignment(argument, argument_metadata)
             insert_values_into_tmp_table(argument, argument_metadata, value)
             "l_#{argument}"
@@ -396,7 +396,7 @@ module PLSQL
           end
           "l_#{argument} := " if is_return_value
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
-          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
+          if xmltype_argument?(argument_metadata)
             @declare_sql << "l_#{argument} XMLTYPE;\n" if is_return_value
             bind_variable = :"o_#{argument}"
             @return_vars << bind_variable
@@ -417,7 +417,7 @@ module PLSQL
                         ":#{bind_variable} := o_#{argument};\n"
           "l_#{argument} := " if is_return_value
         else
-          if argument_metadata[:tmp_table_name]
+          if tmp_table_argument?(argument_metadata)
             add_return_table(argument, argument_metadata, is_return_value)
           elsif is_return_value
             @return_vars << argument
@@ -518,11 +518,11 @@ module PLSQL
           numeric_value = @cursor[":o_#{argument}"]
           plsql_boolean_to_ruby_value(numeric_value)
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
-          if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
+          if xmltype_argument?(argument_metadata)
             @cursor[":o_#{argument}"]
           end
         else
-          if argument_metadata[:tmp_table_name]
+          if tmp_table_argument?(argument_metadata)
             is_index_by_table = argument_metadata[:data_type] == "PL/SQL TABLE"
             case argument_metadata[:element][:data_type]
             when "PL/SQL RECORD"
@@ -633,6 +633,14 @@ module PLSQL
 
       def plsql_boolean_metadata(base_metadata)
         base_metadata.merge(data_type: "NUMBER", data_precision: 1)
+      end
+
+      def xmltype_argument?(metadata)
+        metadata[:type_name] == "XMLTYPE" || metadata[:data_type] =~ /XMLTYPE/
+      end
+
+      def tmp_table_argument?(metadata)
+        metadata[:tmp_table_name]
       end
   end
 end
