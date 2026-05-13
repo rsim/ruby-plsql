@@ -237,8 +237,8 @@ module PLSQL
         when "PL/SQL BOOLEAN"
           @declare_sql << "l_#{argument} BOOLEAN;\n"
           @assignment_sql << "l_#{argument} := (:#{argument} = 1);\n"
-          @bind_values[argument] = value.nil? ? nil : (value ? 1 : 0)
-          @bind_metadata[argument] = argument_metadata.merge(data_type: "NUMBER", data_precision: 1)
+          @bind_values[argument] = ruby_value_to_plsql_boolean(value)
+          @bind_metadata[argument] = plsql_boolean_metadata(argument_metadata)
           "l_#{argument}"
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
           if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
@@ -352,8 +352,8 @@ module PLSQL
           case metadata[:data_type]
           when "PL/SQL BOOLEAN"
             sql << "l_#{argument}.#{field} := (:#{bind_variable} = 1);\n"
-            bind_values[bind_variable] = value.nil? ? nil : (value ? 1 : 0)
-            bind_metadata[bind_variable] = metadata.merge(data_type: "NUMBER", data_precision: 1)
+            bind_values[bind_variable] = ruby_value_to_plsql_boolean(value)
+            bind_metadata[bind_variable] = plsql_boolean_metadata(metadata)
           else
             sql << "l_#{argument}.#{field} := :#{bind_variable};\n"
             bind_values[bind_variable] = value
@@ -384,7 +384,7 @@ module PLSQL
             case metadata[:data_type]
             when "PL/SQL BOOLEAN"
               @return_vars << bind_variable
-              @return_vars_metadata[bind_variable] = metadata.merge(data_type: "NUMBER", data_precision: 1)
+              @return_vars_metadata[bind_variable] = plsql_boolean_metadata(metadata)
               arg_field = "l_#{argument}.#{field}"
               @return_sql << ":#{bind_variable} := " << "CASE WHEN #{arg_field} = true THEN 1 " <<
                                                         "WHEN #{arg_field} = false THEN 0 ELSE NULL END;\n"
@@ -411,7 +411,7 @@ module PLSQL
           # if output bind variable appears in several places
           bind_variable = :"o_#{argument}"
           @return_vars << bind_variable
-          @return_vars_metadata[bind_variable] = argument_metadata.merge(data_type: "NUMBER", data_precision: 1)
+          @return_vars_metadata[bind_variable] = plsql_boolean_metadata(argument_metadata)
           @return_sql << "IF l_#{argument} IS NULL THEN\no_#{argument} := NULL;\n" <<
                         "ELSIF l_#{argument} THEN\no_#{argument} := 1;\nELSE\no_#{argument} := 0;\nEND IF;\n" <<
                         ":#{bind_variable} := o_#{argument};\n"
@@ -508,7 +508,7 @@ module PLSQL
             field_value = @cursor[":#{argument}_o#{metadata[:position]}"]
             case metadata[:data_type]
             when "PL/SQL BOOLEAN"
-              return_value[field] = field_value.nil? ? nil : field_value == 1
+              return_value[field] = plsql_boolean_to_ruby_value(field_value)
             else
               return_value[field] = field_value
             end
@@ -516,7 +516,7 @@ module PLSQL
           return_value
         when "PL/SQL BOOLEAN"
           numeric_value = @cursor[":o_#{argument}"]
-          numeric_value.nil? ? nil : numeric_value == 1
+          plsql_boolean_to_ruby_value(numeric_value)
         when "UNDEFINED", "XMLTYPE", "OPAQUE/XMLTYPE"
           if argument_metadata[:type_name] == "XMLTYPE" || argument_metadata[:data_type] =~ /XMLTYPE/
             @cursor[":o_#{argument}"]
@@ -621,6 +621,18 @@ module PLSQL
           @dbms_output_stream.puts "DBMS_OUTPUT: #{line}" if line
         end
         @dbms_output_stream.flush if @dbms_output_stream
+      end
+
+      def ruby_value_to_plsql_boolean(value)
+        value.nil? ? nil : (value ? 1 : 0)
+      end
+
+      def plsql_boolean_to_ruby_value(numeric_value)
+        numeric_value.nil? ? nil : numeric_value == 1
+      end
+
+      def plsql_boolean_metadata(base_metadata)
+        base_metadata.merge(data_type: "NUMBER", data_precision: 1)
       end
   end
 end
