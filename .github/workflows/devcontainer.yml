@@ -5,9 +5,6 @@ on:
     - cron: "0 6 1 * *"  # 1st of every month at 6:00 AM UTC
   workflow_dispatch:
 
-env:
-  RUBYOPT: "-w"
-
 jobs:
   test:
     runs-on: ubuntu-latest
