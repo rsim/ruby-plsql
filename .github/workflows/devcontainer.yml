@@ -18,6 +18,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           runCmd: |
+            set -e
             uname -a
             lsb_release -a
             ruby --version
