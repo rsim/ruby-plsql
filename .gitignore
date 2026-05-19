@@ -13,3 +13,4 @@ Gemfile.lock
 *.zip
 .idea
 spec/support/custom_config.rb
+.devcontainer/tzdata/
