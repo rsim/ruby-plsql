@@ -6,7 +6,8 @@
   "features": {
     "ghcr.io/rails/devcontainer/features/ruby:2": {
       "version": "4.0.3"
-    }
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
   "customizations": {
     "vscode": {
