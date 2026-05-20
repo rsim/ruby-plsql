@@ -10,8 +10,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    env:
-      BUNDLER_VERSION: 4.0.6
 
     steps:
     - uses: actions/checkout@v6
@@ -19,12 +17,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: "4.0"
-    - name: Pin Bundler to 4.0.6 (workaround for ruby/rubygems#9536)
-      run: |
-        gem install bundler -v 4.0.6
-        ruby --version
-        gem --version
-        bundle --version
+        rubygems: latest
     - name: Build and run RuboCop
       run: |
         BUNDLE_ONLY=rubocop bundle install --jobs 4 --retry 3
