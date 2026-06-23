@@ -74,7 +74,13 @@ module PLSQL
             end
             { data_type: typecode, data_length: nil, sql_type_name: "#{type.schema_name}.#{type.type_name}", in_out: "IN/OUT" }
           rescue ArgumentError
-            raise ArgumentError, "Package variable data type #{type_string} is not object type defined in schema"
+            # Try to resolve as a package SUBTYPE
+            base_type = resolve_package_subtype(type_string)
+            if base_type
+              metadata(base_type)
+            else
+              raise ArgumentError, "Package variable data type #{type_string} is not object type defined in schema"
+            end
           end
         when /^(\w+\.)?(\w+)%ROWTYPE$/
           schema = $1 ? plsql.send($1.chop) : plsql
@@ -93,6 +99,34 @@ module PLSQL
         else
           raise ArgumentError, "Package variable data type #{type_string} is not supported"
         end
+      end
+
+      # Resolve a package SUBTYPE to its base type by querying ALL_SOURCE.
+      # Handles both qualified (PACKAGE.SUBTYPE) and unqualified (SUBTYPE) names.
+      def resolve_package_subtype(type_string)
+        if type_string =~ /^(\w+)\.(\w+)$/i
+          # Package-qualified: PACKAGE.SUBTYPE
+          package_name = $1.upcase
+          subtype_name = $2.upcase
+        elsif type_string =~ /^(\w+)$/i
+          # Unqualified: look up in the current package
+          package_name = @package_name
+          subtype_name = $1.upcase
+        else
+          return nil
+        end
+
+        @schema.select_all(
+          "SELECT text FROM all_source
+          WHERE owner = :owner AND name = :package_name AND type = 'PACKAGE'
+            AND UPPER(text) LIKE :subtype_pattern",
+          @schema_name, package_name, "%SUBTYPE%#{subtype_name}%"
+        ).each do |row|
+          if row[0] =~ /^\s*SUBTYPE\s+#{subtype_name}\s+IS\s+([^;]+?)\s*(NOT\s+NULL\s*)?;\s*(--.*)?$/i
+            return $1.strip
+          end
+        end
+        nil
       end
 
       # wrapper class to simulate Procedure class for ProcedureClass#exec
