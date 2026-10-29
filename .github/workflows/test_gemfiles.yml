@@ -15,7 +15,8 @@ jobs:
   build:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
-    runs-on: ubuntu-latest
+    # CRuby older than 3.2 is not available on ubuntu-26.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
